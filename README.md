@@ -256,31 +256,31 @@ Go (standard library only) is the only requirement.
 
 ### The Today view with reminders
 
-![The Today view with reminders](docs/today.png)
+<img alt="The Today view with reminders" src="docs/today.png" width=65%>
 
 ### The statistics page with the heatmap
 
-![The statistics page with the heatmap](docs/stats.png)
+<img alt="The statistics page with the heatmap" src="docs/stats.png" width=70%>
 
 ### The narrow layout
 
-![The narrow layout](docs/narrow.png)
+<img alt="The narrow layout" src="docs/narrow.png" width=350px>
 
 ### The command palette
 
-![The command palette](docs/command-palette.png)
+<img alt="The command palette" src="docs/command-palette.png" width=450px>
 
 ### The writing/work timer
 
-![The writing/work timer](docs/timer.png)
+<img alt="The writing/work timer" src="docs/timer.png" width=300px>
 
 ### The settings page
 
-![The settings page](docs/settings.png)
+<img alt="The settings page" src="docs/settings.png" width=450px>
 
 ### The menu (top right icon)
 
-![The menu](docs/menu.png)
+<img alt="The menu" src="docs/menu.png" width=350px>
 
 ---
 
