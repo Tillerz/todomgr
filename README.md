@@ -1,11 +1,15 @@
 # Tillerz Todo Mgr
 
 A small, portable todo, idea and project manager. One program, no installation: the UI, the API, the
-command line and the (optional) MCP server for AI assistants are all in one executable. Everything you
-enter is stored in the `data/` folder next to it, so you can copy the folder to a USB stick or a synced
-drive and take it with you.
+command line and the (optional) MCP server for AI assistants are all in one executable. The UI runs in
+your web browser: start the program and it opens `http://localhost:7437/`. The page comes from your own
+computer, so you need no internet connection and no account. Everything you enter is stored in the
+`data/` folder next to the program, so you can copy the folder to a USB stick or a synced drive and take
+it with you.
 
-> Screenshots: put them into `docs/` and link them here (see [Screenshots](#screenshots)).
+![The tree with the detail panel, dark mode](docs/dark.png)
+
+More in [Screenshots](#screenshots).
 
 ## Contents
 
@@ -246,15 +250,37 @@ Go (standard library only) is the only requirement.
 
 ## Screenshots
 
-Not added yet. Suggested files, taken with the demo data (⋯ → Settings → Load demo data):
+### The tree with the detail panel, light mode
 
-| File | Shows |
-|---|---|
-| `docs/tree.png` | the tree with the detail panel, light mode |
-| `docs/dark.png` | the same in dark mode |
-| `docs/today.png` | the Today view with reminders |
-| `docs/stats.png` | the statistics page with the heatmap |
-| `docs/mobile.png` | the narrow layout |
+![The tree with the detail panel, light mode](docs/tree.png)
+
+### The Today view with reminders
+
+![The Today view with reminders](docs/today.png)
+
+### The statistics page with the heatmap
+
+![The statistics page with the heatmap](docs/stats.png)
+
+### The narrow layout
+
+![The narrow layout](docs/narrow.png)
+
+### The command palette
+
+![The command palette](docs/command-palette.png)
+
+### The writing/work timer
+
+![The writing/work timer](docs/timer.png)
+
+### The settings page
+
+![The settings page](docs/settings.png)
+
+### The menu (top right icon)
+
+![The menu](docs/menu.png)
 
 ---
 
