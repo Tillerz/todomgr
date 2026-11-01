@@ -29,4 +29,4 @@ read -r -p "Publish $tag to GitHub? [y/N] " answer
 
 git tag -a "$tag" -m "$tag"
 git push origin HEAD "$tag"
-gh release create "$tag" --title "Tillerz Todo Mgr $tag" --generate-notes "${assets[@]}"
+gh release create "$tag" --title "Tillerz Todo Mgr $tag" --generate-notes --verify-tag "${assets[@]}"
