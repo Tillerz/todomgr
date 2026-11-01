@@ -1,0 +1,8 @@
+.history/
+/data/
+/dist/
+/test/
+/prototype/
+*.corrupt-*.json
+/todo
+/todo.exe
