@@ -209,10 +209,15 @@ input[type=range]{width:100%;padding:0;accent-color:var(--accent);border:0;backg
 textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .md{padding:8px 10px;border:1px solid var(--line);border-radius:6px;min-height:60px}
 .md p,.md ul,.md ol,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md pre,.md table,.md blockquote,.md .alert{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
+.md h4{font-size:1em;text-transform:none;letter-spacing:normal;color:inherit;display:block}/* not the panel's section label style */
 .md ul,.md ol{padding-left:1.5em}.md li:has(>input[type=checkbox]){list-style:none}.md pre{background:var(--hover);padding:6px 8px;border-radius:6px;overflow-x:auto}.md pre code{padding:0}.md img{max-width:100%}
 .md blockquote{border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}.md hr{border:0;border-top:1px solid var(--line)}
 .md table{border-collapse:collapse}.md th,.md td{border:1px solid var(--line);padding:2px 8px}
 .md .alert{border-left:3px solid var(--c);padding:2px 10px}.md .alert>b{color:var(--c)}.md .alert p{margin:.2em 0}
+.md .bb-dc{float:left;font-size:3em;line-height:.85;margin:4px 6px 0 0;font-weight:700}.md .bb-code,.md .bb-aloud,.md details{clear:both}
+.md .bb-code{font-family:ui-monospace,Consolas,monospace;background:var(--hover);padding:6px 8px;border-radius:6px;margin:.3em 0}
+.md .bb-aloud{border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--sel);padding:6px 10px;border-radius:6px;margin:.3em 0;font-style:italic}
+.md .bb-by{font-size:.9em;margin-top:2px}.md details{margin:.3em 0;border:1px solid var(--line);border-radius:6px;padding:4px 8px}.md summary{cursor:pointer;color:var(--accent)}
 .alert.note{--c:var(--accent)}.alert.tip{--c:var(--ok)}.alert.important{--c:#8a63d2}.alert.warning{--c:var(--warn)}.alert.caution{--c:var(--danger)}
 .hist{font-size:12px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
 
@@ -494,7 +499,7 @@ const RECUR={'':'Does not repeat',d:'Daily',w:'Weekly',m:'Monthly',y:'Yearly'};
 let S,ui={sel:null,multi:new Set(),view:'tree',q:'',hideDone:false,panel:false,metric:'closed',dragging:false};
 const blank=()=>({v:2,rev:0,nodes:{root:{id:'root',name:'root',children:[]}},activity:[],timer:null,prefs:{theme:null,views:[]}});
 function uid(){let i;do i=Math.random().toString(36).slice(2,8);while(S.nodes[i]);return i}
-function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,tags:[],people:[],location:'',deadline:'',reminder:'',deps:[],notes:'',links:[],
+function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,tags:[],people:[],location:'',deadline:'',reminder:'',deps:[],notes:'',notesFormat:'markdown',links:[],
   prog:{mode:'percent',done:0,total:100,unit:''},recur:'',est:0,time:[],url:'',webhook:'',collapsed:false,created:t,updated:t,parent:null,children:[],hist:[{s:p.status||'open',at:t}],...p}}
 const isClosed=n=>CLOSED.has(n.status);
 const kids=n=>n.children.map(i=>S.nodes[i]).filter(c=>c&&c.status!=='cancelled'&&c.status!=='rejected'&&c.status!=='archived'&&c.kind!=='reminder');
@@ -700,6 +705,7 @@ function renderDetail(){
   document.body.dataset.panel=ui.panel?'1':'0';
   el.classList.toggle('open',ui.panel);
   if(!n||n.trashed){el.innerHTML=`<div class="hd"><span class="sp"></span><button class="ib close-panel" data-act="closepanel">${ic('x')}</button></div><div class="empty">Select an item to see and edit its details.<br><br><small>Tip: double-click a name to rename it.<br>Drag URLs or files onto an item to attach them.</small></div>`;return}
+  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim()}// a newly opened entry: preview if it has notes, else edit
   const k=kids(n),tr=treeTime(n),own=n.time.reduce((a,t)=>a+t.secs,0);
   const depNames=S.nodes;
   const blocking=allNodes().filter(x=>x.deps.includes(n.id));
@@ -742,8 +748,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
-<h4>Notes <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview (GitHub markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes)">${ui.mdPrev?'Edit':'Preview'}</button></h4>
-${ui.mdPrev?`<div class="md">${md(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}
+<h4>Notes <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview">${ui.mdPrev?'Edit':'Preview'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode (World Anvil): [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button></h4>
+${ui.mdPrev?`<div class="md">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
@@ -765,6 +771,30 @@ const MD=new marked.Marked({gfm:true,breaks:true,renderer:{
     if(!m)return`<blockquote>${b}</blockquote>`;const k=m[1].toLowerCase();
     return`<div class="alert ${k}"><b>${k[0].toUpperCase()+k.slice(1)}</b>${('<p>'+b.slice(m[0].length)).replace(/^<p><\/p>\s*/,'')}</div>`}}});
 function md(s){return s?MD.parse(s):''}
+// notes preview for BBCode (World Anvil's basic formatting). The text is escaped first and only the
+// known tags become HTML; colours must look like a colour and icons must exist, so nothing else gets in.
+function bb(s){if(!s)return'';const keep=[],put=h=>`\u0000${keep.push(h)-1}\u0000`;
+  s=s.replace(/\u0000/g,'').replace(/\[noparse\]([\s\S]*?)\[\/noparse\]/gi,(_,x)=>put(esc(x).replace(/\n/g,'<br>'))).replace(/\/\*[\s\S]*?\*\//g,'');
+  s=esc(s);
+  const again=(re,fn)=>{let o;do{o=s;s=s.replace(re,fn)}while(s!==o)};
+  const pair=t=>new RegExp(`\\[${t}\\]((?:(?!\\[${t}\\])[\\s\\S])*?)\\[\\/${t}\\]`,'gi');// innermost first, so tags can nest
+  const col=c=>/^(#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(c=(c||'').trim())?c:'';
+  again(/\[(ul|ol)\]((?:(?!\[(?:ul|ol)\])[\s\S])*?)\[\/\1\]\n?/gi,(_,t,x)=>{const li=[];
+    x.split('\n').forEach(l=>{const m=l.match(/^\s*[-*]\s+(.*)/);if(m)li.push(m[1]);else if(l.trim()&&li.length)li[li.length-1]+='<br>'+l.trim()});
+    return`<${t.toLowerCase()}>${li.map(i=>`<li>${i}</li>`).join('')}</${t.toLowerCase()}>`});
+  [['b','strong'],['i','em'],['u','u'],['s','s'],['small','small'],['sup','sup'],['sub','sub']].forEach(([t,h])=>again(pair(t),(_,x)=>`<${h}>${x}</${h}>`));
+  again(pair('dc'),(_,x)=>`<span class="bb-dc">${x}</span>`);
+  again(/\[color:([^\]|]*)(?:\|([^\]]*))?\]((?:(?!\[color:)[\s\S])*?)\[\/color\]/gi,(_,c,b,x)=>{const st=(col(c)?`color:${col(c)};`:'')+(col(b)?`background:${col(b)};`:'');return st?`<span style="${st}">${x}</span>`:x});
+  again(/\[url:([^\]]+)\]((?:(?!\[url:)[\s\S])*?)\[\/url\]/gi,(_,u,x)=>mdUrl(u)?`<a href="${u.trim()}" target="_blank" rel="noopener">${x.trim()||u.trim()}</a>`:x);// u is escaped already
+  s=s.replace(/\[icon:([a-z0-9-]+)\]/gi,(m,k)=>P[k.toLowerCase()]?`<span class="tic">${ic(k.toLowerCase(),16)}</span>`:m).replace(/\[br\]/gi,'<br>');
+  const block=(t,fn)=>again(new RegExp(`\\n?\\[${t}\\]((?:(?!\\[${t}\\])[\\s\\S])*?)\\[\\/${t}\\]\\n?`,'gi'),(_,x)=>fn(x));
+  const split=x=>{const i=x.lastIndexOf('|');return i<0?[x,'']:[x.slice(0,i),x.slice(i+1).trim()]};
+  ['h1','h2','h3','h4'].forEach(h=>block(h,x=>`<${h}>${x}</${h}>`));
+  block('code',x=>`<div class="bb-code">${x.replace(/\n/g,' ')}</div>`);
+  block('aloud',x=>`<div class="bb-aloud">${x.trim().replace(/\n/g,'<br>')}</div>`);
+  block('quote',x=>{const[q,a]=split(x);return`<blockquote>${q.trim().replace(/\n/g,'<br>')}${a?`<div class="bb-by">— ${a}</div>`:''}</blockquote>`});
+  block('spoiler',x=>{const[c,l]=split(x);return`<details class="bb-spoiler"><summary>${l||'Spoiler'}</summary>${c.trim().replace(/\n/g,'<br>')}</details>`});
+  return s.replace(/\n/g,'<br>').replace(/\u0000(\d+)\u0000/g,(_,i)=>keep[i])}
 function setDT(n,key){const d=$(`[data-f=${key}-d]`).value,t=$(`[data-f=${key}-t]`).value;n[key]=d?(t?d+'T'+t:d):'';if(key==='reminder'){n.remDone=false;delete n.alert;delete n.snoozeUntil}}
 function addLinks(id,links){const n=S.nodes[id];if(!n||!links.length)return;mutate(()=>{links.forEach(l=>n.links.push({title:l.title,uri:l.uri}));touch(n)},{panel:id===ui.sel});toast(`Added ${links.length} link${links.length>1?'s':''} to “${n.name}”`)}
 function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!f||!n)return;const v=t.value;
@@ -803,6 +833,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'addtime':{const mi=+$('[data-f=mintime]').value;if(mi>0)m(()=>{n.time.push({at:now(),secs:mi*60});log('time',n.id,{secs:mi*60})});break}
     case'rmtime':m(()=>n.time=n.time.filter(t=>t.at!==+b.dataset.at));break;
     case'mdtoggle':ui.mdPrev=!ui.mdPrev;renderDetail();break;
+    case'fmttoggle':mutate(()=>{n.notesFormat=n.notesFormat==='bbcode'?'markdown':'bbcode';touch(n)},{panel:true});break;
     case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
     case'dup':{let c;mutate(()=>{c=dupNode(n.id,n.parent,S.nodes[n.parent].children.indexOf(n.id)+1,true);log('create',c.id)});ui.sel=c.id;renderAll();break}
     case'trash':trash(n.id);break;

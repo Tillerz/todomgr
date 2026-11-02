@@ -394,3 +394,17 @@ func TestListTreeStats(t *testing.T) {
 		t.Fatalf("stats: %v", s)
 	}
 }
+
+func TestNotesFormat(t *testing.T) {
+	st, _ := testStore(t)
+	id := mustCreate(t, st, "Article", "", map[string]any{"notesFormat": "bbcode", "notes": "[b]x[/b]"})
+	if n, _ := st.Get(id); n["notesFormat"] != "bbcode" {
+		t.Errorf("notesFormat %v", n["notesFormat"])
+	}
+	if n, _ := st.Get(mustCreate(t, st, "Plain", "", nil)); n["notesFormat"] != "markdown" {
+		t.Errorf("default notesFormat %v", n["notesFormat"])
+	}
+	if _, err := st.Patch("test", id, map[string]any{"notesFormat": "html"}); err == nil {
+		t.Error("notesFormat html must be refused")
+	}
+}

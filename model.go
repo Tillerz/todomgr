@@ -95,7 +95,7 @@ func defaultNode(id, name string) Node {
 	return Node{
 		"id": id, "name": name, "kind": "todo", "status": "open", "color": "", "prio": 0.0,
 		"tags": []any{}, "people": []any{}, "location": "", "deadline": "", "reminder": "",
-		"deps": []any{}, "notes": "", "links": []any{},
+		"deps": []any{}, "notes": "", "notesFormat": "markdown", "links": []any{},
 		"prog":  map[string]any{"mode": "percent", "done": 0.0, "total": 100.0, "unit": ""},
 		"recur": "", "est": 0.0, "time": []any{}, "url": "", "webhook": "", "collapsed": false,
 		"created": t, "updated": t, "parent": nil, "children": []any{},

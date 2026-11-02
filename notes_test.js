@@ -1,5 +1,5 @@
-// Notes preview tests: runs the md() code from web/index.html with the embedded marked and checks
-// that markdown renders and that HTML, script links and attribute tricks in notes stay harmless.
+// Notes preview tests: runs the md() and bb() code from web/index.html (with the embedded marked) and
+// checks that Markdown and BBCode render and that HTML, script links and attribute tricks stay harmless.
 // Usage: node notes_test.js  (prints "PASS name" / "FAIL name: why" per case, exit code 1 on failure)
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -14,6 +14,8 @@ const cut = (from, to) => {
   return html.slice(a, b + to.length);
 };
 const md = new Function(cut('const esc=', ';\n') + cut('// notes preview:', "function md(s){return s?MD.parse(s):''}") + 'return md;')();
+const bb = new Function(cut('const esc=', ';\n') + cut('const mdUrl=', ';\n') + cut('const P={', '\n};') + cut('const ic=', ';\n') +
+  cut('// notes preview for BBCode', 'keep[i])}') + 'return bb;')();
 
 const cases = [
   // [name, notes, must contain (all), must not contain (none)]
@@ -46,10 +48,39 @@ const cases = [
   ['autolink with javascript: is not a link', '<javascript:alert(1)>', [], ['<a ']],
 ];
 
+const bbCases = [
+  ['bbcode: inline tags', '[b]B[/b] [i]I[/i] [u]U[/u] [s]S[/s] [small]sm[/small] x[sup]2[/sup] H[sub]2[/sub]',
+    ['<strong>B</strong>', '<em>I</em>', '<u>U</u>', '<s>S</s>', '<small>sm</small>', '<sup>2</sup>', '<sub>2</sub>'], []],
+  ['bbcode: nested tags', '[b]bold [i]both[/i][/b]', ['<strong>bold <em>both</em></strong>'], []],
+  ['bbcode: headings without extra breaks', 'intro\n[h1]Title[/h1]\ntext', ['intro<h1>Title</h1>text'], ['<br><h1>']],
+  ['bbcode: line breaks', 'one\ntwo[br]three', ['one<br>two<br>three'], []],
+  ['bbcode: lists', '[ul]\n- first\n- second\n[/ul]\n[ol]\n- a\n[/ol]', ['<ul><li>first</li><li>second</li></ul>', '<ol><li>a</li></ol>'], []],
+  ['bbcode: colour and background', '[color:red|#ff0]x[/color]', ['<span style="color:red;background:#ff0;">x</span>'], []],
+  ['bbcode: quote with author', '[quote]Words.|Mira[/quote]', ['<blockquote>Words.<div class="bb-by">— Mira</div></blockquote>'], []],
+  ['bbcode: spoiler with label', '[spoiler]secret|Click me![/spoiler]', ['<details class="bb-spoiler"><summary>Click me!</summary>secret</details>'], []],
+  ['bbcode: aloud, code, drop cap', '[aloud]Read this[/aloud][code]a\nb[/code][dc]D[/dc]rop', ['<div class="bb-aloud">Read this</div>', '<div class="bb-code">a b</div>', '<span class="bb-dc">D</span>rop'], []],
+  ['bbcode: comment is hidden', 'a /* hidden\ntext */ b', ['a  b'], ['hidden']],
+  ['bbcode: noparse keeps tags as text', '[noparse][b]x[/b][/noparse]', ['[b]x[/b]'], ['<strong>']],
+  ['bbcode: icon', '[icon:star] [icon:nosuchicon]', ['<span class="tic"><svg', '[icon:nosuchicon]'], []],
+  ['bbcode: unknown or unclosed tags stay text', '[b]open [x]y[/x]', ['[b]open [x]y[/x]'], ['<strong>']],
+  ['bbcode: link', '[url:https://www.worldanvil.com/w/x?a=1&b=2]My world[/url]', ['<a href="https://www.worldanvil.com/w/x?a=1&amp;b=2" target="_blank" rel="noopener">My world</a>'], []],
+  ['bbcode: link without text shows the URL', '[url:https://example.com][/url]', ['>https://example.com</a>'], []],
+  ['bbcode: tags inside link text', '[url:https://example.com][b]bold[/b][/url]', ['rel="noopener"><strong>bold</strong></a>'], []],
+  // safety
+  ['bbcode: javascript: link is dropped', '[url:javascript:alert(1)]click[/url] [url:JaVaScRiPt:x]b[/url] [url:data:text/html,x]c[/url]', ['click', 'b', 'c'], ['<a ', 'javascript:', 'data:']],
+  ['bbcode: quote in URL cannot break out', '[url:https://x.y/" onmouseover="alert(1)]t[/url]', ['&quot;'], ['" onmouseover']],
+  ['bbcode: HTML shows as text', '<script>alert(1)</script><img src=x onerror=alert(1)>', ['&lt;script&gt;', '&lt;img'], ['<script', '<img']],
+  ['bbcode: colour cannot inject CSS', '[color:red;background:url(https://evil.example/x)]a[/color]', ['a'], ['url(', 'style=']],
+  ['bbcode: colour cannot break the attribute', '[color:red" onmouseover="alert(1)]a[/color]', [], ['" onmouseover', 'style="color:red"']],
+  ['bbcode: noparse cannot smuggle HTML', '[noparse]<script>x</script>[/noparse]', ['&lt;script&gt;'], ['<script']],
+  ['bbcode: fake placeholder from the text', 'a\u00000\u0000b[noparse]<i>[/noparse]', ['a0b'], ['<i>']],
+  ['bbcode: tags inside a spoiler label stay harmless', '[spoiler]x|<b onclick=alert(1)>[/spoiler]', ['&lt;b onclick'], ['<b onclick']],
+];
+
 let failed = 0;
-for (const [name, src, want, never] of cases) {
+for (const [fn, list] of [[md, cases], [bb, bbCases]]) for (const [name, src, want, never] of list) {
   let out, why = '';
-  try { out = md(src); } catch (e) { why = 'error: ' + e.message; }
+  try { out = fn(src); } catch (e) { why = 'error: ' + e.message; }
   if (!why) why = want.filter(w => !out.includes(w)).map(w => 'missing ' + JSON.stringify(w))
     .concat(never.filter(n => out.includes(n)).map(n => 'contains ' + JSON.stringify(n))).join(', ');
   if (why) { failed++; console.log(`FAIL ${name}: ${why} in ${JSON.stringify(out)}`); } else console.log('PASS ' + name);

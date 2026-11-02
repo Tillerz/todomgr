@@ -67,6 +67,12 @@ quotes and links. A single line break stays a line break. GitHub's notice boxes 
 > Check the map scale before the next session.
 ```
 
+Notes can use **BBCode** instead, as on World Anvil: click the **Markdown** button above the notes to
+switch that entry to BBCode. Supported: `[b]` `[i]` `[u]` `[s]` `[small]` `[sup]` `[sub]` `[dc]` (drop cap),
+`[color:red|yellow]`, `[h1]`–`[h4]`, `[quote]…|Author[/quote]`, `[aloud]`, `[code]`, `[spoiler]…|Label[/spoiler]`,
+`[url:https://…]text[/url]`, `[br]`, `[ul]` / `[ol]` with `- item` lines, `[noparse]`, `/* hidden comments */` and `[icon:name]` with any
+icon name from Settings → Tag icons. Other World Anvil tags (mentions, sections, containers) stay as text.
+
 Click **Preview** above the notes to see the result. HTML in notes is shown as plain text, and only
 `http`, `https` and `mailto` links become links, so a note added through the API or MCP can never run
 code in your browser.
@@ -332,6 +338,10 @@ preview tests (`node notes_test.js`).
 
 <img alt="The printable list" src="docs/print-list.png" width=450px>
 
+### Notes in BBCode (World Anvil style)
+
+<img alt="Notes in BBCode, preview" src="docs/notes-bbcode.png" width=400px>
+
 ---
 
 ## MCP server for AI assistants
@@ -384,6 +394,7 @@ Requests whose `Host` or `Origin` is not local are refused.
 
 Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` (`#rrggbb`), `prio` (0–4),
 `tags`, `people`, `location`, `deadline` and `reminder` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`), `deps`, `notes`,
+`notesFormat` (`markdown` or `bbcode`),
 `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog`
 (`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`), `est` (minutes), `lead` (minutes
 of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
