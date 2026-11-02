@@ -2,6 +2,7 @@
 # Publishes the archives in dist/ as a GitHub release for the Version in main.go.
 # Order: ./build.sh, ./test.sh, try it yourself, git commit, then ./release.sh.
 # Release text: docs/releases/v<Version>.md if it exists (GitHub adds its changelog link below it).
+# Write one line per paragraph or list item: GitHub shows every line break in release texts.
 # Usage: ./release.sh   (needs: everything committed, a GitHub remote "origin", gh logged in)
 set -euo pipefail
 cd "$(dirname "$0")"
