@@ -11,8 +11,65 @@ it with you.
 
 More in [Screenshots](#screenshots).
 
+## At a glance
+
+### Capture in seconds
+
+- Type `Call Anna @anna !high due:fri at:14:00` and it lands in your Inbox with the person, priority,
+  date and time already set.
+- Tags and people autocomplete, so `#Work` and `#work` never split into two.
+- Todos, ideas, projects and reminders live together in one tree.
+
+### Plan your day
+
+- **Today** shows what is overdue, due, running and coming up.
+- A day plan bar warns you when your estimates and meetings do not fit into the work day.
+- A countdown timer or stopwatch logs the time to the task you worked on.
+
+### Never miss a date
+
+- Reminders pop up even when no browser window is open, with an early warning if you want one.
+- The computer was off? The reminder waits for you as "missed".
+- Repeats of every kind: every 2 weeks, the 1st and 3rd Friday, or 3 days after you last did it.
+- Events with a start and an end, from a 2-hour stream to a 3-day convention.
+
+### Keep big projects under control
+
+- Nest entries as deep as you like, and drag and drop to reorder them.
+- Progress adds up from the sub-entries, and dependencies show what is blocked.
+- Give projects an icon and a colour. Select many entries and change them together.
+- Announce finished tasks in your Discord channel.
+
+### Notes that work like a wiki
+
+- Markdown or BBCode (World Anvil style), with a preview.
+- Link entries with `[[`, and see which entries link back.
+- A large editor for long notes.
+
+### Your data stays yours
+
+- One program for Windows, macOS and Linux. No install, no account, no cloud.
+- Copy the folder to a USB stick and take everything with you.
+- Every change is saved at once, and automatic backups restore with one click.
+
+### Works with your other tools
+
+- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel.
+- Export to CSV, a calendar file, Markdown, or a printed list.
+- A command line (`todo add "…"`), and an MCP server, so AI assistants such as Claude can read and
+  update your list.
+
+### Nice to use
+
+- Light and dark mode. The layout adapts to narrow windows.
+- Keyboard shortcuts, a command palette (Ctrl+K), and undo for every change.
+- Statistics with a GitHub-style heatmap of what you got done.
+
+Every feature in detail: [Features](#features).
+
 ## Contents
 
+- [At a glance](#at-a-glance)
 - [Run it](#run-it)
 - [Features](#features)
 - [Where the data is, and how it is kept safe](#where-the-data-is-and-how-it-is-kept-safe)
