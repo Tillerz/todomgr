@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publishes the archives in dist/ as a GitHub release for the Version in main.go.
 # Order: ./build.sh, ./test.sh, try it yourself, git commit, then ./release.sh.
+# Release text: docs/releases/v<Version>.md if it exists (GitHub adds its changelog link below it).
 # Usage: ./release.sh   (needs: everything committed, a GitHub remote "origin", gh logged in)
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -20,13 +21,21 @@ assets=(dist/todomgr-"$tag"-*.zip dist/todomgr-"$tag"-*.tar.gz dist/SHA256SUMS.t
 for f in "${assets[@]}"; do
   [ -e "$f" ] || { echo "missing $f: run ./build.sh first"; exit 1; }
 done
-newer=$(git ls-files | while read -r f; do if [ "$f" -nt dist/SHA256SUMS.txt ]; then echo "$f"; fi; done)
+# docs/ (screenshots, release texts) is not part of the archives, so it may change after the build
+newer=$(git ls-files | grep -v '^docs/' | while read -r f; do if [ "$f" -nt dist/SHA256SUMS.txt ]; then echo "$f"; fi; done)
 [ -z "$newer" ] || { echo "changed after the last build, run ./build.sh and ./test.sh again:"; echo "$newer"; exit 1; }
 echo "will publish:"; printf '  %s\n' "${assets[@]}"
+notes=(--generate-notes)
+if [ -f "docs/releases/$tag.md" ]; then
+  notes+=(--notes-file "docs/releases/$tag.md")
+  echo "release text: docs/releases/$tag.md, plus GitHub's changelog link"
+else
+  echo "release text: GitHub's automatic notes only (no docs/releases/$tag.md)"
+fi
 
 read -r -p "Publish $tag to GitHub? [y/N] " answer
 [ "$answer" = "y" ] || { echo "stopped, nothing published"; exit 1; }
 
 git tag -a "$tag" -m "$tag"
 git push origin HEAD "$tag"
-gh release create "$tag" --title "Tillerz Todo Mgr $tag" --generate-notes --verify-tag "${assets[@]}"
+gh release create "$tag" --title "Tillerz Todo Mgr $tag" "${notes[@]}" --verify-tag "${assets[@]}"
