@@ -255,6 +255,15 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 #tip{position:fixed;z-index:70;background:#222a3c;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;pointer-events:none;max-width:320px;white-space:pre-line;opacity:0;transition:opacity .1s}
 #tip.show{opacity:.96}
 
+/* printable list (right-click → Print list…) */
+#print{display:none}
+@media print{html,body{background:#fff!important}body>*:not(#print){display:none!important}
+  #print{display:block;color:#000;font:11pt/1.35 system-ui,sans-serif}}
+#print h1{font-size:16pt;margin:0}#print .pp{color:#555;font-size:9pt;margin-bottom:8px}
+#print ul{list-style:none;margin:0;padding-left:20px}#print>ul{padding-left:0;margin-top:8px}#print li{margin:3px 0;break-inside:avoid}
+#print .pn{font-weight:600}#print .x>.pn{text-decoration:line-through;color:#666}
+#print .pm{color:#444;font-size:9pt}#print .pt{color:#555;font-size:9pt;white-space:pre-line;margin-left:1.4em}
+
 /* responsive */
 @media (max-width:1100px){
   main{grid-template-columns:minmax(0,1fr)}
@@ -323,6 +332,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <div id="modal"></div>
 <div id="toasts"></div>
 <div id="tip"></div>
+<div id="print"></div>
 <input type="file" id="file" accept=".json,application/json" hidden>
 
 <script src="/sortable.min.js"></script>
@@ -581,6 +591,18 @@ function badge(n){const b=[];  if(n.webhook)b.push(`<span class="bd" data-tip="D
 // first lines of the notes, for tooltips
 function notesTip(n){const l=n.notes.trim().split('\n');
   return l.slice(0,4).map(x=>x.length>120?x.slice(0,119)+'…':x).join('\n')+(l.length>4?'\n…':'')}
+// printable list: the entry and everything below it, through the browser print dialog (also "Save as PDF")
+function printList(id){const r=S.nodes[id];if(!r)return;
+  const pdt=s=>{const d=pd(s);return d?`${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}${s.includes('T')?' '+pad(d.getHours())+':'+pad(d.getMinutes()):''}`:''};
+  const meta=n=>[n.kind==='reminder'?n.reminder&&'Reminder '+pdt(n.reminder):STAT[n.status],n.prio?PRIO[n.prio]:'',n.deadline&&'Due '+pdt(n.deadline),
+    n.people.join(', '),n.tags.map(t=>'#'+t).join(' ')].filter(Boolean).map(esc).join(' · ');
+  const info=n=>`<span class="pm">${meta(n)}</span>${n.notes&&n.notes.trim()?`<div class="pt">${esc(notesTip(n))}</div>`:''}`;
+  const box=n=>n.kind==='reminder'?'◷':n.status==='done'?'☑':isClosed(n)?'☒':'☐';
+  const list=n=>{const c=n.children.map(i=>S.nodes[i]).filter(Boolean);
+    return c.length?`<ul>${c.map(x=>`<li class="${isClosed(x)?'x':''}">${box(x)} <span class="pn">${esc(x.name)}</span> ${info(x)}${list(x)}</li>`).join('')}</ul>`:''};
+  const el=$('#print');
+  el.innerHTML=`<h1>${esc(r.name)}</h1><div class="pp">${esc([path(r),'Printed '+fmtFull(now())].filter(Boolean).join(' · '))}</div>${info(r)}${list(r)}`;
+  window.addEventListener('afterprint',()=>el.innerHTML='',{once:true});window.print()}
 function progHTML(n){const k=kids(n);let label,f;
   if(k.length){f=frac(n);label=`${k.filter(c=>c.status==='done').length}/${k.length}`}
   else if(n.prog.mode==='units'){f=frac(n);label=`${n.prog.done}/${n.prog.total}${n.prog.unit?' '+esc(n.prog.unit):''}`}
@@ -1222,7 +1244,7 @@ function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexO
   if(url)items.push(mi('Open link',()=>window.open(url,'_blank','noopener')));
   if(!isRem)items.push(mi('Start timer on this',()=>openTimer(id)));
   if(kind==='todo'&&projectOf(n))items.push(mi('Announce on Discord…',()=>{annQueue=[id];showAnn()}));
-  items.push(mi('Copy as text',()=>copyText(n.name+(safeUrl(n.url)?'\n'+n.url:''))),mi('Copy ID',()=>copyText(id)),MSEP,
+  items.push(mi('Print list…',()=>printList(id)),mi('Copy as text',()=>copyText(n.name+(safeUrl(n.url)?'\n'+n.url:''))),mi('Copy ID',()=>copyText(id)),MSEP,
     mi('Duplicate',()=>dupAction(id)),mi('Move to trash',()=>trash(id),{danger:true,key:'Del'}));
   return items}
 function bulkMenu(ids){const N=ids.map(i=>S.nodes[i]).filter(Boolean),doM=fn=>()=>mutate(fn,{panel:true});

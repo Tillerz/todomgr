@@ -82,7 +82,7 @@ code in your browser.
   command palette. A cheat sheet is under ⋯ → Keyboard shortcuts.
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open,
   rename, add sub-entry, status, priority, colour, change type, deadline, add tag, move to…, reorder and
-  indent, open link, start a timer, announce on Discord, copy as text / copy ID, duplicate, trash.
+  indent, open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash.
   With several entries selected, right-click one of them: the menu then acts on all of them (mark done,
   status, priority, colour, add or remove a tag, add a person in charge, move to…, trash). Each entry only
   takes a status that its type has.
@@ -186,6 +186,10 @@ Under ⋯ (and in the command palette) and in Settings → Data:
 The calendar file is a snapshot, not a subscription: export it again after changes. From the command line,
 the format follows the file name: `todo export plan.csv`, `todo export plan.ics`. By default the CSV
 includes finished entries and the calendar does not; add `--open` or `--closed` to change that.
+
+**Print:** right-click an entry → *Print list…* prints it with everything below it: name, status,
+priority, due date, people, tags and the first lines of the notes, indented like the tree, with tick
+boxes. The browser's print dialog can also save it as a PDF.
 
 **Import** reads JSON (this app's export) and replaces everything after
 taking a backup. There is no CSV or calendar import.
@@ -302,6 +306,10 @@ preview tests (`node notes_test.js`).
 ### The menu (top right icon)
 
 <img alt="The menu" src="docs/menu.png" width=350px>
+
+### The printable list
+
+<img alt="The printable list" src="docs/print-list.png" width=450px>
 
 ---
 
