@@ -126,6 +126,10 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 
 The up and down arrow keys step through your earlier entries, so you can edit and re-send one.
 
+When you type `#` or `@`, a list of your existing tags or people opens, so `#Work` does not become a
+second `#work`. Pick one with the arrow keys and **Enter** or **Tab**, or with a click. **Esc** closes
+the list.
+
 ### Progress
 
 - **Percent** or **units** ("450 of 1200 words"), set per entry.

@@ -212,6 +212,8 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .notesbox.max textarea,.notesbox.max .md{flex:1;min-height:0;overflow:auto;resize:none}
 .maxhint{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;font-size:12px}
 .copyid{cursor:pointer}
+.qac{position:fixed;z-index:70;min-width:180px;max-height:240px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:4px;font-size:13.5px}
+.qac .ci.on{background:var(--sel)}
 .md p,.md ul,.md ol,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md pre,.md table,.md blockquote,.md .alert{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
 .md h4{font-size:1em;text-transform:none;letter-spacing:normal;color:inherit;display:block}/* not the panel's section label style */
 .md ul,.md ol{padding-left:1.5em}.md li:has(>input[type=checkbox]){list-style:none}.md pre{background:var(--hover);padding:6px 8px;border-radius:6px;overflow-x:auto}.md pre code{padding:0}.md img{max-width:100%}
@@ -1246,6 +1248,29 @@ $('#detail').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&modalKind!=='alarm')closeModal();timerClick(e);
   const tr=e.target.closest('[data-tr]');if(tr){if(tr.dataset.tr==='restore'){restoreNode(tr.dataset.id);showTrash()}else if(confirm('Permanently delete everything in the trash?')){push();Object.values(S.nodes).filter(n=>n.trashed).forEach(n=>purge(n.id));persist();showTrash()}}});
 let qh=-1,qDraft='';
+// Quick add: typing #… or @… lists the existing tags or people, so "#Work" does not become a second "#work"
+const qac={el:null,items:[],cur:0};
+function qacClose(){qac.el?.remove();qac.el=null}
+function qacOpen(inp){const c=inp.selectionStart,m=inp.value.slice(0,c).match(/(^|\s)([#@])([^\s#@]*)$/);if(!m){qacClose();return}
+  const typed=m[3].toLowerCase(),cnt=new Map(),rank=t=>t.toLowerCase()===typed?2:t.toLowerCase().startsWith(typed)?1:0;
+  for(const n of allNodes())for(const t of n[m[2]==='#'?'tags':'people'])cnt.set(t,(cnt.get(t)||0)+1);
+  qac.items=[...cnt.keys()].filter(t=>t.toLowerCase().includes(typed)).sort((a,b)=>rank(b)-rank(a)||cnt.get(b)-cnt.get(a)||a.localeCompare(b));
+  if(!qac.items.length){qacClose();return}
+  Object.assign(qac,{sym:m[2],from:c-m[3].length-1,to:c,cur:0});
+  if(!qac.el){qac.el=document.createElement('div');qac.el.className='qac';document.body.append(qac.el)}
+  const r=inp.getBoundingClientRect();qac.el.style.left=r.left+'px';qac.el.style.top=r.bottom+2+'px';qacDraw()}
+function qacDraw(){qac.el.innerHTML=qac.items.map((t,i)=>`<div class="ci${i===qac.cur?' on':''}" data-qac="${i}">${esc(qac.sym+t)}</div>`).join('');qac.el.children[qac.cur]?.scrollIntoView({block:'nearest'})}
+function qacPick(inp,i){const v=inp.value,ins=qac.sym+qac.items[i]+' ',rest=v.slice(qac.to).replace(/^\S*\s?/,'');
+  inp.value=v.slice(0,qac.from)+ins+rest;const p=qac.from+ins.length;inp.setSelectionRange(p,p);qacClose()}
+$('#quick').addEventListener('input',e=>qacOpen(e.target));
+$('#quick').addEventListener('blur',qacClose);
+$('#quick').addEventListener('keydown',e=>{if(!qac.el)return;const k=e.key;
+  if(k==='ArrowDown'||k==='ArrowUp'){qac.cur=(qac.cur+(k==='ArrowDown'?1:-1)+qac.items.length)%qac.items.length;qacDraw()}
+  else if(k==='Enter'||k==='Tab')qacPick(e.target,qac.cur);
+  else if(k==='Escape')qacClose();
+  else{if(k==='ArrowLeft'||k==='ArrowRight'||k==='Home'||k==='End')qacClose();return}
+  e.preventDefault();e.stopImmediatePropagation()});
+document.addEventListener('mousedown',e=>{const it=e.target.closest?.('[data-qac]');if(it){e.preventDefault();qacPick($('#quick'),+it.dataset.qac)}},true);
 $('#quick').addEventListener('keydown',e=>{const H=S.prefs.quickHist||(S.prefs.quickHist=[]);
   if(e.key==='ArrowUp'||e.key==='ArrowDown'){if(!H.length)return;e.preventDefault();
     if(e.key==='ArrowUp'){if(qh===-1)qDraft=e.target.value;if(qh<H.length-1)qh++}else if(qh>-1)qh--;
