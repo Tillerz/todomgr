@@ -208,6 +208,10 @@ input[type=range]{width:100%;padding:0;accent-color:var(--accent);border:0;backg
 .dropzone.drop-hot,#detail.drop-hot .dropzone{border-color:var(--accent);color:var(--accent);background:var(--sel)}
 textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .md{padding:8px 10px;border:1px solid var(--line);border-radius:6px;min-height:60px}
+.notesbox.max{position:fixed;inset:5vh 6vw;z-index:45;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 16px 16px;box-shadow:0 0 0 100vmax rgba(10,14,25,.45)}
+.notesbox.max textarea,.notesbox.max .md{flex:1;min-height:0;overflow:auto;resize:none}
+.maxhint{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;font-size:12px}
+.copyid{cursor:pointer}
 .md p,.md ul,.md ol,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md pre,.md table,.md blockquote,.md .alert{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
 .md h4{font-size:1em;text-transform:none;letter-spacing:normal;color:inherit;display:block}/* not the panel's section label style */
 .md ul,.md ol{padding-left:1.5em}.md li:has(>input[type=checkbox]){list-style:none}.md pre{background:var(--hover);padding:6px 8px;border-radius:6px;overflow-x:auto}.md pre code{padding:0}.md img{max-width:100%}
@@ -717,14 +721,14 @@ function renderDetail(){
   document.body.dataset.panel=ui.panel?'1':'0';
   el.classList.toggle('open',ui.panel);
   if(!n||n.trashed){el.innerHTML=`<div class="hd"><span class="sp"></span><button class="ib close-panel" data-act="closepanel">${ic('x')}</button></div><div class="empty">Select an item to see and edit its details.<br><br><small>Tip: double-click a name to rename it.<br>Drag URLs or files onto an item to attach them.</small></div>`;return}
-  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim()}// a newly opened entry: preview if it has notes, else edit
+  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim();ui.notesMax=false}// a newly opened entry: preview if it has notes, else edit
   const k=kids(n),tr=treeTime(n),own=n.time.reduce((a,t)=>a+t.secs,0);
   const depNames=S.nodes;
   const blocking=allNodes().filter(x=>x.deps.includes(n.id));
   const f=frac(n);
   let html=`
 <div class="hd"><div class="seg"><button data-act="kind" data-v="todo" class="${n.kind==='todo'?'on':''}" data-tip="Something to do">Todo</button><button data-act="kind" data-v="idea" class="${n.kind==='idea'?'on':''}" data-tip="An idea to explore — can be promoted to a todo">Idea</button><button data-act="kind" data-v="project" class="${n.kind==='project'?'on':''}" data-tip="A project groups todos and ideas; can have a world/project URL and a Discord webhook">Project</button><button data-act="kind" data-v="reminder" class="${n.kind==='reminder'?'on':''}" data-tip="Just a reminder: pops up before and at the set time. No status to manage; can repeat.">Reminder</button></div>
-<span class="sp"></span><span class="bd" data-tip="Item id (used by CLI/API)">${n.id}</span><button class="ib close-panel" data-act="closepanel" data-tip="Close sidebar (Esc)">${ic('x')}</button></div>
+<span class="sp"></span><span class="bd copyid" data-act="copyid" data-tip="Item id (used by CLI/API) — click to copy">${n.id}</span><button class="ib close-panel" data-act="closepanel" data-tip="Close sidebar (Esc)">${ic('x')}</button></div>
 <input data-f="name" value="${esc(n.name)}" placeholder="Name (required)" data-tip="Name — required">
 ${urlSec(n)}
 <h4>Status & priority</h4>
@@ -760,8 +764,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
-<h4>Notes <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview">${ui.mdPrev?'Edit':'Preview'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode (World Anvil): [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button></h4>
-${ui.mdPrev?`<div class="md">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}
+<div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview">${ui.mdPrev?'Edit':'Preview'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode (World Anvil): [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax?'<span class="maxhint">Alt+Enter or Esc to close</span>':''}</h4>
+${ui.mdPrev?`<div class="md">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
@@ -839,6 +843,8 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   const m=(fn)=>mutate(()=>{fn();touch(n)},{panel:true});
   switch(a){
     case'closepanel':ui.panel=false;renderDetail();break;
+    case'copyid':copyText(n.id);break;
+    case'notesmax':ui.notesMax=!ui.notesMax;renderDetail();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
     case'prio':m(()=>n.prio=+v);break;case'color':m(()=>n.color=v);break;
@@ -1030,8 +1036,8 @@ function openPalette(){
   inp.oninput=()=>{cur=0;draw()};
   inp.onkeydown=e=>{if(e.key==='ArrowDown'){cur=Math.min(items.length-1,cur+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){cur=Math.max(0,cur-1);draw();e.preventDefault()}else if(e.key==='Enter')run(cur)};
   ul.onclick=e=>{const li=e.target.closest('li');if(li)run(+li.dataset.i)};draw();inp.focus()}
-function showHelp(){const K=[['Ctrl+K','Command palette'],['/','Search'],['N','Quick add'],['↑ ↓','Move selection'],['← →','Collapse / expand'],['Enter','New sibling below'],['Insert','New sub-item'],['F2','Rename'],['Space','Toggle done'],
-  ['Tab / Shift+Tab','Indent / outdent'],['Alt+↑ / ↓','Reorder'],['Delete','Move to trash'],['Ctrl+Z / Ctrl+Shift+Z','Undo / redo'],['1 2 3','Tree / Today / Stats'],['T','Timer'],['Ctrl+click','Multi-select'],['Shift+click','Select a range'],['Esc','Clear filter / close']];
+function showHelp(){const K=[['Ctrl+K','Command palette'],['/','Search'],['N','Quick add'],['↑ ↓','Move selection'],['← →','Collapse / expand'],['Enter','New sibling below'],['Insert','New sub-item'],['F2 / Double-click','Rename'],['Space','Toggle done'],
+  ['Tab / Shift+Tab','Indent / outdent'],['Alt+↑ / ↓','Reorder'],['Delete','Move to trash'],['Ctrl+Z / Ctrl+Shift+Z','Undo / redo'],['1 2 3','Tree / Today / Stats'],['T','Timer'],['Ctrl+click','Multi-select'],['Shift+click','Select a range'],['Alt+Enter','Large notes editor'],['Esc','Clear filter / close']];
   openModal(`<h3 style="margin-top:0">Keyboard shortcuts</h3><div class="keys">${K.map(([k,d])=>`<span>${k.split(' / ').map(x=>`<kbd>${x}</kbd>`).join(' ')}</span><span>${d}</span>`).join('')}</div>
   <h3>Good to know</h3><ul style="color:var(--muted);padding-left:18px"><li>Drag the ⋮⋮ handle to move items; drop onto the dashed area under an item to nest.</li><li>Drop URLs, mails or files onto an item to attach them.</li><li>Right-click an entry (long-press on touch, Shift+F10, or the ⋯ button) for more actions.</li><li>Everything is saved automatically on the server (data/database.json) — the CLI and AI tools see the same data.</li></ul>`)}
 function showTrash(){const T=Object.values(S.nodes).filter(n=>n.trashed).sort((a,b)=>b.trashed-a.trashed);
@@ -1220,13 +1226,15 @@ $('#tree').addEventListener('click',e=>{
   if(e.target.closest('.add')){ui.sel=id;newAndRename(id);return}
   if(e.target.closest('input.rename'))return;
   if(!e.target.closest('.row'))return;
+  // a double-click is detected here: the first click redraws the tree, so a "dblclick" event can miss the new row
+  const dbl=!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&ui.lastClick?.id===id&&now()-ui.lastClick.t<450;
+  ui.lastClick=dbl?null:{id,t:now()};if(dbl){ui.sel=id;rename(id);return}
   if(e.ctrlKey||e.metaKey){ui.multi.has(id)?ui.multi.delete(id):ui.multi.add(id);renderTree();return}
   if(e.shiftKey&&ui.sel&&ui.sel!==id){// range from the current row to the clicked one, visible rows only
     const ids=$$('#tree .node').map(li=>li.dataset.id),a=ids.indexOf(ui.sel),b=ids.indexOf(id);
     if(a>=0&&b>=0){ui.multi=new Set(ids.slice(Math.min(a,b),Math.max(a,b)+1));renderTree();return}}
   ui.multi.clear();ui.sel=id;ui.panel=true;renderTree();renderDetail()});
 $('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
-$('#tree').addEventListener('dblclick',e=>{const nm=e.target.closest('.name');if(nm){const id=nm.closest('.node').dataset.id;ui.sel=id;rename(id)}});
 $('#detail').addEventListener('change',onDetailChange);
 // leaving the Ends fields with an end before the start brings the saved end back
 $('#detail').addEventListener('focusout',e=>{const f=e.target.dataset?.f||'',n=S.nodes[ui.sel];
@@ -1310,7 +1318,8 @@ document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();co
 document.addEventListener('keydown',e=>{
   const inField=e.target.closest('input,textarea,select,[contenteditable]'),ctrl=e.ctrlKey||e.metaKey;
   if(ctrl&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();return}
-  if(e.key==='Escape'){if(modalKind&&modalKind!=='alarm'){closeModal();return}if(inField){e.target.blur();return}if(ui.q||ui.multi.size){ui.multi.clear();setQuery('');return}if(ui.panel){ui.panel=false;renderDetail()}return}
+  if(e.key==='Enter'&&e.altKey&&!modalKind&&ui.panel&&S.nodes[ui.sel]){e.preventDefault();e.target.blur?.();ui.notesMax=!ui.notesMax;renderDetail();if(ui.notesMax&&!ui.mdPrev)$('.notesbox textarea')?.focus();return}
+  if(e.key==='Escape'){if(modalKind&&modalKind!=='alarm'){closeModal();return}if(ui.notesMax){e.target.blur?.();ui.notesMax=false;renderDetail();return}if(inField){e.target.blur();return}if(ui.q||ui.multi.size){ui.multi.clear();setQuery('');return}if(ui.panel){ui.panel=false;renderDetail()}return}
   if(inField)return;
   if(ctrl&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
   if(ctrl&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return}

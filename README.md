@@ -77,6 +77,9 @@ Click **Preview** above the notes to see the result. HTML in notes is shown as p
 `http`, `https` and `mailto` links become links, so a note added through the API or MCP can never run
 code in your browser.
 
+For long notes, click **Expand** (or press **Alt+Enter**) to edit them in a large window. **Esc** brings
+them back to the sidebar.
+
 ### The tree
 
 - Nested entries of any depth, **drag and drop** to reorder or re-parent (SortableJS). Rows keep their
