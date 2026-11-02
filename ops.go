@@ -58,7 +58,7 @@ func normURL(v string) string {
 	return ""
 }
 
-var fieldOrder = []string{"kind", "name", "color", "prio", "tags", "people", "location", "deadline", "reminder",
+var fieldOrder = []string{"kind", "name", "color", "prio", "tags", "people", "location", "deadline", "reminder", "end",
 	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "est", "lead", "discord", "collapsed", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
@@ -160,6 +160,17 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be text")
 		}
 		n[k] = s
+	case "end": // the end of an event: not before its start; a date-only end lasts to the end of that day
+		s, ok := v.(string)
+		if !ok || !validWhen(s, t.loc) {
+			return errors.New("must be empty, YYYY-MM-DD or YYYY-MM-DDTHH:MM")
+		}
+		if start, ok := parseWhen(n.S("reminder"), t.loc); ok && s != "" {
+			if e, _ := endAt(s, t.loc); e.Before(start) {
+				return errors.New("the end must not be before the start")
+			}
+		}
+		n["end"] = s
 	case "notesFormat":
 		s, _ := v.(string)
 		if s != "markdown" && s != "bbcode" {
@@ -171,8 +182,10 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		if !ok || !validWhen(s, t.loc) {
 			return errors.New("must be empty, YYYY-MM-DD or YYYY-MM-DDTHH:MM")
 		}
+		old := n.S(k)
 		n[k] = s
-		if k == "reminder" { // a new time re-arms the reminder
+		if k == "reminder" { // a new time re-arms the reminder, and an event keeps its length
+			shiftEnd(n, old, s)
 			delete(n, "alert")
 			delete(n, "snoozeUntil")
 			delete(n, "remDone")
@@ -262,10 +275,11 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		n["prog"] = out
 	case "recur":
 		s, _ := v.(string)
-		if s != "" && s != "d" && s != "w" && s != "m" && s != "y" {
-			return errors.New("must be empty, d, w, m or y")
+		r, ok := normRecur(s)
+		if !ok {
+			return errors.New("must be empty, d/w/m/y, every N (2w, 3d, 6m) or monthly on weekdays (m:1fr,3fr,-1fr)")
 		}
-		n["recur"] = s
+		n["recur"] = r
 	case "est", "lead":
 		x := num(v)
 		if x < 0 {
@@ -622,8 +636,7 @@ func parseQuick(text string, now time.Time) (string, map[string]any) {
 				keep = true
 			}
 		case "repeat:":
-			r := map[string]string{"d": "d", "daily": "d", "w": "w", "weekly": "w", "m": "m", "monthly": "m", "y": "y", "yearly": "y"}[strings.ToLower(v)]
-			if r != "" {
+			if r, ok := normRecur(v); ok && r != "" {
 				f["recur"] = r
 			} else {
 				keep = true

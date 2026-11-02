@@ -79,6 +79,9 @@ func (s *Store) snapshotFileLocked(kind string, data []byte) (string, error) {
 func (s *Store) BackupNow() (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closedLocked() {
+		return "", errClosed
+	}
 	if s.last == nil {
 		return "", errors.New("nothing to back up yet")
 	}
@@ -102,7 +105,9 @@ func (s *Store) snapshotLoop() {
 			return
 		case <-t.C:
 			s.mu.Lock()
-			s.afterSaveLocked()
+			if !s.closedLocked() {
+				s.afterSaveLocked()
+			}
 			s.mu.Unlock()
 		}
 	}

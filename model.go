@@ -94,7 +94,7 @@ func defaultNode(id, name string) Node {
 	t := nowMs()
 	return Node{
 		"id": id, "name": name, "kind": "todo", "status": "open", "color": "", "prio": 0.0,
-		"tags": []any{}, "people": []any{}, "location": "", "deadline": "", "reminder": "",
+		"tags": []any{}, "people": []any{}, "location": "", "deadline": "", "reminder": "", "end": "",
 		"deps": []any{}, "notes": "", "notesFormat": "markdown", "links": []any{},
 		"prog":  map[string]any{"mode": "percent", "done": 0.0, "total": 100.0, "unit": ""},
 		"recur": "", "est": 0.0, "time": []any{}, "url": "", "webhook": "", "collapsed": false,
@@ -349,28 +349,6 @@ func parseWhen(s string, loc *time.Location) (time.Time, bool) {
 	return t, err == nil
 }
 
-func nextOcc(s, r string, loc *time.Location) string {
-	layout := "2006-01-02"
-	if strings.Contains(s, "T") {
-		layout = "2006-01-02T15:04"
-	}
-	d, err := time.ParseInLocation(layout, s, loc)
-	if err != nil {
-		return s
-	}
-	switch r {
-	case "d":
-		d = d.AddDate(0, 0, 1)
-	case "w":
-		d = d.AddDate(0, 0, 7)
-	case "m":
-		d = d.AddDate(0, 1, 0)
-	default:
-		d = d.AddDate(1, 0, 0)
-	}
-	return d.Format(layout)
-}
-
 func startOfDay(t time.Time) time.Time {
 	y, m, d := t.Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
@@ -414,7 +392,7 @@ func (db *DB) view(n Node, now time.Time) map[string]any {
 		"prio": n["prio"], "parent": n["parent"], "path": db.path(n),
 		"progress": round2(db.frac(n)), "blocked": db.blocked(n), "children": len(n.Kids()),
 	}
-	for _, k := range []string{"deadline", "reminder", "url", "location", "color", "recur"} {
+	for _, k := range []string{"deadline", "reminder", "end", "url", "location", "color", "recur"} {
 		if s := n.S(k); s != "" {
 			v[k] = s
 		}

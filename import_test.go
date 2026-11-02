@@ -38,17 +38,19 @@ func TestImportICS(t *testing.T) {
 		"BEGIN:VEVENT\r\nUID:e3\r\nRECURRENCE-ID:" + past.Format("20060102") + "T100000\r\nSUMMARY:Weekly call (moved)\r\nDTSTART:" + past.Format("20060102") + "T110000\r\nEND:VEVENT\r\n" +
 		"BEGIN:VEVENT\r\nUID:e4\r\nSUMMARY:Cancelled\r\nSTATUS:CANCELLED\r\nDTSTART:" + next.Format("20060102") + "\r\nEND:VEVENT\r\n" +
 		"BEGIN:VEVENT\r\nUID:e5\r\nSUMMARY:Every 2 weeks\r\nDTSTART;VALUE=DATE:" + next.Format("20060102") + "\r\nRRULE:FREQ=WEEKLY;INTERVAL=2\r\nEND:VEVENT\r\n" +
+		"BEGIN:VEVENT\r\nUID:e6\r\nSUMMARY:Club night\r\nDTSTART:" + next.Format("20060102") + "T200000\r\nRRULE:FREQ=MONTHLY;BYDAY=1FR,3FR,-1FR\r\nEND:VEVENT\r\n" +
+		"BEGIN:VEVENT\r\nUID:e7\r\nSUMMARY:Five times\r\nDTSTART:" + next.Format("20060102") + "T080000\r\nRRULE:FREQ=DAILY;COUNT=5\r\nEND:VEVENT\r\n" +
 		"END:VCALENDAR\r\n"
 	res, err := st.ImportEntries("test", "", "cal.ics", []byte(ics))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res["added"] != 5 || res["skipped"] != 3 || !strings.HasPrefix(str(res["name"]), "Import: cal.ics, ") {
-		t.Fatalf("result %v, want 5 added, 3 skipped (old meeting, moved date, cancelled)", res)
+	if res["added"] != 7 || res["skipped"] != 3 || !strings.HasPrefix(str(res["name"]), "Import: cal.ics, ") {
+		t.Fatalf("result %v, want 7 added, 3 skipped (old meeting, moved date, cancelled)", res)
 	}
 	top := importedKids(t, st, str(res["id"]))
 	novel := top["Novel"]
-	if novel == nil || len(top) != 4 {
+	if novel == nil || len(top) != 6 {
 		t.Fatalf("top level %v", top)
 	}
 	if got := novel.S("deadline"); got != time.Date(2030, 12, 24, 13, 0, 0, 0, time.UTC).In(st.loc).Format("2006-01-02T15:04") {
@@ -74,7 +76,13 @@ func TestImportICS(t *testing.T) {
 	if w == nil || w.S("recur") != "w" || isPast(w.S("reminder"), st.loc, now) {
 		t.Errorf("repeating event must move to its next date: %v", w)
 	}
-	if e := top["Every 2 weeks"]; e == nil || !strings.Contains(e.S("notes"), "INTERVAL=2") {
+	if e := top["Every 2 weeks"]; e == nil || e.S("recur") != "2w" || e.S("notes") != "" {
+		t.Errorf("every 2 weeks: %v", e)
+	}
+	if e := top["Club night"]; e == nil || e.S("recur") != "m:1fr,3fr,-1fr" {
+		t.Errorf("monthly on weekdays: %v", e)
+	}
+	if e := top["Five times"]; e == nil || e.S("recur") != "d" || !strings.Contains(e.S("notes"), "COUNT=5") {
 		t.Errorf("a rule the app cannot repeat goes into the notes: %v", e)
 	}
 

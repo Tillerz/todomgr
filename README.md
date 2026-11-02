@@ -116,7 +116,7 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 | `!low` `!med` `!high` `!urgent` | priority |
 | `due:today` `due:tomorrow` `due:fri` `due:+3d` `due:2026-12-24` | deadline |
 | `at:19:00` | time of day |
-| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly` | recurrence |
+| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday) | recurrence |
 | `~30m` `~2h` | time estimate |
 | `?` at the start | an idea |
 | `r:` at the start | a reminder |
@@ -130,7 +130,10 @@ The up and down arrow keys step through your earlier entries, so you can edit an
 - Setting an entry to done fills its own bar.
 - **Dependencies:** an entry that depends on unfinished entries is shown as blocked. Dependency cycles are
   refused.
-- **Recurring** todos reopen with the next deadline instead of staying done.
+- **Recurring** todos reopen with the next deadline instead of staying done. Repeat daily, weekly,
+  monthly or yearly, **every N** days, weeks, months or years (every 2 weeks, every 4 weeks…), or
+  **monthly on certain weekdays** (the 1st, 3rd and 5th Friday; the last Sunday). Pick *Custom…* in the
+  Repeat field for the last two; a month without a 5th Friday is simply skipped.
 
 ### Reminders
 
@@ -140,6 +143,9 @@ no window is open.
 - A **reminder entry** has a date and time, and pops up *at the time*, plus (if you want) an early warning
   1 day / 2 h / 1 h / 30 / 15 / 10 / 5 minutes before. A recurring reminder then moves on to its next
   occurrence by itself; a one-off one stays in the tree as "passed".
+- **Events with an end:** give a reminder an optional *Ends* time, for a stream from 19:00 to 21:00 or a
+  convention over three days. The tree shows "Sat 19:00–21:00" or "5–7 Dec", Today lists the event on
+  every day it runs, and the pop-up stays at the start. Moving the start moves the end along.
 - A normal todo, idea or project can also have a **reminder time** and pops up once.
 - A pop-up offers *Open link*, *Snooze 10 min* and *Dismiss* (and *Show* for tasks). If the program was off or no
   window was open, the pop-up waits and appears as **Missed reminder** the next time you open the page.
@@ -189,7 +195,7 @@ Under ⋯ (and in the command palette) and in Settings → Data:
 | Export | For | Contents |
 |---|---|---|
 | **JSON** | backup and moving to another computer | everything, including the activity log; can be imported again |
-| **CSV** | Excel, LibreOffice, Google Sheets | one row per entry (including finished ones): id, parent id, path, name, type, status, priority, progress, deadline, reminder, repeat, tags, people, location, URL, estimate and tracked minutes, created / updated / closed time, notes. UTF-8 with a byte order mark, so umlauts open correctly; text that starts with `=`, `+`, `-` or `@` is prefixed with `'` so a spreadsheet never runs it as a formula. |
+| **CSV** | Excel, LibreOffice, Google Sheets | one row per entry (including finished ones): id, parent id, path, name, type, status, priority, progress, deadline, reminder, end, repeat, tags, people, location, URL, estimate and tracked minutes, created / updated / closed time, notes. UTF-8 with a byte order mark, so umlauts open correctly; text that starts with `=`, `+`, `-` or `@` is prefixed with `'` so a spreadsheet never runs it as a formula. |
 | **Calendar (.ics)** | Outlook, Google / Apple Calendar, Thunderbird, task apps | open entries that have a date: **reminders** become events (with their repeat rule and alarms: early warning and at the time); todos, ideas and projects with a deadline or reminder time become **tasks** (due date, status, priority, tags, notes, link, alarm). Times are "floating", so a calendar shows the same clock time as the app. |
 | **Markdown outline** | notes, wikis | the tree as a nested checklist |
 
@@ -209,7 +215,7 @@ file twice gives the entries twice.
 
 - **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos**
   (title, description, due date, status, priority, categories as tags, location, link, repeat, progress,
-  alarm), events become **reminders** (start time, repeat, the alarm as early warning). Sub-tasks stay
+  alarm), events become **reminders** (start and end time, repeat, the alarm as early warning). Sub-tasks stay
   sub-entries. Times in UTC or another time zone are converted to local time. **Past one-time events are
   skipped**; repeating events start at their next date. A past alarm of a task goes into its notes instead
   of popping up.
@@ -217,7 +223,7 @@ file twice gives the entries twice.
   work too: the columns are found by name (`name`/`title`/`task`, `notes`/`description`, `due`/`deadline`,
   `tags`/`labels`, `priority`, `status`, `assignee`, …). Commas, semicolons and tabs work, and so do
   Excel files saved in the Windows encoding. Dates such as `2026-11-05` or `05.11.2026` are read.
-- Anything that has no field here (an unknown date format, a repeat rule such as "every 2nd week") is
+- Anything that has no field here (an unknown date format, a repeat rule such as "only 5 times") is
   written into the notes, so nothing is lost silently.
 
 ### Look and feel
@@ -393,10 +399,11 @@ Requests whose `Host` or `Origin` is not local are refused.
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |
 
 Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` (`#rrggbb`), `prio` (0–4),
-`tags`, `people`, `location`, `deadline` and `reminder` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`), `deps`, `notes`,
+`tags`, `people`, `location`, `deadline`, `reminder` and `end` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`; `end` is the
+end of an event, not before its start), `deps`, `notes`,
 `notesFormat` (`markdown` or `bbcode`),
 `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog`
-(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`), `est` (minutes), `lead` (minutes
+(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last), `est` (minutes), `lead` (minutes
 of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
 
 ## Licence

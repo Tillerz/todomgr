@@ -1,5 +1,6 @@
-// Notes preview tests: runs the md() and bb() code from web/index.html (with the embedded marked) and
-// checks that Markdown and BBCode render and that HTML, script links and attribute tricks stay harmless.
+// Page tests: runs the md() and bb() code from web/index.html (with the embedded marked) and checks that
+// Markdown and BBCode render and that HTML, script links and attribute tricks stay harmless. Also checks
+// the page's repeat rules (nextOcc, recurText) against testdata/recur_cases.json, shared with recur_test.go.
 // Usage: node notes_test.js  (prints "PASS name" / "FAIL name: why" per case, exit code 1 on failure)
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -85,4 +86,28 @@ for (const [fn, list] of [[md, cases], [bb, bbCases]]) for (const [name, src, wa
     .concat(never.filter(n => out.includes(n)).map(n => 'contains ' + JSON.stringify(n))).join(', ');
   if (why) { failed++; console.log(`FAIL ${name}: ${why} in ${JSON.stringify(out)}`); } else console.log('PASS ' + name);
 }
+// repeat rules: the page must compute the same next dates as the server
+const rc = new Function(cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('function pd(s)', '}\n') +
+  cut('const RECUR=', '[1]}`}\n') + cut('// next date of a repeating entry', '\n  return out(d)}') + 'return {nextOcc, recurText, normRecur};')();
+const check = (name, bad) => { if (bad.length) { failed++; console.log(`FAIL ${name}: ${bad.join('; ')}`); } else console.log('PASS ' + name); };
+const rcCases = JSON.parse(fs.readFileSync(path.join(__dirname, 'testdata', 'recur_cases.json'), 'utf8')).cases;
+check(`repeat: next dates (${rcCases.length} cases shared with Go)`, rcCases.filter(([d, r, want]) => rc.nextOcc(d, r) !== (want || d))
+  .map(([d, r, want]) => `nextOcc(${d}, ${r}) = ${rc.nextOcc(d, r)}, want ${want || d}`));
+check('repeat: labels', [['w', 'weekly'], ['2w', 'every 2 weeks'], ['3d', 'every 3 days'], ['m:1fr,3fr,5fr', 'monthly on the 1st, 3rd and 5th Friday'],
+  ['m:-1fr', 'monthly on the last Friday'], ['m:1mo,-1su', 'monthly on the 1st Monday and last Sunday'], ['x', '']]
+  .filter(([r, want]) => rc.recurText(r) !== want).map(([r, want]) => `recurText(${r}) = ${rc.recurText(r)}, want ${want}`));
+check('repeat: input', [['weekly', 'w'], [' 2W ', '2w'], ['1w', 'w'], ['m:1FR', 'm:1fr'], ['biweekly', null], ['m:6fr', null], ['0d', null]]
+  .filter(([v, want]) => rc.normRecur(v) !== want).map(([v, want]) => `normRecur(${v}) = ${rc.normRecur(v)}, want ${want}`));
+
+// events with an end: range text and moving the end with the start
+const ev = new Function(cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('function pd(s)', '}\n') + cut('const startOfToday=', ';\n') +
+  cut('const MON=', ';\n') + cut('function fmtWhen(s)', '\n}') + cut('// "Sat 19:00–21:00"', 'fmtWhen(e)}') + cut('// moves the end of an event', "'')}") +
+  'return {whenRange, shiftEnd};')();
+check('events: range text', [[{reminder: '2030-12-05T19:00', end: '2030-12-05T21:00'}, '5 Dec 2030 19:00–21:00'], [{reminder: '2030-12-05', end: '2030-12-07'}, '5–7 Dec 2030'],
+  [{reminder: '2030-12-30', end: '2031-01-02'}, '30 Dec 2030 – 2 Jan 2031'], [{reminder: '2030-12-05T19:00', end: ''}, '5 Dec 2030 19:00']]
+  .filter(([n, want]) => ev.whenRange(n) !== want).map(([n, want]) => `whenRange(${n.reminder}, ${n.end}) = ${ev.whenRange(n)}, want ${want}`));
+check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:00', '2030-12-05T21:00', '2030-12-12T21:00'], ['2030-12-05', '2030-12-06', '2030-12-07', '2030-12-08'],
+  ['2027-03-27T19:00', '2027-04-03T19:00', '2027-03-27T21:00', '2027-04-03T21:00'], ['2030-12-05T19:00', '', '2030-12-05T21:00', '2030-12-05T21:00']]
+  .map(([a, b, e, want]) => { const n = {end: e}; ev.shiftEnd(n, a, b); return n.end === want ? '' : `shiftEnd(${a} → ${b}) end ${n.end}, want ${want}`; }).filter(Boolean));
+
 process.exit(failed ? 1 : 0);

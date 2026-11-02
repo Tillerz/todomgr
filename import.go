@@ -172,14 +172,6 @@ func isPast(when string, loc *time.Location, now time.Time) bool {
 	return t.Before(now)
 }
 
-// nextFuture moves a repeating date forward to its first occurrence that is not past.
-func nextFuture(when, recur string, loc *time.Location, now time.Time) string {
-	for i := 0; i < 100000 && isPast(when, loc, now); i++ {
-		when = nextOcc(when, recur, loc)
-	}
-	return when
-}
-
 // ---------------------------------------------------------------- ICS
 
 type icsProp struct {
@@ -348,8 +340,9 @@ func icsDur(v string) (time.Duration, bool) {
 	return d, true
 }
 
-// icsRule maps a repeat rule to d/w/m/y. exact is false when the rule has parts the
-// app cannot repeat (every 2nd week, several weekdays, a count…); until is zero if open.
+// icsRule maps a calendar repeat rule to a rule of the app (see recur.go). exact is false
+// when it has parts the app cannot repeat (a count, several weekdays a week…); until is
+// zero if the rule is open-ended.
 func icsRule(v string, loc *time.Location) (recur string, exact bool, until time.Time) {
 	parts := map[string]string{}
 	for _, kv := range strings.Split(v, ";") {
@@ -357,11 +350,14 @@ func icsRule(v string, loc *time.Location) (recur string, exact bool, until time
 			parts[strings.ToUpper(strings.TrimSpace(k))] = strings.TrimSpace(x)
 		}
 	}
-	recur = map[string]string{"DAILY": "d", "WEEKLY": "w", "MONTHLY": "m", "YEARLY": "y"}[strings.ToUpper(parts["FREQ"])]
-	exact = recur != ""
+	freq := map[string]string{"DAILY": "d", "WEEKLY": "w", "MONTHLY": "m", "YEARLY": "y"}[strings.ToUpper(parts["FREQ"])]
+	if freq == "" {
+		return "", false, until
+	}
+	exact = true
 	for k, x := range parts {
 		switch k {
-		case "FREQ", "WKST":
+		case "FREQ", "WKST", "INTERVAL", "BYDAY":
 		case "UNTIL":
 			if t, dateOnly, ok := icsTime(&icsProp{params: map[string]string{}, value: x}, loc); ok {
 				if dateOnly {
@@ -369,14 +365,27 @@ func icsRule(v string, loc *time.Location) (recur string, exact bool, until time
 				}
 				until = t
 			}
-		case "INTERVAL":
-			if x != "1" {
-				exact = false
-			}
-		case "BYDAY": // weekly on one day is the day of the start date
-			if recur != "w" || strings.Contains(x, ",") {
-				exact = false
-			}
+		default:
+			exact = false
+		}
+	}
+	n := 1
+	if x := parts["INTERVAL"]; x != "" {
+		if i, err := strconv.Atoi(x); err == nil && i >= 1 && i <= 999 {
+			n = i
+		} else {
+			exact = false
+		}
+	}
+	recur = freq
+	if n > 1 {
+		recur = strconv.Itoa(n) + freq
+	}
+	if by := strings.ReplaceAll(strings.ToLower(parts["BYDAY"]), "+", ""); by != "" {
+		switch {
+		case freq == "m" && n == 1 && reRecur.MatchString("m:"+by): // 1FR,3FR,-1FR
+			recur = "m:" + by
+		case freq == "w" && !strings.Contains(by, ","): // weekly on one day is the day of the start date
 		default:
 			exact = false
 		}
@@ -452,27 +461,53 @@ func icsEvent(c *icsComp, loc *time.Location, now time.Time) (*impItem, bool) {
 	}
 	it := icsCommon(c)
 	it.f["kind"] = "reminder"
-	when := whenStr(start, dateOnly)
+	when, end := whenStr(start, dateOnly), ""
+	// the end: DTEND (for all-day events the day after the last day) or DURATION
+	if p := c.get("DTEND"); p != nil {
+		if t, d, ok := icsTime(p, loc); ok {
+			if d {
+				t = t.AddDate(0, 0, -1)
+			}
+			end = whenStr(t, d)
+		}
+	} else if d, ok := icsDur(c.text("DURATION")); ok && d > 0 {
+		if dateOnly {
+			end = whenStr(start.Add(d).AddDate(0, 0, -1), true)
+		} else {
+			end = whenStr(start.Add(d), false)
+		}
+	}
+	if end == when { // a one-day all-day event
+		end = ""
+	}
+	over := func() bool { // the event (or this occurrence) has ended
+		if end != "" {
+			return isPast(end, loc, now)
+		}
+		return isPast(when, loc, now)
+	}
 	if r := c.get("RRULE"); r != nil {
 		recur, exact, until := icsRule(r.value, loc)
-		if !until.IsZero() && until.Before(now) || recur == "" && isPast(when, loc, now) {
+		if !until.IsZero() && until.Before(now) || recur == "" && over() {
 			return nil, false
 		}
 		if recur != "" {
 			it.f["recur"] = recur
-			when = nextFuture(when, recur, loc, now)
+			for i := 0; i < 100000 && over(); i++ { // move on to the first occurrence that has not ended
+				next, ev := nextOcc(when, recur, loc), Node{"end": end}
+				shiftEnd(ev, when, next)
+				when, end = next, ev.S("end")
+			}
 		}
 		if !exact {
 			it.note("Repeat rule from the calendar: %s", r.value)
 		}
-	} else if isPast(when, loc, now) {
+	} else if over() {
 		return nil, false
 	}
 	it.f["reminder"] = when
-	if p := c.get("DTEND"); p != nil {
-		if t, d, ok := icsTime(p, loc); ok && !d {
-			it.note("Ends: %s", whenStr(t, false))
-		}
+	if end != "" {
+		it.f["end"] = end
 	}
 	lead := 0.0 // no alarm in the calendar: no early warning either
 	for _, a := range c.subs {
@@ -590,7 +625,8 @@ func parseICSImport(data []byte, loc *time.Location, now time.Time) (impResult, 
 var csvAliases = map[string][]string{
 	"name":     {"name", "title", "task", "task_name", "summary", "subject", "content", "todo", "item"},
 	"notes":    {"notes", "note", "description", "details", "comment", "comments", "body"},
-	"deadline": {"deadline", "due", "due_date", "duedate", "date", "end", "end_date"},
+	"deadline": {"deadline", "due", "due_date", "duedate", "date"},
+	"end":      {"end", "end_date", "ends", "end_time"},
 	"reminder": {"reminder", "remind", "reminder_date", "alarm"},
 	"tags":     {"tags", "tag", "labels", "label", "categories", "category"},
 	"people":   {"people", "person", "assignee", "assignees", "assigned_to", "owner", "responsible"},
@@ -784,8 +820,7 @@ func parseCSVImport(data []byte, loc *time.Location, now time.Time) (impResult, 
 			}
 		}
 		if v := get("repeat"); v != "" {
-			rc := map[string]string{"d": "d", "daily": "d", "w": "w", "weekly": "w", "m": "m", "monthly": "m", "y": "y", "yearly": "y"}[strings.ToLower(v)]
-			if rc != "" {
+			if rc, ok := normRecur(v); ok && rc != "" {
 				it.f["recur"] = rc
 			} else {
 				it.note("Repeat: %s", v)
@@ -808,22 +843,52 @@ func parseCSVImport(data []byte, loc *time.Location, now time.Time) (impResult, 
 				it.note("Due: %s", v)
 			}
 		}
+		end := get("end")
+		if v := end; v != "" && kind != "reminder" && get("deadline") == "" { // other tools: "end date" of a task
+			if w, ok := csvWhen(v, loc); ok {
+				it.f["deadline"] = w
+			} else {
+				it.note("End: %s", v)
+			}
+			end = ""
+		}
 		if v := get("reminder"); v != "" {
 			w, ok := csvWhen(v, loc)
 			rc, _ := it.f["recur"].(string)
 			switch {
 			case !ok:
 				it.note("Reminder: %s", v)
-			case kind == "reminder" && isPast(w, loc, now) && rc == "":
-				r.skipped++ // a past one-time reminder
-				continue
 			case kind == "reminder":
-				it.f["reminder"] = nextFuture(w, rc, loc, now)
+				e, eok := csvWhen(end, loc)
+				last := w
+				if eok {
+					last = e
+				}
+				if isPast(last, loc, now) && rc == "" {
+					r.skipped++ // a past one-time event
+					continue
+				}
+				for i := 0; i < 100000 && isPast(last, loc, now); i++ { // first occurrence that has not ended
+					next, ev := nextOcc(w, rc, loc), Node{"end": e}
+					shiftEnd(ev, w, next)
+					w, e = next, ev.S("end")
+					last = w
+					if eok {
+						last = e
+					}
+				}
+				it.f["reminder"] = w
+				if eok {
+					it.f["end"] = e
+				}
 			case isPast(w, loc, now):
 				it.note("Reminder: %s", w)
 			default:
 				it.f["reminder"] = w
 			}
+		}
+		if _, used := it.f["end"]; end != "" && !used {
+			it.note("End: %s", end)
 		}
 		if d, ok := csvNum(get("done")); ok {
 			t, _ := csvNum(get("total"))

@@ -32,6 +32,32 @@ func remindAt(rem string, loc *time.Location) (time.Time, bool) {
 	return t, ok
 }
 
+// endAt is when an event ends; a date-only end lasts to the end of that day.
+func endAt(end string, loc *time.Location) (time.Time, bool) {
+	t, ok := parseWhen(end, loc)
+	if ok && !strings.Contains(end, "T") {
+		t = t.AddDate(0, 0, 1)
+	}
+	return t, ok
+}
+
+// shiftEnd moves the end of an event by as much as its start moved (in wall-clock
+// time, so a move across a daylight saving change keeps the clock times).
+func shiftEnd(n Node, oldStart, newStart string) {
+	end := n.S("end")
+	a, ok1 := parseWhen(oldStart, time.UTC)
+	b, ok2 := parseWhen(newStart, time.UTC)
+	e, ok3 := parseWhen(end, time.UTC)
+	if end == "" || !ok1 || !ok2 || !ok3 || a.Equal(b) {
+		return
+	}
+	layout := "2006-01-02"
+	if strings.Contains(end, "T") {
+		layout = "2006-01-02T15:04"
+	}
+	n["end"] = e.Add(b.Sub(a)).Format(layout)
+}
+
 func setAlert(n Node, when string, at float64) {
 	n["alert"] = map[string]any{"when": when, "at": at}
 }
@@ -84,7 +110,9 @@ func stepReminder(n Node, now time.Time, loc *time.Location) (changed, announce 
 				if !ok || float64(nt.UnixMilli()) > t {
 					break
 				}
-				n["reminder"] = nextOcc(n.S("reminder"), r, loc)
+				next := nextOcc(n.S("reminder"), r, loc)
+				shiftEnd(n, n.S("reminder"), next)
+				n["reminder"] = next
 			}
 		}
 	}

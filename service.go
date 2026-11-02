@@ -355,7 +355,13 @@ func (s *Store) Today() map[string]any {
 		n := s.db.Nodes[id]
 		switch n.S("kind") {
 		case "reminder":
-			if d, ok := parseWhen(n.S("reminder"), s.loc); ok && !d.Before(startOfDay(now)) && d.Before(weekEnd) {
+			// an event shows on every day it runs: it starts before the week ends and has not ended yet
+			d, ok := parseWhen(n.S("reminder"), s.loc)
+			last := d
+			if e, ok := endAt(n.S("end"), s.loc); ok {
+				last = e.Add(-time.Minute)
+			}
+			if ok && !last.Before(startOfDay(now)) && d.Before(weekEnd) {
 				res["upcomingReminders"] = append(res["upcomingReminders"], s.db.view(n, now))
 			}
 			continue

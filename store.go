@@ -293,6 +293,9 @@ func (s *Store) reloadLocked() {
 func (s *Store) Mutate(actor, client string, fn func(tx *Tx) error) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closedLocked() {
+		return 0, errClosed
+	}
 	tx := &Tx{db: s.db, actor: actor, loc: s.loc, touched: map[string]bool{}}
 	err := fn(tx)
 	if err == nil {
@@ -315,6 +318,19 @@ func (s *Store) Mutate(actor, client string, fn func(tx *Tx) error) (int64, erro
 	s.hub.Publish("change", map[string]any{"rev": rev, "by": actor, "client": client, "ids": sortedKeys(tx.touched)})
 	s.afterSaveLocked()
 	return rev, nil
+}
+
+// errClosed: a change that waited for the lock while the store was closing is not saved
+// (the lock file is released and the activity file is closed by then).
+var errClosed = errors.New("the data store is closed")
+
+func (s *Store) closedLocked() bool {
+	select {
+	case <-s.done:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Store) Close() {
@@ -342,6 +358,9 @@ func (s *Store) Close() {
 func (s *Store) Replace(newDB *DB, act []map[string]any, replaceActivity bool, snapKind string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.closedLocked() {
+		return errClosed
+	}
 	if s.last != nil {
 		if _, err := s.snapshotFileLocked(snapKind, s.last); err != nil {
 			return fmt.Errorf("could not back up current data first: %w", err)

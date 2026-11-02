@@ -218,6 +218,8 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .md .bb-code{font-family:ui-monospace,Consolas,monospace;background:var(--hover);padding:6px 8px;border-radius:6px;margin:.3em 0}
 .md .bb-aloud{border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--sel);padding:6px 10px;border-radius:6px;margin:.3em 0;font-style:italic}
 .md .bb-by{font-size:.9em;margin-top:2px}.md details{margin:.3em 0;border:1px solid var(--line);border-radius:6px;padding:4px 8px}.md summary{cursor:pointer;color:var(--accent)}
+.rc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-top:6px}.rc .chk-row{margin:3px 0}.rcnth{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-left:22px}.rcnth .chk-row{margin:0}
+input.bad{border-color:var(--danger);outline-color:var(--danger)}
 .alert.note{--c:var(--accent)}.alert.tip{--c:var(--ok)}.alert.important{--c:#8a63d2}.alert.warning{--c:var(--warn)}.alert.caution{--c:var(--danger)}
 .hist{font-size:12px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
 
@@ -495,11 +497,21 @@ const REOPEN={todo:'open',idea:'raw',project:'active',reminder:'set'};
 const CLOSED=new Set(['done','cancelled','rejected','archived']);
 const PRIO=['None','Low','Medium','High','Urgent'];
 const COLORS=['#e5534b','#e8863a','#d9a520','#3fa56b','#2aa6a0','#4a7de0','#8a63d2','#d6578f','#7d8596'];
-const RECUR={'':'Does not repeat',d:'Daily',w:'Weekly',m:'Monthly',y:'Yearly'};
+const RECUR={'':'Does not repeat',d:'Daily',w:'Weekly','2w':'Every 2 weeks','4w':'Every 4 weeks',m:'Monthly',y:'Yearly'};
+// repeat rules, the same as recur.go: d w m y, every N (2w 3d 6m), monthly on weekdays (m:1fr,3fr,-1fr)
+const RE_RECUR=/^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))$/;
+const WDS=['su','mo','tu','we','th','fr','sa'],WDN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],NTH={1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th','-1':'last'};
+const UNIT={d:['day','days'],w:['week','weeks'],m:['month','months'],y:['year','years']};
+function normRecur(v){v=String(v||'').trim().toLowerCase();const w={daily:'d',weekly:'w',monthly:'m',yearly:'y','1d':'d','1w':'w','1m':'m','1y':'y'}[v];return w||(v===''||RE_RECUR.test(v)?v:null)}
+function recurText(r){const m=RE_RECUR.exec(r||'');if(!m)return'';
+  if(m[3]){const by={};m[3].split(',').forEach(x=>{const k=x.slice(-2);(by[k]=by[k]||[]).push(NTH[x.slice(0,-2)])});
+    const list=a=>a.length>1?a.slice(0,-1).join(', ')+' and '+a[a.length-1]:a[0];
+    return'monthly on the '+list(Object.entries(by).map(([k,a])=>list(a)+' '+WDN[WDS.indexOf(k)]))}
+  const n=+(m[1]||1);return n===1?{d:'daily',w:'weekly',m:'monthly',y:'yearly'}[m[2]]:`every ${n} ${UNIT[m[2]][1]}`}
 let S,ui={sel:null,multi:new Set(),view:'tree',q:'',hideDone:false,panel:false,metric:'closed',dragging:false};
 const blank=()=>({v:2,rev:0,nodes:{root:{id:'root',name:'root',children:[]}},activity:[],timer:null,prefs:{theme:null,views:[]}});
 function uid(){let i;do i=Math.random().toString(36).slice(2,8);while(S.nodes[i]);return i}
-function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,tags:[],people:[],location:'',deadline:'',reminder:'',deps:[],notes:'',notesFormat:'markdown',links:[],
+function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,tags:[],people:[],location:'',deadline:'',reminder:'',end:'',deps:[],notes:'',notesFormat:'markdown',links:[],
   prog:{mode:'percent',done:0,total:100,unit:''},recur:'',est:0,time:[],url:'',webhook:'',collapsed:false,created:t,updated:t,parent:null,children:[],hist:[{s:p.status||'open',at:t}],...p}}
 const isClosed=n=>CLOSED.has(n.status);
 const kids=n=>n.children.map(i=>S.nodes[i]).filter(c=>c&&c.status!=='cancelled'&&c.status!=='rejected'&&c.status!=='archived'&&c.kind!=='reminder');
@@ -562,11 +574,10 @@ function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClo
   else if(wasClosed&&n.status!=='cancelled')parentHint(n)}
 function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p))return;const k=kids(p);
   if(k.length&&k.every(c=>c.status==='done'))toast(`All sub-items of “${p.name}” are done`,{action:{label:'Mark parent done',fn:()=>mutate(()=>setStatus(p,'done'),{panel:true})},ms:7000})}
-function recurNext(n){const step=(s)=>{const d=pd(s);if(!d)return s;if(n.recur==='d')d.setDate(d.getDate()+1);else if(n.recur==='w')d.setDate(d.getDate()+7);else if(n.recur==='m')d.setMonth(d.getMonth()+1);else d.setFullYear(d.getFullYear()+1);
-    return dayKey(d)+(s.includes('T')?`T${pad(d.getHours())}:${pad(d.getMinutes())}`:'')};
+function recurNext(n){const step=s=>nextOcc(s,n.recur);
   n.status='open';n.hist.push({s:'open',at:now()});n.prog.done=0;n.remDone=false;
   if(n.deadline)n.deadline=step(n.deadline);if(n.reminder)n.reminder=step(n.reminder);
-  toast(`Repeats ${RECUR[n.recur].toLowerCase()} — next: ${n.deadline?fmtWhen(n.deadline):'reopened'}`)}
+  toast(`Repeats ${recurText(n.recur)} — next: ${n.deadline?fmtWhen(n.deadline):'reopened'}`)}
 function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));n.prog.done=v;log('progress',n.id);n.updated=now();
   if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
   else if(v>0&&v<c&&n.status==='open')setStatus(n,'progress');
@@ -600,7 +611,7 @@ function parseQuick(txt){const o={tags:[],people:[]};if(/^r:\s*/i.test(txt)){o.k
     else if(k==='~'){const mm=v.match(/^(\d+)(m|h)?$/);if(mm)o.est=+mm[1]*(mm[2]==='h'?60:1)}
     else if(k==='due:'){const w=parseWhen(v);if(w)o.deadline=w}
     else if(k==='at:'){if(/^\d{1,2}:\d{2}$/.test(v))o.time=v.padStart(5,'0')}
-    else if(k==='repeat:'){const r={d:'d',daily:'d',w:'w',weekly:'w',m:'m',monthly:'m',y:'y',yearly:'y'}[v.toLowerCase()];if(r)o.recur=r}else return m;return sp});
+    else if(k==='repeat:'){const r=normRecur(v);if(r)o.recur=r;else return m}else return m;return sp});
   if(o.kind==='reminder'){let d=o.deadline;const tm=o.time;delete o.deadline;delete o.time;
     if(!d&&!tm)o.reminder=defaultRemTime();else{if(!d){d=addDays(0);if(tm&&pd(d+'T'+tm)<=new Date())d=addDays(1)}o.reminder=tm?d+'T'+tm:d}}
   else if(o.time&&o.deadline){o.deadline+='T'+o.time;delete o.time}else delete o.time;
@@ -630,8 +641,8 @@ function badge(n){const b=[];  if(n.webhook)b.push(`<span class="bd" data-tip="D
   if(blocked(n))b.push(`<span class="bd lock" data-tip="Blocked: waiting for another item to be done first">${ic('lock',12)}</span>`);
   if(n.prio)b.push(`<span class="flag p${n.prio}" data-tip="Priority: ${PRIO[n.prio]}">${ic('flag',14)}</span>`);
   const ds=dueState(n);if(n.deadline)b.push(`<span class="bd ${ds==='over'?'over':ds==='today'?'today':''}" data-tip="Deadline: ${esc(fmtFull(pd(n.deadline)))}">${ic('clock',12)}${esc(fmtWhen(n.deadline))}</span>`);
-  if(n.kind==='reminder'&&n.reminder)b.push(`<span class="bd rem" data-tip="Reminder: ${esc(fmtFull(remAt(n)))}${+n.lead?' (pop-up '+n.lead+' min before and at the time)':' (pop-up at the time)'}">${ic('bell',12)}${esc(fmtWhen(n.reminder))}</span>`);
-  if(n.recur)b.push(`<span class="bd" data-tip="Repeats ${RECUR[n.recur].toLowerCase()}">${ic('repeat',12)}</span>`);
+  if(n.kind==='reminder'&&n.reminder)b.push(`<span class="bd rem" data-tip="Reminder: ${esc(fmtFull(remAt(n)))}${+n.lead?' (pop-up '+n.lead+' min before and at the time)':' (pop-up at the time)'}">${ic('bell',12)}${esc(whenRange(n))}</span>`);
+  if(n.recur)b.push(`<span class="bd" data-tip="Repeats ${esc(recurText(n.recur))}">${ic('repeat',12)}</span>`);
   n.tags.slice(0,2).forEach(t=>b.push(`<span class="bd tag" data-tag="${esc(t)}" data-tip="Filter by #${esc(t)}">#${esc(t)}</span>`));
   if(n.tags.length>2)b.push(`<span class="bd tag" data-tip="${esc(n.tags.slice(2).join(', '))}">+${n.tags.length-2}</span>`);
   if(n.people.length)b.push(`<span class="bd ppl" data-tip="In charge: ${esc(n.people.join(', '))}">${ic('user',12)}${esc(n.people[0])}${n.people.length>1?'+'+(n.people.length-1):''}</span>`);
@@ -645,7 +656,7 @@ function notesTip(n){const l=n.notes.trim().split('\n');
 // printable list: the entry and everything below it, through the browser print dialog (also "Save as PDF")
 function printList(id){const r=S.nodes[id];if(!r)return;
   const pdt=s=>{const d=pd(s);return d?`${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}${s.includes('T')?' '+pad(d.getHours())+':'+pad(d.getMinutes()):''}`:''};
-  const meta=n=>[n.kind==='reminder'?n.reminder&&'Reminder '+pdt(n.reminder):STAT[n.status],n.prio?PRIO[n.prio]:'',n.deadline&&'Due '+pdt(n.deadline),
+  const meta=n=>[n.kind==='reminder'?n.reminder&&'Reminder '+pdt(n.reminder)+(n.end?' – '+pdt(n.end):''):STAT[n.status],n.prio?PRIO[n.prio]:'',n.deadline&&'Due '+pdt(n.deadline),
     n.people.join(', '),n.tags.map(t=>'#'+t).join(' ')].filter(Boolean).map(esc).join(' · ');
   const info=n=>`<span class="pm">${meta(n)}</span>${n.notes&&n.notes.trim()?`<div class="pt">${esc(notesTip(n))}</div>`:''}`;
   const box=n=>n.kind==='reminder'?'◷':n.status==='done'?'☑':isClosed(n)?'☒':'☐';
@@ -661,7 +672,7 @@ function progHTML(n){const k=kids(n);let label,f;
   return`<span class="prog ${f>=1?'full':''}" data-tip="${k.length?'Sub-items done / total (bar = average progress)':'Progress'}"><span class="bar"><i style="width:${Math.round(f*100)}%"></i></span>${label}</span>`}
 function liHTML(n,vis,force){
   const open=!n.collapsed||force,kidsHtml=open?n.children.map(i=>S.nodes[i]).filter(c=>c&&(!vis||vis.has(c.id))).map(c=>liHTML(c,vis,force)).join(''):'';
-  const hasKids=n.children.length>0,cls=['row'];if(ui.sel===n.id)cls.push('sel');if(ui.multi.has(n.id))cls.push('multi');if(isClosed(n))cls.push('closed');if(blocked(n))cls.push('blocked');if(n.status==='later')cls.push('later');if(n.kind==='reminder'&&n.reminder&&!n.recur&&remAt(n)<=new Date())cls.push('passed');if(n.kind==='project')cls.push('proj');
+  const hasKids=n.children.some(c=>!vis||vis.has(c)),cls=['row'];if(ui.sel===n.id)cls.push('sel');if(ui.multi.has(n.id))cls.push('multi');if(isClosed(n))cls.push('closed');if(blocked(n))cls.push('blocked');if(n.status==='later')cls.push('later');if(n.kind==='reminder'&&n.reminder&&!n.recur&&(evEnd(n)||remAt(n))<=new Date())cls.push('passed');if(n.kind==='project')cls.push('proj');
   const tip=n.kind==='idea'?'Idea — click to cycle raw ⇄ exploring':isClosed(n)?'Click to reopen':n.kind==='project'?'Project — click to complete':'Click to mark done';
   return`<li class="node${n.color?' col':''}" data-id="${n.id}"${n.color?` style="--c:${n.color}"`:''}><div class="${cls.join(' ')}" style="${n.color?`--rc:${n.color}`:''}">
 <span class="grip" data-tip="Drag to move (or Alt+↑/↓, Tab / Shift+Tab)">${ic('grip')}</span>
@@ -671,12 +682,13 @@ ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to s
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
 function renderTree(){
-  const vis=visibleSet(),force=filtering(),root=S.nodes.root;
+  // a search opens every branch to show its matches; "Hide done" only hides, so collapsing still works
+  const vis=visibleSet(),force=!!ui.q.trim(),root=S.nodes.root;
   const html=root.children.map(i=>S.nodes[i]).filter(c=>c&&(!vis||vis.has(c.id))).map(c=>liHTML(c,vis,force)).join('');
   const el=$('#tree');sortables.forEach(s=>s.destroy());sortables=[];
-  el.innerHTML=`<ul class="children root" data-id="root" style="padding-left:0!important">${html}</ul>`+((!html)?`<div class="empty">${force?'Nothing matches this filter.':'Nothing here yet — type above to add your first item.'}</div>`:'');
+  el.innerHTML=`<ul class="children root" data-id="root" style="padding-left:0!important">${html}</ul>`+((!html)?`<div class="empty">${filtering()?'Nothing matches this filter.':'Nothing here yet — type above to add your first item.'}</div>`:'');
   $$('.children',el).forEach(ul=>sortables.push(new Sortable(ul,{group:'tree',animation:130,handle:'.grip',ghostClass:'ghost',chosenClass:'chosen',fallbackOnBody:true,swapThreshold:.65,emptyInsertThreshold:16,
-    delay:150,delayOnTouchOnly:true,touchStartThreshold:4,disabled:force,
+    delay:150,delayOnTouchOnly:true,touchStartThreshold:4,disabled:filtering(),
     onStart(){ui.dragging=true;document.body.classList.add('dragging')},
     onEnd(e){ui.dragging=false;document.body.classList.remove('dragging');
       if(e.from===e.to&&e.oldIndex===e.newIndex)return;
@@ -728,8 +740,8 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 `<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div>`}</div>`}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
-<div class="grid2" style="margin-top:8px"><label class="field"><span>Repeat</span><select data-f="recur" data-tip="When marked done, the item reopens with the next deadline">${Object.entries(RECUR).map(([v,l])=>`<option value="${v}" ${n.recur===v?'selected':''}>${l}</option>`).join('')}</select></label>
-<label class="field"><span>Estimate (minutes)</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>
+<div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
+<label class="field"><span>Estimate (minutes)</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}
 <h4>Tags</h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
 <h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
 <h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
@@ -795,17 +807,24 @@ function bb(s){if(!s)return'';const keep=[],put=h=>`\u0000${keep.push(h)-1}\u000
   block('quote',x=>{const[q,a]=split(x);return`<blockquote>${q.trim().replace(/\n/g,'<br>')}${a?`<div class="bb-by">— ${a}</div>`:''}</blockquote>`});
   block('spoiler',x=>{const[c,l]=split(x);return`<details class="bb-spoiler"><summary>${l||'Spoiler'}</summary>${c.trim().replace(/\n/g,'<br>')}</details>`});
   return s.replace(/\n/g,'<br>').replace(/\u0000(\d+)\u0000/g,(_,i)=>keep[i])}
-function setDT(n,key){const d=$(`[data-f=${key}-d]`).value,t=$(`[data-f=${key}-t]`).value;n[key]=d?(t?d+'T'+t:d):'';if(key==='reminder'){n.remDone=false;delete n.alert;delete n.snoozeUntil}}
+function setDT(n,key){const d=$(`[data-f=${key}-d]`).value,t=$(`[data-f=${key}-t]`).value,old=n[key];n[key]=d?(t?d+'T'+t:d):'';
+  if(key==='reminder'){shiftEnd(n,old,n.reminder);n.remDone=false;delete n.alert;delete n.snoozeUntil}}
+// the end typed into the Ends fields, and whether it is before the start
+function endInput(n){const d=$('[data-f=end-d]').value,t=$('[data-f=end-t]').value,end=d?(t?d+'T'+t:d):'';return{end,bad:!!(end&&n.reminder&&evEnd({end})<pd(n.reminder))}}
+function showEnd(n){const[d,t]=(n.end||'').split('T');$('[data-f=end-d]').value=d||'';$('[data-f=end-t]').value=t||'';$$('[data-f^=end-]').forEach(x=>x.classList.remove('bad'))}
 function addLinks(id,links){const n=S.nodes[id];if(!n||!links.length)return;mutate(()=>{links.forEach(l=>n.links.push({title:l.title,uri:l.uri}));touch(n)},{panel:id===ui.sel});toast(`Added ${links.length} link${links.length>1?'s':''} to “${n.name}”`)}
 function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!f||!n)return;const v=t.value;
+  if(/-d$/.test(f)&&v&&+v.slice(0,4)<1000)return;// a year that is still being typed (0002, 0020, 0202…)
   const m=(fn,panel)=>mutate(()=>{fn();touch(n)},{panel});
   switch(f){
     case'name':if(!v.trim()){t.value=n.name;return toast('A name is required')}m(()=>n.name=v.trim());break;
     case'status':mutate(()=>setStatus(n,v),{panel:true});break;
     case'notes':m(()=>n.notes=v);break;case'location':m(()=>n.location=v.trim(),true);break;
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
-    case'reminder-d':case'reminder-t':m(()=>setDT(n,'reminder'));break;
-    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'recur':m(()=>n.recur=v,n.kind==='reminder');break;case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
+    case'reminder-d':case'reminder-t':m(()=>setDT(n,'reminder'));if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
+    case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>n.end=x.end);break}
+    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>n.recur=v,true);break;
+    case'rc':{const r=recurFromEditor();if(r!==null)m(()=>n.recur=r,true);break}case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
     case'pct':mutate(()=>setProgress(n,v),{panel:true});break;
     case'pdone':mutate(()=>setProgress(n,v),{panel:true});break;
     case'ptotal':m(()=>{n.prog.total=Math.max(1,+v||1);if(n.prog.done>n.prog.total)n.prog.done=n.prog.total},true);break;
@@ -840,12 +859,12 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   }}
 
 /* ============================ today ============================ */
-function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span><span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(fmtWhen(n.reminder))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span><span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 function renderToday(){
   const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'),used=new Set();
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(trow).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
-  const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&remAt(n)>=startOfToday()&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
+  const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
   const html=sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
    +sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
@@ -917,10 +936,48 @@ function timerClick(e){const b=e.target.closest('[data-t]');if(!b)return;const a
   else if(a==='sw')startTimer(0,$('#ttask').value);else if(a==='stop')stopTimer(true);else if(a==='discard')stopTimer(false);
   else if(a==='plus5')extendTimer(5);else if(a==='plus15')extendTimer(15)}
 const remAt=n=>{const d=pd(n.reminder);if(d&&!n.reminder.includes('T'))d.setHours(9);return d};
+// end of an event (a date-only end lasts to the end of that day), or null
+const evEnd=n=>{const d=pd(n.end);if(d&&!n.end.includes('T'))d.setDate(d.getDate()+1);return d};
+// "Sat 19:00–21:00", "5–7 Dec" or "Sat 19:00 – Mon 10:00"
+function whenRange(n){const s=n.reminder,e=n.end,a=pd(s),b=pd(e);if(!a||!b)return fmtWhen(s);
+  if(dayKey(a)===dayKey(b))return e.includes('T')?fmtWhen(s)+'–'+pad(b.getHours())+':'+pad(b.getMinutes()):fmtWhen(s);
+  if(!s.includes('T')&&!e.includes('T')&&a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear())return`${a.getDate()}–${b.getDate()} ${MON[a.getMonth()]}${a.getFullYear()!==new Date().getFullYear()?' '+a.getFullYear():''}`;
+  return fmtWhen(s)+' – '+fmtWhen(e)}
+// moves the end of an event by as much as its start moved (same as shiftEnd in reminders.go)
+function shiftEnd(n,oldS,newS){const u=x=>{const d=pd(x);return d&&Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes())};
+  const a=u(oldS),b=u(newS),e=u(n.end);if(!n.end||!a||!b||!e||a===b)return;const x=new Date(e+(b-a));
+  n.end=`${x.getUTCFullYear()}-${pad(x.getUTCMonth()+1)}-${pad(x.getUTCDate())}`+(n.end.includes('T')?`T${pad(x.getUTCHours())}:${pad(x.getUTCMinutes())}`:'')}
 const LEADS=[[0,'At the time only'],[5,'5 minutes before'],[10,'10 minutes before'],[15,'15 minutes before'],[30,'30 minutes before'],[60,'1 hour before'],[120,'2 hours before'],[1440,'1 day before']];
 const defaultRemTime=()=>{const d=new Date();d.setHours(d.getHours()+1,0,0,0);return dayKey(d)+'T'+pad(d.getHours())+':00'};
-function nextOcc(s,r){const d=pd(s);if(!d)return s;if(r==='d')d.setDate(d.getDate()+1);else if(r==='w')d.setDate(d.getDate()+7);else if(r==='m')d.setMonth(d.getMonth()+1);else d.setFullYear(d.getFullYear()+1);
-  return dayKey(d)+(s.includes('T')?`T${pad(d.getHours())}:${pad(d.getMinutes())}`:'')}
+// next date of a repeating entry after s; an unknown rule keeps s (same as nextOcc in recur.go)
+// Repeat field of the detail panel: presets, or "Custom…" with every N … / monthly on the 1st, 3rd… weekday
+function recurHTML(n,tip){const r=n.recur||'',m=RE_RECUR.exec(r),custom=ui.rcEdit===n.id||!(r in RECUR);
+  const sel=`<label class="field"><span>Repeat</span><select data-f="recur" data-tip="${tip}">${Object.entries(RECUR).map(([v,l])=>`<option value="${v}" ${!custom&&r===v?'selected':''}>${l}</option>`).join('')}<option value="custom" ${custom?'selected':''}>Custom…</option></select></label>`;
+  return sel}
+function recurEditor(n){const r=n.recur||'',m=RE_RECUR.exec(r);if(ui.rcEdit!==n.id&&r in RECUR)return'';
+  const nth=m&&m[3]?m[3].split(','):[],wd=nth.length?nth[0].slice(-2):WDS[(pd(n.deadline||n.reminder)||new Date()).getDay()];
+  const ev=!nth.length,cnt=m&&!m[3]?+(m[1]||1):2,u=m&&!m[3]?m[2]:'w';
+  return`<div class="rc">
+<label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="n" ${ev?'checked':''}> Every <input type="number" data-f="rc" data-k="n" min="1" max="999" value="${cnt}" style="width:64px"> <select data-f="rc" data-k="u">${Object.entries(UNIT).map(([k,v])=>`<option value="${k}" ${u===k?'selected':''}>${v[1]}</option>`).join('')}</select></label>
+<label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="nth" ${ev?'':'checked'}> Monthly on the</label>
+<div class="rcnth">${Object.entries(NTH).sort((a,b)=>(+a[0]<0)-(+b[0]<0)||a[0]-b[0]).map(([k,l])=>`<label class="chk-row"><input type="checkbox" data-f="rc" data-k="nth" value="${k}" ${nth.some(x=>x.slice(0,-2)===k)?'checked':''}> ${l}</label>`).join('')}
+<select data-f="rc" data-k="wd">${WDS.map((k,i)=>[k,i]).slice(1).concat([['su',0]]).map(([k,i])=>`<option value="${k}" ${wd===k?'selected':''}>${WDN[i]}</option>`).join('')}</select></div>
+<div class="note">${r?'Repeats '+esc(recurText(r)):'Pick how it repeats'}</div></div>`}
+// the rule the custom repeat editor shows
+function recurFromEditor(){const box=$('.rc');if(!box)return'';
+  if(box.querySelector('input[type=radio][value=n]').checked){const k=Math.min(999,Math.max(1,Math.round(+box.querySelector('[data-k=n]').value||1)));return normRecur(k+box.querySelector('[data-k=u]').value)}
+  const wd=box.querySelector('[data-k=wd]').value,ns=[...box.querySelectorAll('[data-k=nth]:checked')].map(x=>x.value);
+  return'm:'+(ns.length?ns:['1']).map(k=>k+wd).join(',')}
+function nextOcc(s,r){const d=pd(s),m=RE_RECUR.exec(r||'');if(!d||!m)return s;
+  const out=x=>dayKey(x)+(s.includes('T')?`T${pad(x.getHours())}:${pad(x.getMinutes())}`:'');
+  if(m[3]){for(let i=0;i<14;i++){const y=d.getFullYear(),mo=d.getMonth()+i,days=new Date(y,mo+1,0).getDate();let best=0;
+      m[3].split(',').forEach(x=>{const n=+x.slice(0,-2),wd=WDS.indexOf(x.slice(-2));let day;
+        if(n<0)day=days-(new Date(y,mo,days).getDay()-wd+7)%7;else{day=1+(wd-new Date(y,mo,1).getDay()+7)%7+(n-1)*7;if(day>days)day=0}
+        if(day&&new Date(y,mo,day,d.getHours(),d.getMinutes())>d&&(!best||day<best))best=day});
+      if(best)return out(new Date(y,mo,best,d.getHours(),d.getMinutes()))}
+    return s}
+  const n=+(m[1]||1);if(m[2]==='d')d.setDate(d.getDate()+n);else if(m[2]==='w')d.setDate(d.getDate()+7*n);else if(m[2]==='m')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);
+  return out(d)}
 let remQ=[];const ackd=new Set();
 /* The server's scheduler marks an entry with alert={when,at}; every open window shows it until somebody dismisses or snoozes it. */
 function syncAlerts(){const have=new Set();
@@ -938,11 +995,11 @@ function showRem(){const it=remQ[0],n=it&&S.nodes[it.id];if(!n||n.trashed){remQ.
   ${n.location?`<p style="margin:2px 0">${ic('pin',13)} ${esc(n.location)}</p>`:''}
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">${n.kind!=='reminder'?'<button class="btn pri" data-rm="show">Show</button>':''}${u?`<a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">Open link</a>`:''}<button class="btn" data-rm="snooze">Snooze 10 min</button><button class="btn${u?'':' pri'}" data-rm="ok">Dismiss</button></div></div>`,{cls:'center',kind:'remind'})}
 function remSec(n){const lead=(+n.lead||0),l=LEADS.find(x=>x[0]===lead);
-  return`<h4>When</h4><div class="field"><span>Date & time</span>${dtFields('reminder',n.reminder)}</div>
+  return`<h4>When</h4><div class="grid2"><div class="field"><span>Date & time</span>${dtFields('reminder',n.reminder)}</div><div class="field"><span data-tip="Optional: for events that last a while or several days. The pop-up stays at the start.">Ends (optional)</span>${dtFields('end',n.end)}</div></div>
 <div class="grid2" style="margin-top:8px"><label class="field"><span>Remind me</span><select data-f="lead" data-tip="You always get a pop-up at the time; this adds an earlier one">${LEADS.map(([m,t])=>`<option value="${m}" ${m===lead?'selected':''}>${t}</option>`).join('')}</select></label>
-<label class="field"><span>Repeat</span><select data-f="recur" data-tip="After the reminder fires it simply moves to the next occurrence">${Object.entries(RECUR).map(([v,t])=>`<option value="${v}" ${n.recur===v?'selected':''}>${t}</option>`).join('')}</select></label></div>
+${recurHTML(n,'After the reminder fires it simply moves to the next occurrence')}</div>${recurEditor(n)}
 ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="checkbox" data-f="discord" ${n.discord?'checked':''}> Also post it to the Discord channel of “${esc(projectOf(n).name)}” at the time <small style="color:var(--muted)">(works even when no window is open)</small></label>`:''}
-<div style="font-size:12px;color:var(--muted);margin-top:6px">${n.reminder?`Pops up ${lead?(l?l[1].toLowerCase():lead+' min before')+' and ':''}at the time${n.recur?`, then moves on to the next ${{d:'day',w:'week',m:'month',y:'year'}[n.recur]}`:' (once)'}. There is no status to set.`:'Pick a date and time to activate this reminder.'}</div>`}
+<div style="font-size:12px;color:var(--muted);margin-top:6px">${n.reminder?`Pops up ${lead?(l?l[1].toLowerCase():lead+' min before')+' and ':''}at the time${n.recur?`, then moves on to the next date (${recurText(n.recur)})`:' (once)'}. There is no status to set.`:'Pick a date and time to activate this reminder.'}</div>`}
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
@@ -1171,6 +1228,9 @@ $('#tree').addEventListener('click',e=>{
 $('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
 $('#tree').addEventListener('dblclick',e=>{const nm=e.target.closest('.name');if(nm){const id=nm.closest('.node').dataset.id;ui.sel=id;rename(id)}});
 $('#detail').addEventListener('change',onDetailChange);
+// leaving the Ends fields with an end before the start brings the saved end back
+$('#detail').addEventListener('focusout',e=>{const f=e.target.dataset?.f||'',n=S.nodes[ui.sel];
+  if(!n||!/^end-/.test(f)||/^end-/.test(e.relatedTarget?.dataset?.f||'')||!endInput(n).bad)return;showEnd(n);toast('The end must not be before the start')});
 $('#detail').addEventListener('click',onDetailClick);
 $('#detail').addEventListener('input',e=>{if(e.target.dataset.f==='pct')$('#pctv').textContent=e.target.value+'%'});
 $('#detail').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-f=tagadd],[data-f=peopleadd],[data-f=depadd],[data-f=linkadd],[data-f=name]')){e.preventDefault();e.target.blur()}

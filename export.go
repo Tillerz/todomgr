@@ -57,7 +57,7 @@ func csvText(s string) string {
 }
 
 var csvHeader = []string{"id", "parent_id", "path", "name", "type", "status", "priority", "progress_percent", "progress_done", "progress_total", "progress_unit",
-	"deadline", "reminder", "repeat", "tags", "people", "location", "url", "estimate_min", "tracked_min", "created", "updated", "closed", "notes"}
+	"deadline", "reminder", "end", "repeat", "tags", "people", "location", "url", "estimate_min", "tracked_min", "created", "updated", "closed", "notes"}
 
 func (s *Store) ExportCSV(includeClosed bool) []byte {
 	s.mu.RLock()
@@ -86,7 +86,6 @@ func (s *Store) ExportCSV(includeClosed bool) []byte {
 		if parent == "root" {
 			parent = ""
 		}
-		recur := map[string]string{"d": "daily", "w": "weekly", "m": "monthly", "y": "yearly"}[n.S("recur")]
 		prog := []string{"", "", ""}
 		if len(n.Kids()) == 0 || len(s.db.progressKids(n)) == 0 {
 			prog = []string{num0(num(p["done"])), num0(num(p["total"])), str(p["unit"])}
@@ -94,7 +93,7 @@ func (s *Store) ExportCSV(includeClosed bool) []byte {
 		_ = w.Write([]string{
 			n.S("id"), parent, csvText(s.db.path(n)), csvText(n.S("name")), n.S("kind"), n.S("status"), prioNames[prio],
 			strconv.Itoa(int(s.db.frac(n)*100 + 0.5)), prog[0], prog[1], prog[2],
-			n.S("deadline"), n.S("reminder"), recur,
+			n.S("deadline"), n.S("reminder"), n.S("end"), recurCSV(n.S("recur")),
 			csvText(strings.Join(strs(n["tags"]), ", ")), csvText(strings.Join(strs(n["people"]), ", ")),
 			csvText(n.S("location")), csvText(n.S("url")),
 			num0(n.N("est")), num0(round2(secs / 60)),
@@ -152,8 +151,6 @@ func icsWhen(v string, loc *time.Location) (prop string, ok bool) {
 
 func icsUTC(t time.Time) string { return t.UTC().Format("20060102T150405Z") }
 
-var icsRecur = map[string]string{"d": "DAILY", "w": "WEEKLY", "m": "MONTHLY", "y": "YEARLY"}
-
 func icsStatus(n Node) string {
 	switch n.S("status") {
 	case "progress", "exploring", "active":
@@ -210,8 +207,8 @@ func (s *Store) ExportICS(includeClosed bool) []byte {
 				}
 				icsLine(&b, "CATEGORIES:"+strings.Join(esc, ","))
 			}
-			if r := icsRecur[n.S("recur")]; r != "" {
-				icsLine(&b, "RRULE:FREQ="+r)
+			if r := recurRRULE(n.S("recur")); r != "" {
+				icsLine(&b, "RRULE:"+r)
 			}
 		}
 		alarm := func(trigger, text string) {
@@ -228,7 +225,17 @@ func (s *Store) ExportICS(includeClosed bool) []byte {
 				continue
 			}
 			common("VEVENT")
-			icsLine(&b, "DTSTART:"+at.Format("20060102T150405"))
+			if end := n.S("end"); end != "" && !strings.Contains(rem, "T") && !strings.Contains(end, "T") {
+				// all-day event over whole days: the calendar's end date is the day after the last one
+				e, _ := endAt(end, s.loc)
+				icsLine(&b, "DTSTART;VALUE=DATE:"+at.Format("20060102"))
+				icsLine(&b, "DTEND;VALUE=DATE:"+e.Format("20060102"))
+			} else {
+				icsLine(&b, "DTSTART:"+at.Format("20060102T150405"))
+				if e, ok := endAt(end, s.loc); ok {
+					icsLine(&b, "DTEND:"+e.Format("20060102T150405"))
+				}
+			}
 			if lead := int(n.N("lead")); lead > 0 {
 				alarm(fmt.Sprintf(":-PT%dM", lead), name)
 			}
