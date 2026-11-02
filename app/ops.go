@@ -369,6 +369,10 @@ func (t *Tx) recurNext(n Node) {
 		p["done"] = 0.0
 	}
 	delete(n, "remDone")
+	if r := n.S("recur"); strings.HasSuffix(r, "+") {
+		n["deadline"], n["reminder"] = afterDone(n.S("deadline"), n.S("reminder"), r, time.Now().In(t.loc).Format("2006-01-02"), t.loc)
+		return
+	}
 	for _, k := range []string{"deadline", "reminder"} {
 		if s := n.S(k); s != "" {
 			n[k] = nextOcc(s, n.S("recur"), t.loc)

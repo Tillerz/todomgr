@@ -505,14 +505,16 @@ const PRIO=['None','Low','Medium','High','Urgent'];
 const COLORS=['#e5534b','#e8863a','#d9a520','#3fa56b','#2aa6a0','#4a7de0','#8a63d2','#d6578f','#7d8596'];
 const RECUR={'':'Does not repeat',d:'Daily',w:'Weekly','2w':'Every 2 weeks','4w':'Every 4 weeks',m:'Monthly',y:'Yearly'};
 // repeat rules, the same as recur.go: d w m y, every N (2w 3d 6m), monthly on weekdays (m:1fr,3fr,-1fr)
-const RE_RECUR=/^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))$/;
+const RE_RECUR=/^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))(\+)?$/;
 const WDS=['su','mo','tu','we','th','fr','sa'],WDN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],NTH={1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th','-1':'last'};
 const UNIT={d:['day','days'],w:['week','weeks'],m:['month','months'],y:['year','years']};
-function normRecur(v){v=String(v||'').trim().toLowerCase();const w={daily:'d',weekly:'w',monthly:'m',yearly:'y','1d':'d','1w':'w','1m':'m','1y':'y'}[v];return w||(v===''||RE_RECUR.test(v)?v:null)}
+function normRecur(v){v=String(v||'').trim().toLowerCase();const p=v.endsWith('+')?'+':'',w={daily:'d',weekly:'w',monthly:'m',yearly:'y','1d':'d','1w':'w','1m':'m','1y':'y'}[v.slice(0,v.length-p.length)];
+  if(w)v=w+p;return v===''||RE_RECUR.test(v)?v:null}
 function recurText(r){const m=RE_RECUR.exec(r||'');if(!m)return'';
+  if(m[4]&&!m[3]){const n=+(m[1]||1);return`${n} ${UNIT[m[2]][n===1?0:1]} after done`}
   if(m[3]){const by={};m[3].split(',').forEach(x=>{const k=x.slice(-2);(by[k]=by[k]||[]).push(NTH[x.slice(0,-2)])});
     const list=a=>a.length>1?a.slice(0,-1).join(', ')+' and '+a[a.length-1]:a[0];
-    return'monthly on the '+list(Object.entries(by).map(([k,a])=>list(a)+' '+WDN[WDS.indexOf(k)]))}
+    return'monthly on the '+list(Object.entries(by).map(([k,a])=>list(a)+' '+WDN[WDS.indexOf(k)]))+(m[4]?' after done':'')}
   const n=+(m[1]||1);return n===1?{d:'daily',w:'weekly',m:'monthly',y:'yearly'}[m[2]]:`every ${n} ${UNIT[m[2]][1]}`}
 let S,ui={sel:null,multi:new Set(),view:'tree',q:'',hideDone:false,panel:false,metric:'closed',dragging:false};
 const blank=()=>({v:2,rev:0,nodes:{root:{id:'root',name:'root',children:[]}},activity:[],timer:null,prefs:{theme:null,views:[]}});
@@ -582,7 +584,8 @@ function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(
   if(k.length&&k.every(c=>c.status==='done'))toast(`All sub-items of “${p.name}” are done`,{action:{label:'Mark parent done',fn:()=>mutate(()=>setStatus(p,'done'),{panel:true})},ms:7000})}
 function recurNext(n){const step=s=>nextOcc(s,n.recur);
   n.status='open';n.hist.push({s:'open',at:now()});n.prog.done=0;n.remDone=false;
-  if(n.deadline)n.deadline=step(n.deadline);if(n.reminder)n.reminder=step(n.reminder);
+  if(n.recur.endsWith('+'))[n.deadline,n.reminder]=afterDone(n.deadline,n.reminder,n.recur,dayKey(now()));
+  else{if(n.deadline)n.deadline=step(n.deadline);if(n.reminder)n.reminder=step(n.reminder)}
   toast(`Repeats ${recurText(n.recur)} — next: ${n.deadline?fmtWhen(n.deadline):'reopened'}`)}
 function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));n.prog.done=v;log('progress',n.id);n.updated=now();
   if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
@@ -970,12 +973,18 @@ function recurEditor(n){const r=n.recur||'',m=RE_RECUR.exec(r);if(ui.rcEdit!==n.
 <label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="nth" ${ev?'':'checked'}> Monthly on the</label>
 <div class="rcnth">${Object.entries(NTH).sort((a,b)=>(+a[0]<0)-(+b[0]<0)||a[0]-b[0]).map(([k,l])=>`<label class="chk-row"><input type="checkbox" data-f="rc" data-k="nth" value="${k}" ${nth.some(x=>x.slice(0,-2)===k)?'checked':''}> ${l}</label>`).join('')}
 <select data-f="rc" data-k="wd">${WDS.map((k,i)=>[k,i]).slice(1).concat([['su',0]]).map(([k,i])=>`<option value="${k}" ${wd===k?'selected':''}>${WDN[i]}</option>`).join('')}</select></div>
+<label class="chk-row"><input type="checkbox" data-f="rc" data-k="after" ${m&&m[4]?'checked':''}> Count from the day it is done</label>
 <div class="note">${r?'Repeats '+esc(recurText(r)):'Pick how it repeats'}</div></div>`}
 // the rule the custom repeat editor shows
-function recurFromEditor(){const box=$('.rc');if(!box)return'';
-  if(box.querySelector('input[type=radio][value=n]').checked){const k=Math.min(999,Math.max(1,Math.round(+box.querySelector('[data-k=n]').value||1)));return normRecur(k+box.querySelector('[data-k=u]').value)}
+function recurFromEditor(){const box=$('.rc');if(!box)return'';const p=box.querySelector('[data-k=after]').checked?'+':'';
+  if(box.querySelector('input[type=radio][value=n]').checked){const k=Math.min(999,Math.max(1,Math.round(+box.querySelector('[data-k=n]').value||1)));return normRecur(k+box.querySelector('[data-k=u]').value+p)}
   const wd=box.querySelector('[data-k=wd]').value,ns=[...box.querySelectorAll('[data-k=nth]:checked')].map(x=>x.value);
-  return'm:'+(ns.length?ns:['1']).map(k=>k+wd).join(',')}
+  return'm:'+(ns.length?ns:['1']).map(k=>k+wd).join(',')+p}
+// a "+" rule counts from the day it is done: the new deadline and reminder (same as afterDone in recur.go)
+function afterDone(dl,rem,r,today){const a=dl||rem;if(!a)return[nextOcc(today,r),''];
+  const u=s=>{const[y,m,d]=s.slice(0,10).split('-').map(Number);return Date.UTC(y,m-1,d)},days=Math.round((u(nextOcc(today+a.slice(10),r))-u(a))/864e5);
+  const sh=s=>{if(!s)return s;const x=new Date(u(s)+days*864e5);return`${x.getUTCFullYear()}-${pad(x.getUTCMonth()+1)}-${pad(x.getUTCDate())}`+s.slice(10)};
+  return[sh(dl),sh(rem)]}
 function nextOcc(s,r){const d=pd(s),m=RE_RECUR.exec(r||'');if(!d||!m)return s;
   const out=x=>dayKey(x)+(s.includes('T')?`T${pad(x.getHours())}:${pad(x.getMinutes())}`:'');
   if(m[3]){for(let i=0;i<14;i++){const y=d.getFullYear(),mo=d.getMonth()+i,days=new Date(y,mo+1,0).getDate();let best=0;

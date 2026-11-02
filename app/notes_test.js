@@ -88,7 +88,7 @@ for (const [fn, list] of [[md, cases], [bb, bbCases]]) for (const [name, src, wa
 }
 // repeat rules: the page must compute the same next dates as the server
 const rc = new Function(cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('function pd(s)', '}\n') +
-  cut('const RECUR=', '[1]}`}\n') + cut('// next date of a repeating entry', '\n  return out(d)}') + 'return {nextOcc, recurText, normRecur};')();
+  cut('const RECUR=', '[1]}`}\n') + cut('// next date of a repeating entry', '\n  return out(d)}') + 'return {nextOcc, recurText, normRecur, afterDone};')();
 const check = (name, bad) => { if (bad.length) { failed++; console.log(`FAIL ${name}: ${bad.join('; ')}`); } else console.log('PASS ' + name); };
 const rcCases = JSON.parse(fs.readFileSync(path.join(__dirname, 'testdata', 'recur_cases.json'), 'utf8')).cases;
 check(`repeat: next dates (${rcCases.length} cases shared with Go)`, rcCases.filter(([d, r, want]) => rc.nextOcc(d, r) !== (want || d))
@@ -98,6 +98,13 @@ check('repeat: labels', [['w', 'weekly'], ['2w', 'every 2 weeks'], ['3d', 'every
   .filter(([r, want]) => rc.recurText(r) !== want).map(([r, want]) => `recurText(${r}) = ${rc.recurText(r)}, want ${want}`));
 check('repeat: input', [['weekly', 'w'], [' 2W ', '2w'], ['1w', 'w'], ['m:1FR', 'm:1fr'], ['biweekly', null], ['m:6fr', null], ['0d', null]]
   .filter(([v, want]) => rc.normRecur(v) !== want).map(([v, want]) => `normRecur(${v}) = ${rc.normRecur(v)}, want ${want}`));
+const adCases = JSON.parse(fs.readFileSync(path.join(__dirname, 'testdata', 'recur_cases.json'), 'utf8')).afterDone;
+check(`repeat: after done (${adCases.length} cases shared with Go)`, adCases.filter(([dl, rem, r, today, wd, wr]) => rc.afterDone(dl, rem, r, today).join('|') !== wd + '|' + wr)
+  .map(([dl, rem, r, today, wd, wr]) => `afterDone(${dl}, ${rem}, ${r}, ${today}) = ${rc.afterDone(dl, rem, r, today)}, want ${wd},${wr}`));
+check('repeat: after done rules', [['3D+', '3d+'], ['weekly+', 'w+'], ['m:1fr+', 'm:1fr+'], ['+', null], ['d++', null]]
+  .filter(([v, want]) => rc.normRecur(v) !== want).map(([v, want]) => `normRecur(${v}) = ${rc.normRecur(v)}, want ${want}`)
+  .concat([['3d+', '3 days after done'], ['w+', '1 week after done'], ['m:1fr+', 'monthly on the 1st Friday after done']]
+    .filter(([r, want]) => rc.recurText(r) !== want).map(([r, want]) => `recurText(${r}) = ${rc.recurText(r)}, want ${want}`)));
 
 // events with an end: range text and moving the end with the start
 const ev = new Function(cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('function pd(s)', '}\n') + cut('const startOfToday=', ';\n') +

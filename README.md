@@ -119,10 +119,31 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 | `!low` `!med` `!high` `!urgent` | priority |
 | `due:today` `due:tomorrow` `due:fri` `due:+3d` `due:2026-12-24` | deadline |
 | `at:19:00` | time of day |
-| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday) | recurrence |
-| `~30m` `~2h` | time estimate |
+| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday), `repeat:3d+` (3 days after it is done) | recurrence |
+| `~30m` `~2h` (a number alone means minutes) | time estimate |
 | `?` at the start | an idea |
 | `r:` at the start | a reminder |
+
+**Examples** (written on Monday, 2 November 2026):
+
+| You type | You get |
+|---|---|
+| `Buy milk` | a todo in the Inbox |
+| `Buy milk #shopping due:today` | tagged *shopping*, due today |
+| `Call Anna @anna due:fri at:14:00` | with Anna, due Friday 6 November at 14:00 |
+| `Tax return !urgent due:2027-05-31 ~3h` | urgent, due 31 May 2027, estimated 3 hours |
+| `Write chapter 4 #novel !high due:+2w ~90` | high priority, due in 2 weeks, estimated 90 minutes |
+| `Send the weekly report #work due:mon repeat:weekly` | due next Monday, then every Monday |
+| `Pay the rent due:12-01 repeat:monthly` | due 1 December, then on the 1st of every month |
+| `Water the plants #home repeat:3d+` | due again 3 days after you tick it off |
+| `?A board game about trains #ideas` | an idea, not a todo |
+| `r: Call mum` | a reminder at the next full hour |
+| `r: Dentist due:2026-12-03 at:09:30` | a reminder on 3 December at 09:30, with a warning 15 minutes before |
+| `r: Stand up and stretch at:15:00 repeat:daily` | a reminder every day at 15:00 |
+| `r: Club night due:2026-11-06 at:20:00 repeat:m:1fr,3fr` | a reminder on the 1st and 3rd Friday of each month at 20:00 |
+
+Words the syntax does not understand stay in the name. The same text works on the command line
+(`todo add "…"`) and for AI clients over MCP.
 
 The up and down arrow keys step through your earlier entries, so you can edit and re-send one.
 
@@ -141,6 +162,9 @@ the list.
   monthly or yearly, **every N** days, weeks, months or years (every 2 weeks, every 4 weeks…), or
   **monthly on certain weekdays** (the 1st, 3rd and 5th Friday; the last Sunday). Pick *Custom…* in the
   Repeat field for the last two; a month without a 5th Friday is simply skipped.
+- **After done:** tick *Count from the day it is done* in the custom Repeat field (or write `3d+`). The
+  next date then counts from the day you finish the entry, not from its old date: water the plants
+  3 days after you last did it, however late that was. An entry without a date gets one.
 
 ### Reminders
 
@@ -415,7 +439,7 @@ Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` 
 end of an event, not before its start), `deps`, `notes`,
 `notesFormat` (`markdown` or `bbcode`),
 `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog`
-(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last), `est` (minutes), `lead` (minutes
+(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last; a `+` at the end counts from the day it is done: `3d+`), `est` (minutes), `lead` (minutes
 of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
 
 ## Licence

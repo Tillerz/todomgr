@@ -14,11 +14,13 @@ import (
 //	m:1fr,3fr,-1fr   monthly on the 1st and 3rd Friday and the last Friday
 //	                 (1–5 or -1 for the last; mo tu we th fr sa su); a month
 //	                 without a 5th Friday has no date for "5fr"
+//	3d+ 2w+ m:1fr+   "+" at the end: count from the day the entry is done,
+//	                 not from its old date (see afterDone)
 //
 // web/index.html has the same rules in JavaScript (nextOcc, recurText).
 
 var (
-	reRecur   = regexp.MustCompile(`^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))$`)
+	reRecur   = regexp.MustCompile(`^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))(\+)?$`)
 	recurDays = map[string]time.Weekday{"su": time.Sunday, "mo": time.Monday, "tu": time.Tuesday, "we": time.Wednesday, "th": time.Thursday, "fr": time.Friday, "sa": time.Saturday}
 )
 
@@ -26,8 +28,12 @@ var (
 // ok is false for anything else.
 func normRecur(v string) (string, bool) {
 	v = strings.ToLower(strings.TrimSpace(v))
-	if w, ok := map[string]string{"daily": "d", "weekly": "w", "monthly": "m", "yearly": "y", "1d": "d", "1w": "w", "1m": "m", "1y": "y"}[v]; ok {
-		return w, true
+	base, plus := strings.CutSuffix(v, "+")
+	if w, ok := map[string]string{"daily": "d", "weekly": "w", "monthly": "m", "yearly": "y", "1d": "d", "1w": "w", "1m": "m", "1y": "y"}[base]; ok {
+		v = w
+		if plus {
+			v += "+"
+		}
 	}
 	return v, v == "" || reRecur.MatchString(v)
 }
@@ -93,6 +99,29 @@ func nextOcc(s, r string, loc *time.Location) string {
 		d = d.AddDate(n, 0, 0)
 	}
 	return d.Format(layout)
+}
+
+// afterDone gives the new deadline and reminder of an entry with a "+" rule that is done today
+// (YYYY-MM-DD): the deadline, else the reminder, goes to the next date after today, at the same
+// time of day, and the other date moves by as many days. Without dates, the deadline becomes the
+// next date after today.
+func afterDone(deadline, reminder, r, today string, loc *time.Location) (string, string) {
+	a := deadline
+	if a == "" {
+		a = reminder
+	}
+	if a == "" {
+		return nextOcc(today, r, loc), ""
+	}
+	day := func(s string) time.Time { d, _ := time.Parse("2006-01-02", s[:10]); return d }
+	days := int(day(nextOcc(today+a[10:], r, loc)).Sub(day(a)).Hours() / 24)
+	shift := func(s string) string {
+		if len(s) < 10 {
+			return s
+		}
+		return day(s).AddDate(0, 0, days).Format("2006-01-02") + s[10:]
+	}
+	return shift(deadline), shift(reminder)
 }
 
 var recurFreq = map[string]string{"d": "DAILY", "w": "WEEKLY", "m": "MONTHLY", "y": "YEARLY"}

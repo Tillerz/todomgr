@@ -80,6 +80,16 @@ func TestRecurringDoneReopens(t *testing.T) {
 	}
 }
 
+func TestRecurringAfterDone(t *testing.T) {
+	st, _ := testStore(t)
+	a := mustCreate(t, st, "Water plants", "", map[string]any{"recur": "3D+", "deadline": "2020-01-01"})
+	n, err := st.SetStatus("test", a, "done")
+	want := time.Now().In(st.loc).AddDate(0, 0, 3).Format("2006-01-02")
+	if err != nil || n["status"] != "open" || n["recur"] != "3d+" || n["deadline"] != want {
+		t.Fatalf("after done: %v %v, want deadline %s", err, n, want)
+	}
+}
+
 func TestReminderHasNoStatus(t *testing.T) {
 	st, _ := testStore(t)
 	r := mustCreate(t, st, "Stream", "", map[string]any{"kind": "reminder", "reminder": "2026-11-05T19:00"})

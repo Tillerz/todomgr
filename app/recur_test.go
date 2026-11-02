@@ -53,3 +53,34 @@ func TestRecurRules(t *testing.T) {
 		}
 	}
 }
+
+// "+" rules count from the day the entry is done; the cases are shared with notes_test.js.
+func TestAfterDone(t *testing.T) {
+	for in, want := range map[string]string{"3D+": "3d+", "weekly+": "w+", "1w+": "w+", "m:1fr+": "m:1fr+"} {
+		if got, ok := normRecur(in); !ok || got != want {
+			t.Errorf("normRecur(%q) = %q, %v; want %q", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{"+", "d++", "+d", "2w +"} {
+		if _, ok := normRecur(in); ok {
+			t.Errorf("normRecur(%q) must be refused", in)
+		}
+	}
+	if got := recurRRULE("2w+"); got != "FREQ=WEEKLY;INTERVAL=2" {
+		t.Errorf("recurRRULE(2w+) = %q", got)
+	}
+	raw, err := os.ReadFile("testdata/recur_cases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f struct{ AfterDone [][6]string }
+	if err := json.Unmarshal(raw, &f); err != nil || len(f.AfterDone) == 0 {
+		t.Fatal("no afterDone cases", err)
+	}
+	loc := time.FixedZone("UTC+1", 3600)
+	for _, c := range f.AfterDone {
+		if d, r := afterDone(c[0], c[1], c[2], c[3], loc); d != c[4] || r != c[5] {
+			t.Errorf("afterDone(%q, %q, %q, %q) = %q, %q; want %q, %q", c[0], c[1], c[2], c[3], d, r, c[4], c[5])
+		}
+	}
+}
