@@ -212,6 +212,9 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .notesbox.max textarea,.notesbox.max .md{flex:1;min-height:0;overflow:auto;resize:none}
 .maxhint{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;font-size:12px}
 .copyid{cursor:pointer}
+.plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
+.planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
+.planbar b{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;background:var(--ink)}
 .elink{color:var(--accent);cursor:pointer;text-decoration:underline dotted}.elink.gone{color:var(--muted);text-decoration:line-through;cursor:default}
 .qac small{color:var(--muted);margin-left:6px}
 .qac{position:fixed;z-index:70;min-width:180px;max-height:240px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:4px;font-size:13.5px}
@@ -882,6 +885,21 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
 
 /* ============================ today ============================ */
 function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span><span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+// Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
+// the timed events in the rest of the work day, against the time left in it (Settings → Work day)
+function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startOfToday();
+  const at=hm=>{const[h,m]=hm.split(':').map(Number);return new Date(t0.getFullYear(),t0.getMonth(),t0.getDate(),h,m).getTime()};
+  const from=Math.max(now(),at(wd.from)),to=at(wd.to);
+  const due=allNodes().filter(n=>n.kind==='todo'&&!isClosed(n)&&n.status!=='later'&&n.est>0&&['over','today'].includes(dueState(n)));
+  const tasks=due.filter(n=>!due.some(m=>m!==n&&inSubtree(m.id,n.id)))// a parent and its sub-items: only the sub-items count
+    .reduce((a,n)=>a+Math.max(0,n.est-n.time.reduce((s,t)=>s+t.secs,0)/60),0);
+  const events=allNodes().filter(n=>n.kind==='reminder'&&n.end&&n.reminder.includes('T'))
+    .reduce((a,n)=>a+Math.max(0,Math.min(evEnd(n),to)-Math.max(remAt(n),from))/6e4,0);
+  return{left:Math.max(0,to-from)/6e4,tasks,events}}
+function planBar(){const{left,tasks,events}=dayPlan(),plan=tasks+events;if(!plan)return'';
+  const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60);
+  return`<div class="plan${over>0?' over':''}"><div class="row-between"><span><b>Planned ${d(plan)}</b> · ${left?d(left)+' left in the work day':'the work day is over'}</span><span>${over>0?`<b>${d(over)} too much</b>`:d(-over)+' free'}</span></div>
+<div class="planbar"><i class="ev" style="width:${w(events)}" data-tip="Events: ${d(events)}"></i><i class="tk" style="width:${w(tasks)}" data-tip="Todos due today or overdue (estimate minus time tracked): ${d(tasks)}"></i>${over>0&&left?`<b style="left:${w(left)}" data-tip="End of the work day"></b>`:''}</div></div>`}
 function renderToday(){
   const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'),used=new Set();
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(trow).join('')}`:''};
@@ -890,7 +908,7 @@ function renderToday(){
   const html=sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
    +sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
-  $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small></h2>${html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>'}</div>`}
+  $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small></h2>${planBar()}${html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>'}</div>`}
 
 /* ============================ stats ============================ */
 const MET={closed:['Closed','items completed'],created:['Created','items created'],activity:['Activity','changes'],time:['Time','minutes tracked']};
@@ -1190,6 +1208,8 @@ async function showSettings(){const v=S.prefs.rowH||36;
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
+  <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
+  <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc((S.prefs.workDay||{}).from||'09:00')}"><span>to</span><input type="time" id="wdTo" value="${esc((S.prefs.workDay||{}).to||'17:00')}"></label>
   <div class="sh">Tag icons <span class="bd" data-tip="Entries with one of these tags show its icon before the name">?</span></div>
   <div id="tagIcs"></div>
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
@@ -1212,6 +1232,8 @@ async function showSettings(){const v=S.prefs.rowH||36;
   const set=x=>{S.prefs.rowH=x;$('#rhv').textContent=x+'px';applyPrefs()};
   $('#rh').oninput=e=>set(+e.target.value);$('#rh').onchange=()=>persist();
   renderTagIcons();
+  $('#wdFrom').onchange=$('#wdTo').onchange=()=>{const from=$('#wdFrom').value,to=$('#wdTo').value;
+    if(!from||!to||from>=to)return toast('The work day must end after it starts');S.prefs.workDay={from,to};persist()};
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
   $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};

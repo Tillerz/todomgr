@@ -128,4 +128,31 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
   ['2027-03-27T19:00', '2027-04-03T19:00', '2027-03-27T21:00', '2027-04-03T21:00'], ['2030-12-05T19:00', '', '2030-12-05T21:00', '2030-12-05T21:00']]
   .map(([a, b, e, want]) => { const n = {end: e}; ev.shiftEnd(n, a, b); return n.end === want ? '' : `shiftEnd(${a} → ${b}) end ${n.end}, want ${want}`; }).filter(Boolean));
 
+// Today's plan at 10:00 with a 09:00–17:00 work day: estimates minus tracked time (a parent with sub-items
+// does not count), closed and undated todos and all-day events left out, events cut to the rest of the day
+{
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const k = `${t0.getFullYear()}-${String(t0.getMonth() + 1).padStart(2, '0')}-${String(t0.getDate()).padStart(2, '0')}`;
+  const N = {
+    a: {id: 'a', kind: 'todo', status: 'open', est: 120, time: [{secs: 1800}], deadline: k, parent: 'r'},
+    p: {id: 'p', kind: 'todo', status: 'open', est: 600, time: [], deadline: k, parent: 'r'},
+    c: {id: 'c', kind: 'todo', status: 'open', est: 60, time: [], deadline: k, parent: 'p'},
+    x: {id: 'x', kind: 'todo', status: 'done', est: 500, time: [], deadline: k, parent: 'r'},
+    l: {id: 'l', kind: 'todo', status: 'open', est: 500, time: [], deadline: '', parent: 'r'},
+    e: {id: 'e', kind: 'reminder', reminder: k + 'T08:00', end: k + 'T11:00', parent: 'r'},
+    f: {id: 'f', kind: 'reminder', reminder: k + 'T16:00', end: k + 'T18:00', parent: 'r'},
+    g: {id: 'g', kind: 'reminder', reminder: k, end: k, parent: 'r'},
+  };
+  const env = {S: {prefs: {}, nodes: N}, now: () => new Date(t0).setHours(10), startOfToday: () => new Date(t0),
+    allNodes: () => Object.values(N), isClosed: n => n.status === 'done', dueState: n => n.deadline ? 'today' : ''};
+  const plan = new Function(...Object.keys(env), cut('const pad=', ';\n') + cut('function pd(s)', '}\n') + cut('const fmtDur=', ';\n') +
+    cut('const inSubtree=', ';\n') + cut('const remAt=', ';\n') + cut('const evEnd=', ';\n') + cut("// Today's plan, in minutes", '</div></div>`}') +
+    'return {dayPlan, planBar};')(...Object.values(env));
+  const r = plan.dayPlan(), text = plan.planBar().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  check('today: plan', [r.left === 420 ? '' : `left ${r.left}, want 420`, r.tasks === 150 ? '' : `tasks ${r.tasks}, want 150`,
+    r.events === 120 ? '' : `events ${r.events}, want 120`, text.includes('2h 30m free') ? '' : 'text: ' + text].filter(Boolean));
+  env.S.prefs.workDay = {from: '09:00', to: '12:00'};
+  check('today: too much', [plan.planBar().includes('1h 30m too much') ? '' : 'no warning'].filter(Boolean));
+}
+
 process.exit(failed ? 1 : 0);

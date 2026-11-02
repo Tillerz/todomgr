@@ -203,6 +203,10 @@ no window is open.
 
 - **Today** gathers upcoming reminders, overdue and due-today items, reminders that fired and what is in
   progress. "Later" items are left out.
+- **Day plan:** a bar at the top of Today adds up the estimates of the todos due today or overdue
+  (minus the time already tracked) and the timed events in the rest of the day. It compares the sum with
+  the time left in your work day (Settings → Work day, default 09:00–17:00) and turns red when the plan
+  does not fit.
 - **Search** with filters (open, done, blocked, overdue, ideas, todos, reminders, projects, later,
   today, tags, people) and **saved views**.
 - A command palette (Ctrl+K) for every action.
