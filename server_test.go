@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -118,6 +119,21 @@ func TestAPIAuthAndGuard(t *testing.T) {
 	}
 	if w := a.do("GET", "/sortable.min.js", nil); w.Code != 200 {
 		t.Errorf("embedded static file: status %d", w.Code)
+	}
+}
+
+// Every licence file that Settings → About links to must be in the embedded web/licenses/.
+func TestLicenseFiles(t *testing.T) {
+	a := testServer(t)
+	page := a.do("GET", "/", nil).Body.String()
+	files := regexp.MustCompile(`\['[^']+','[^']+','([a-z]+\.txt)'`).FindAllStringSubmatch(page, -1)
+	if len(files) == 0 {
+		t.Fatal("no licence list (LIBS) found in index.html")
+	}
+	for _, f := range files {
+		if w := a.do("GET", "/licenses/"+f[1], nil); w.Code != 200 || w.Body.Len() < 100 {
+			t.Errorf("/licenses/%s: status %d, %d bytes", f[1], w.Code, w.Body.Len())
+		}
 	}
 }
 

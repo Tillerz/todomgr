@@ -21,6 +21,8 @@ More in [Screenshots](#screenshots).
 - [Screenshots](#screenshots)
 - [MCP server for AI assistants](#mcp-server-for-ai-assistants)
 - [HTTP API](#http-api)
+- [Licence](#licence)
+- [Third-party licences](#third-party-licences)
 
 ## Run it
 
@@ -87,6 +89,8 @@ code in your browser.
   status, priority, colour, add or remove a tag, add a person in charge, move to…, trash). Each entry only
   takes a status that its type has.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
+- **Tag icons:** entries with certain tags show an icon before the name, for example `#meeting`, `#stream`,
+  `#nsfw` (18+), `#call`, `#mail`, `#bug`, `#research` and `#review`. Change the list under Settings.
 - A page icon in the row shows that an entry has **notes**. Hover the icon or the name to read the first
   lines of the notes without opening the entry.
 - Undo and redo for every change. Deleting only moves an entry (with everything below it) to the **trash**,
@@ -200,11 +204,12 @@ taking a backup. There is no CSV or calendar import.
 - Responsive: three columns on a wide screen, a drawer on a medium one, a bottom sheet on a phone.
 - Tooltips on every control, a row-height slider, a resizable and closable detail panel, a *Hide tags*
   button.
-- Works offline: SortableJS and marked (Markdown) are bundled, no CDN.
+- Works offline: SortableJS, marked (Markdown) and the Lucide tag icons are bundled, no CDN.
 
 ### Settings (⋯ → Settings)
 
 - **Row height** of the tree.
+- **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
 - **Backups:** the snapshot interval, *Back up now* and one-click restore from the list.
@@ -365,3 +370,21 @@ Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` 
 `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog`
 (`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`), `est` (minutes), `lead` (minutes
 of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
+
+## Licence
+
+Tillerz Todo Mgr is under the [PolyForm Shield License 1.0.0](LICENSE). You may use it, change it and
+share it, also at work, free of charge. You may not sell it or offer a product that competes with it.
+
+## Third-party licences
+
+The program uses these open-source parts. They are bundled into the program, and their licence texts
+are in [web/licenses/](web/licenses/). The app shows the same list under Settings → About.
+
+| Part | Used for | Licence |
+|---|---|---|
+| [Go standard library](https://go.dev/) | the program itself | BSD 3-Clause, [go.txt](web/licenses/go.txt) |
+| [SortableJS](https://github.com/SortableJS/Sortable) 1.15.2 | drag and drop in the tree | MIT, [sortablejs.txt](web/licenses/sortablejs.txt) |
+| [marked](https://marked.js.org/) 18.1.2 | Markdown in notes | MIT (and BSD 3-Clause for Markdown), [marked.txt](web/licenses/marked.txt) |
+| [Lucide](https://lucide.dev/) 1.66.0 | tag icons | ISC, [lucide.txt](web/licenses/lucide.txt) |
+| [Feather](https://feathericons.com/) | app icons | MIT, [feather.txt](web/licenses/feather.txt) |

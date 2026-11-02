@@ -12,7 +12,7 @@ build() { # os arch outdir exe
   local dir="dist/$3"
   mkdir -p "$dir"
   GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o "$dir/$4" .
-  cp -f README.md "$dir/README.md"
+  cp -f README.md LICENSE "$dir/"
   echo "built $dir/$4 ($(du -h "$dir/$4" | cut -f1))"
 }
 
