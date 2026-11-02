@@ -338,6 +338,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <div id="tip"></div>
 <div id="print"></div>
 <input type="file" id="file" accept=".json,application/json" hidden>
+<input type="file" id="file2" accept=".csv,.ics,text/csv,text/calendar" hidden>
 
 <script src="/sortable.min.js"></script>
 <script src="/marked.umd.js"></script>
@@ -930,7 +931,7 @@ document.addEventListener('mousedown',()=>{clearTimeout(tipT);tip.classList.remo
 document.addEventListener('scroll',()=>tip.classList.remove('show'),true);
 function openPalette(){
   const cmds=[['New item in Inbox',()=>{ui.view!=='tree'&&setView('tree');$('#quick').focus()}],['Go to Tree',()=>setView('tree')],['Go to Today',()=>setView('today')],['Go to Stats',()=>setView('stats')],['Start timer…',()=>openTimer()],
-   ['New project',newProject],['New reminder',newReminder],['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],['Undo',undo],['Redo',redo],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp],['Load demo data',loadDemo]];
+   ['New project',newProject],['New reminder',newReminder],['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],['Undo',undo],['Redo',redo],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp],['Load demo data',loadDemo]];
   openModal(`<input id="pq" placeholder="Jump to an item or run a command…" autocomplete="off"><ul id="pl"></ul>`,{cls:'palette',kind:'palette'});
   const inp=$('#pq'),ul=$('#pl');let items=[],cur=0;
   const draw=()=>{const q=inp.value.toLowerCase().trim();items=[];
@@ -955,6 +956,15 @@ function exportMD(){const out=[];const walk=(n,d)=>n.children.forEach(c=>{const 
 async function importJSON(text){try{JSON.parse(text)}catch{return toast('That file is not valid JSON')}
   if(!confirm('Replace ALL current data with this file? (A backup of the current data is kept in data/backups.)'))return;
   try{await Store.sync();await Store.api('POST','/api/import',text);await Store.refresh();toast('Imported')}catch(e){toast('Import failed: '+e.message,{ms:9000})}}
+// CSV / calendar import: adds the entries below a new project, nothing is replaced
+async function importEntries(f){
+  try{const buf=await f.arrayBuffer();let text;// German Excel saves CSV as Windows-1252, not UTF-8
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{text=new TextDecoder('windows-1252').decode(buf)}
+    await Store.sync();
+    const r=await Store.api('POST','/api/import/entries',{format:f.name.split('.').pop(),name:f.name,data:text});
+    await Store.refresh();ui.sel=r.id;ui.panel=true;renderAll();
+    toast(`Added ${r.added} entr${r.added===1?'y':'ies'} to “${r.name}”${r.skipped?` · ${r.skipped} skipped`:''}${r.partly?` · ${r.partly} with problems (see their notes)`:''}`,{ms:9000})}
+  catch(e){toast('Import failed: '+e.message,{ms:9000})}}
 async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current data with the demo data? (A backup of the current data is kept in data/backups.)'))return;
   const keep=S,keepSel=ui.sel;seed();const data=JSON.stringify(S);S=keep;ui.sel=keepSel;
   try{await Store.sync();await Store.api('POST','/api/import',data);await Store.refresh();toast('Demo data loaded — your previous data is in data/backups')}catch(e){toast('Could not load demo data: '+e.message,{ms:9000})}}
@@ -1077,7 +1087,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   <div class="list" style="margin-top:8px">${bk.slice(0,6).map(b=>`<div class="li"><span class="t">${esc(b.kind)} · ${fmtFull(new Date(b.time).getTime())}</span><small style="color:var(--muted)">${Math.max(1,Math.round(b.size/1024))} KB</small><button class="btn" data-restore="${esc(b.name)}" data-tip="Replace all data with this backup (the current data is backed up first)">Restore</button></div>`).join('')||'<div class="note">No backups yet.</div>'}</div>
   <div class="note">Kept: all from the last 2 hours, then hourly, daily and weekly. ${bk.length} on disk.</div>
   <div class="sh">Data</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport" data-tip="Download everything as one JSON file (the complete backup)">Export JSON</button><button class="btn" id="dCsv" data-tip="All entries as a table for Excel, LibreOffice or Google Sheets">Export CSV</button><button class="btn" id="dIcs" data-tip="Open entries with a date as a calendar file for Outlook, Google Calendar, Apple Calendar, Thunderbird…">Export calendar (.ics)</button><button class="btn" id="dImport" data-tip="Replace everything with a JSON export">Import JSON…</button><button class="btn" id="dDemo" data-tip="Replace everything with example data">Load demo data</button><button class="btn dng" id="dReset" data-tip="Remove all entries and statistics — a backup is kept">Start with empty data…</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport" data-tip="Download everything as one JSON file (the complete backup)">Export JSON</button><button class="btn" id="dCsv" data-tip="All entries as a table for Excel, LibreOffice or Google Sheets">Export CSV</button><button class="btn" id="dIcs" data-tip="Open entries with a date as a calendar file for Outlook, Google Calendar, Apple Calendar, Thunderbird…">Export calendar (.ics)</button><button class="btn" id="dImport" data-tip="Replace everything with a JSON export">Import JSON…</button><button class="btn" id="dImport2" data-tip="Add the entries of a CSV file or a calendar file (.ics) below a new project — nothing is replaced">Import CSV / calendar…</button><button class="btn" id="dDemo" data-tip="Replace everything with example data">Load demo data</button><button class="btn dng" id="dReset" data-tip="Remove all entries and statistics — a backup is kept">Start with empty data…</button></div>
   <div class="note">“Start with empty data” clears all entries and statistics at once, without restarting the server. Your settings stay, and the previous data is kept as a backup you can restore above.</div>
   <div class="sh">About</div>
   <div class="note"><a href="https://github.com/Tillerz/todomgr" target="_blank" rel="noopener" data-tip="Project page on GitHub">${esc(APP.name)} ${esc(APP.version)}</a> · <a href="https://github.com/Tillerz/todomgr/blob/main/LICENSE" target="_blank" rel="noopener">PolyForm Shield licence</a> · data schema ${cfg.schema} · time zone ${esc(cfg.timezone)}<br>Data folder: <code>${esc(cfg.dataDir)}</code></div>
@@ -1088,7 +1098,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   renderTagIcons();
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
-  $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
+  $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
   $('#dReset').onclick=async()=>{if(!confirm('Remove ALL entries and statistics and start with empty data?\n\nThe current data is saved as a backup first, so you can restore it from Settings.'))return;
     try{await Store.sync();await Store.api('POST','/api/reset',{});closeModal();await Store.refresh();toast('Started with empty data — the previous data is in data/backups')}catch(err){toast('Reset failed: '+err.message,{ms:9000})}};
   $('#bkNow').onclick=async()=>{try{const r=await Store.api('POST','/api/backups',{});toast('Backup created: '+r.name);showSettings()}catch(e){toast(e.message)}};
@@ -1164,7 +1174,7 @@ $('#btnTimer').onclick=()=>S.timer&&S.timer.alarmed?showAlarm():openTimer();
 $('#btnPal').innerHTML=ic('cmd');$('#btnPal').onclick=openPalette;
 $('#btnUndo').innerHTML=ic('undo');$('#btnUndo').onclick=undo;$('#btnRedo').innerHTML=ic('redo');$('#btnRedo').onclick=redo;
 $('#btnTheme').onclick=toggleTheme;$('#btnMenu').innerHTML=ic('menu');$('#ico-search').innerHTML=ic('search',14);
-const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp],['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],['Load demo data',loadDemo]];
+const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp],['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],['Load demo data',loadDemo]];
 $('#btnMenu').onclick=()=>openModal(`<div class="list">${MENU.map(([l],i)=>`<button class="btn" data-m="${i}" style="text-align:left">${l}</button>`).join('')}</div><div style="margin-top:10px;color:var(--muted);font-size:12px;text-align:center">${APP.name} ${APP.version}</div>`,{cls:'pop-right',kind:'menu'});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&modalKind==='menu'){const f=MENU[+b.dataset.m][1];closeModal();f()}});
 $('#newProj').onclick=newProject;$('#newRem').onclick=newReminder;
@@ -1189,6 +1199,7 @@ $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>
   r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
   r.addEventListener('dblclick',()=>{setDetailW(420);persist()})})();
 $('#file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importJSON);e.target.value=''};
+$('#file2').onchange=e=>{const f=e.target.files[0];if(f)importEntries(f);e.target.value=''};
 window.addEventListener('pagehide',()=>Store.beacon());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)Store.sync()});
 

@@ -375,6 +375,7 @@ func (t *Tx) create(name, parent string, index int, f map[string]any) (Node, err
 	delete(f, "name")
 	// status must be applied after kind, which fieldOrder guarantees
 	if err := t.applyFields(n, f, true); err != nil {
+		delete(t.db.Nodes, id) // not attached yet: drop it, so the caller may go on (the import does)
 		return nil, err
 	}
 	if _, has := f["kind"]; has {

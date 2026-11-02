@@ -195,8 +195,24 @@ includes finished entries and the calendar does not; add `--open` or `--closed` 
 priority, due date, people, tags and the first lines of the notes, indented like the tree, with tick
 boxes. The browser's print dialog can also save it as a PDF.
 
-**Import** reads JSON (this app's export) and replaces everything after
-taking a backup. There is no CSV or calendar import.
+**Import JSON** reads this app's export and replaces everything after taking a backup.
+
+**Import CSV / calendar** (⋯ → *Import CSV / calendar…*, or `todo import FILE.csv`) only **adds** entries.
+They go into a new project "Import: file name, date"; nothing that exists is changed. Importing the same
+file twice gives the entries twice.
+
+- **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos**
+  (title, description, due date, status, priority, categories as tags, location, link, repeat, progress,
+  alarm), events become **reminders** (start time, repeat, the alarm as early warning). Sub-tasks stay
+  sub-entries. Times in UTC or another time zone are converted to local time. **Past one-time events are
+  skipped**; repeating events start at their next date. A past alarm of a task goes into its notes instead
+  of popping up.
+- **CSV files:** this app's own CSV export comes back with its tree. Files from other tools or from Excel
+  work too: the columns are found by name (`name`/`title`/`task`, `notes`/`description`, `due`/`deadline`,
+  `tags`/`labels`, `priority`, `status`, `assignee`, …). Commas, semicolons and tabs work, and so do
+  Excel files saved in the Windows encoding. Dates such as `2026-11-05` or `05.11.2026` are read.
+- Anything that has no field here (an unknown date format, a repeat rule such as "every 2nd week") is
+  written into the notes, so nothing is lost silently.
 
 ### Look and feel
 
@@ -260,7 +276,7 @@ todo add "r: Community stream at:19:00 due:thu repeat:weekly"    # a reminder
 todo list --project "Novel"   |   todo tree   |   todo today   |   todo stats
 todo done ID   |   todo set ID deadline=2026-12-24 tags=a,b progress=450/1200:words
 todo mv ID --to PARENT   |   todo rm ID   |   todo restore ID   |   todo log ID 45m
-todo backup   |   todo backups   |   todo import backup.json --yes
+todo backup   |   todo backups   |   todo import backup.json --yes   |   todo import plan.csv   |   todo import calendar.ics
 todo export backup.json   |   todo export plan.csv   |   todo export plan.ics [--open|--closed]
 todo help
 ```
@@ -361,6 +377,7 @@ Requests whose `Host` or `Origin` is not local are refused.
 | `GET`/`PUT /api/settings` | MCP switches, backup interval |
 | `GET`/`POST /api/backups`, `POST /api/backups/restore` | list, create, restore |
 | `GET /api/export`, `POST /api/import` | whole data as JSON / replace everything |
+| `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project |
 | `GET /api/export.csv`, `GET /api/export.ics` | spreadsheet / calendar export (`closed=1` or `closed=0` to include or leave out finished entries; default: CSV with, calendar without) |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |

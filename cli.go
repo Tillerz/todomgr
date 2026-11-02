@@ -595,6 +595,18 @@ func runCLI(cmd string, args []string) error {
 		if err := need(1, "import FILE --yes"); err != nil {
 			return err
 		}
+		if ext := strings.ToLower(filepath.Ext(a.pos[0])); ext == ".csv" || ext == ".ics" {
+			b, err := os.ReadFile(a.pos[0])
+			if err != nil {
+				return err
+			}
+			var res map[string]any
+			if err := c.do("POST", "/api/import/entries", map[string]any{"format": ext[1:], "name": filepath.Base(a.pos[0]), "data": string(b)}, &res); err != nil {
+				return fmt.Errorf("import failed: %w", err)
+			}
+			fmt.Printf("added %v entries to %q (%v skipped)\n", res["added"], res["name"], res["skipped"])
+			return nil
+		}
 		if !a.flag["yes"] {
 			return errors.New("this replaces ALL current data (a pre-import backup is kept). Repeat with --yes to confirm")
 		}
@@ -658,7 +670,9 @@ Commands (talk to the running app):
   log ID 45m                  add tracked time (45m, 1h30m, 90)
   today                       what needs attention now          stats [--days N]
   backup | backups | restore-backup NAME --yes
-  export [FILE[.json|.csv|.ics]] [--open|--closed] | import FILE --yes        info | token
+  export [FILE[.json|.csv|.ics]] [--open|--closed]        info | token
+  import FILE.json --yes      replace ALL data (a backup is kept)
+  import FILE.csv|FILE.ics    add the entries below a new project "Import: FILE, date"
   mcp                         MCP stdio bridge (the MCP server must be switched on in Settings)
 
 Options everywhere: --json (raw output)  --data DIR  --url URL  --token T

@@ -89,6 +89,9 @@ check "todo export .json" bash -c "'$bin' --data '$data' export '$tmp/x.json' &&
 check "todo backup" todo backup
 check "todo import needs --yes" bash -c "! '$bin' --data '$data' import '$tmp/x.json'"
 check "todo import --yes" todo import "$tmp/x.json" --yes
+check "todo import .csv adds entries" grep -q '^added [0-9]* entries to "Import: x.csv' <<< "$(todo import "$tmp/x.csv")"
+printf 'BEGIN:VCALENDAR\r\nBEGIN:VTODO\r\nUID:a\r\nSUMMARY:Calendar task\r\nDUE:20301224\r\nEND:VTODO\r\nEND:VCALENDAR\r\n' > "$tmp/y.ics"
+check "todo import .ics adds entries" bash -c "'$bin' --data '$data' import '$tmp/y.ics' > /dev/null && '$bin' --data '$data' list 'Calendar task' | grep -q '2030-12-24'"
 
 check "todo mcp refuses while MCP is off" bash -c "! '$bin' --data '$data' mcp < /dev/null"
 check "MCP can be switched on" test "$(code -X PUT -H "Authorization: Bearer $token" -H "Content-Type: application/json" \

@@ -69,6 +69,7 @@ func (s *Server) Handler() http.Handler {
 	api("GET /api/export.csv", s.hExportCSV)
 	api("GET /api/export.ics", s.hExportICS)
 	api("POST /api/import", s.hImport)
+	api("POST /api/import/entries", s.hImportEntries)
 	api("POST /api/reset", s.hReset)
 	api("POST /api/discord", s.hDiscord)
 	api("POST /api/alerts/ack", s.hAck)
@@ -438,6 +439,21 @@ func (s *Server) hImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jout(w, 200, map[string]any{"ok": true})
+}
+
+// hImportEntries adds the entries of a CSV or ICS file: {format: "csv"|"ics", name, data}.
+func (s *Server) hImportEntries(w http.ResponseWriter, r *http.Request) {
+	var req struct{ Format, Name, Data string }
+	if err := readBody(r, &req, 64<<20); err != nil {
+		fail(w, err)
+		return
+	}
+	res, err := s.st.ImportEntries(actorOf(r), req.Format, req.Name, []byte(req.Data))
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	jout(w, 200, res)
 }
 
 func (s *Server) hReset(w http.ResponseWriter, r *http.Request) {
