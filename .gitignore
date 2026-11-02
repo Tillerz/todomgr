@@ -2,6 +2,7 @@
 /data/
 /dist/
 /test/
+/live/
 /prototype/
 *.corrupt-*.json
 /todo

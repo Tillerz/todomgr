@@ -80,7 +80,7 @@ Rules:
 
 **Core:** nested tree with drag & drop (SortableJS), inline rename everywhere, keyboard moves
 (Tab/Shift+Tab indent, Alt+↑/↓), collapse, colors, priorities, tags, people, location,
-deadline, reminder, dependencies, notes (markdown-lite), links (drop URLs/files), progress bars.
+deadline, reminder, dependencies, notes (GitHub markdown), links (drop URLs/files), progress bars.
 
 **Brainstormed extras:** quick capture with inline syntax (`#tag @person !high due:fri ~30m`),
 Inbox, Today / Next-up view, search + filters + saved views, command palette (Ctrl+K), multi-select/bulk,

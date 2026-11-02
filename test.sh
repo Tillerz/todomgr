@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs all tests and prints one line per check:
 #   1. Go tests (store, reminders, export, HTTP API, MCP), in memory, no network.
-#   2. End-to-end: builds the program, starts it on a free port with an empty temp
+#   2. Notes preview (needs node): markdown renders, HTML and script links in notes stay harmless.
+#   3. End-to-end: builds the program, starts it on a free port with an empty temp
 #      data folder, and checks the CLI, the API, the MCP stdio bridge, the lock and a restart.
 # Only 127.0.0.1 is contacted; Discord is never called. Exit code 1 if anything failed.
 # Usage: ./test.sh
@@ -29,7 +30,19 @@ if grep -q -E '^(FAIL|panic:|.*\[build failed\])' "$tmp/go.log" && ! grep -q '^-
   bad "go test" "$(grep -m1 -E 'FAIL|panic|cannot|undefined' "$tmp/go.log")"
 fi
 
-# ---------------------------------------------------------------- 2. end-to-end
+# ---------------------------------------------------------------- 2. notes preview
+echo "Notes preview (web/index.html with marked, in node)"
+if command -v node > /dev/null; then
+  node notes_test.js > "$tmp/notes.log" 2>&1
+  while read -r status rest; do
+    [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
+  done < <(grep -E '^(PASS|FAIL) ' "$tmp/notes.log")
+  grep -q -E '^(PASS|FAIL) ' "$tmp/notes.log" || bad "notes_test.js" "$(tail -1 "$tmp/notes.log")"
+else
+  bad "notes preview" "node not found in PATH"
+fi
+
+# ---------------------------------------------------------------- 3. end-to-end
 echo "End-to-end (real program, temp data, 127.0.0.1 only)"
 bin=$tmp/todo data=$tmp/data
 if ! go build -o "$bin" . 2> "$tmp/build.log"; then

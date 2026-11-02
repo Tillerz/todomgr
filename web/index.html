@@ -204,7 +204,12 @@ input[type=range]{width:100%;padding:0;accent-color:var(--accent);border:0;backg
 .dropzone.drop-hot,#detail.drop-hot .dropzone{border-color:var(--accent);color:var(--accent);background:var(--sel)}
 textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .md{padding:8px 10px;border:1px solid var(--line);border-radius:6px;min-height:60px}
-.md p,.md ul,.md h1,.md h2,.md h3{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
+.md p,.md ul,.md ol,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md pre,.md table,.md blockquote,.md .alert{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
+.md ul,.md ol{padding-left:1.5em}.md li:has(>input[type=checkbox]){list-style:none}.md pre{background:var(--hover);padding:6px 8px;border-radius:6px;overflow-x:auto}.md pre code{padding:0}.md img{max-width:100%}
+.md blockquote{border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}.md hr{border:0;border-top:1px solid var(--line)}
+.md table{border-collapse:collapse}.md th,.md td{border:1px solid var(--line);padding:2px 8px}
+.md .alert{border-left:3px solid var(--c);padding:2px 10px}.md .alert>b{color:var(--c)}.md .alert p{margin:.2em 0}
+.alert.note{--c:var(--accent)}.alert.tip{--c:var(--ok)}.alert.important{--c:#8a63d2}.alert.warning{--c:var(--warn)}.alert.caution{--c:var(--danger)}
 .hist{font-size:12px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
 
 /* today / stats */
@@ -247,7 +252,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 #toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;align-items:center;width:max-content;max-width:94vw}
 .toast{background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:9px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
 .toast button{color:var(--accent);font-weight:700;filter:brightness(1.4)}
-#tip{position:fixed;z-index:70;background:#222a3c;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;pointer-events:none;max-width:260px;opacity:0;transition:opacity .1s}
+#tip{position:fixed;z-index:70;background:#222a3c;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;pointer-events:none;max-width:320px;white-space:pre-line;opacity:0;transition:opacity .1s}
 #tip.show{opacity:.96}
 
 /* responsive */
@@ -321,6 +326,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <input type="file" id="file" accept=".json,application/json" hidden>
 
 <script src="/sortable.min.js"></script>
+<script src="/marked.umd.js"></script>
 <script>
 'use strict';
 const APP={name:'Tillerz Todo Mgr',version:'v0.1'};
@@ -569,8 +575,12 @@ function badge(n){const b=[];  if(n.webhook)b.push(`<span class="bd" data-tip="D
   if(n.tags.length>2)b.push(`<span class="bd tag" data-tip="${esc(n.tags.slice(2).join(', '))}">+${n.tags.length-2}</span>`);
   if(n.people.length)b.push(`<span class="bd ppl" data-tip="In charge: ${esc(n.people.join(', '))}">${ic('user',12)}${esc(n.people[0])}${n.people.length>1?'+'+(n.people.length-1):''}</span>`);
   if(n.location)b.push(`<span class="bd loc" data-tip="Location: ${esc(n.location)}">${ic('pin',12)}</span>`);
+  if(n.notes&&n.notes.trim())b.push(`<span class="bd" data-tip="${esc(notesTip(n))}">${ic('file',12)}</span>`);
   if(n.links.length&&!(!safeUrl(n.url)&&openUrl(n)))b.push(`<span class="bd" data-tip="${n.links.length} link(s)">${ic('link',12)}${n.links.length}</span>`);
   return b.join('')}
+// first lines of the notes, for tooltips
+function notesTip(n){const l=n.notes.trim().split('\n');
+  return l.slice(0,4).map(x=>x.length>120?x.slice(0,119)+'…':x).join('\n')+(l.length>4?'\n…':'')}
 function progHTML(n){const k=kids(n);let label,f;
   if(k.length){f=frac(n);label=`${k.filter(c=>c.status==='done').length}/${k.length}`}
   else if(n.prog.mode==='units'){f=frac(n);label=`${n.prog.done}/${n.prog.total}${n.prog.unit?' '+esc(n.prog.unit):''}`}
@@ -584,7 +594,7 @@ function liHTML(n,vis,force){
 <span class="grip" data-tip="Drag to move (or Alt+↑/↓, Tab / Shift+Tab)">${ic('grip')}</span>
 <button class="tw ${hasKids?(open?'open':''):'none'}" data-tip="Expand / collapse">${ic('chev')}</button>
 ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}"></button>`}
-<span class="namewrap"><span class="name" data-tip="Double-click or F2 to rename">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
+<span class="namewrap"><span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
 function renderTree(){
@@ -664,8 +674,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
-<h4>Notes <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview (supports **bold**, *italic*, \`code\`, - lists, # headings, links)">${ui.mdPrev?'Edit':'Preview'}</button></h4>
-${ui.mdPrev?`<div class="md">${md(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown-lite)">${esc(n.notes)}</textarea>`}
+<h4>Notes <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview (GitHub markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes)">${ui.mdPrev?'Edit':'Preview'}</button></h4>
+${ui.mdPrev?`<div class="md">${md(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
@@ -675,11 +685,18 @@ ${ui.mdPrev?`<div class="md">${md(n.notes)||'<span style="color:var(--muted)">No
 <datalist id="dl-nodes">${allNodes().filter(x=>x.kind!=='reminder'&&x.id!==n.id&&!inSubtree(x.id,n.id)&&!dependsOn(x,n.id)).map(x=>`<option value="${esc(x.name)} [${x.id}]">`).join('')}</datalist>`;
   el.innerHTML=forKind(html,n);el.scrollTop=sc}
 function dependsOn(x,id,seen=new Set()){if(seen.has(x.id))return false;seen.add(x.id);return x.deps.some(d=>d===id||(S.nodes[d]&&dependsOn(S.nodes[d],id,seen)))}
-function md(s){if(!s)return'';let out='',ul=false;const inl=t=>t.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>')
-  .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>').replace(/(^|\s)(https?:\/\/[^\s<]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
-  for(const raw of esc(s).split('\n')){let m;if(m=raw.match(/^\s*[-*]\s+(.*)/)){if(!ul){out+='<ul>';ul=true}out+='<li>'+inl(m[1].replace(/^\[ \]/,'☐').replace(/^\[x\]/i,'☑'))+'</li>';continue}
-    if(ul){out+='</ul>';ul=false}if(m=raw.match(/^(#{1,3})\s+(.*)/))out+=`<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`;else if(raw.trim())out+='<p>'+inl(raw)+'</p>'}
-  return out+(ul?'</ul>':'')}
+// notes preview: GitHub markdown via marked. Notes can come from MCP/API, so raw HTML shows as text,
+// links and images only take http(s)/mailto, and > [!NOTE] … [!CAUTION] quotes become alert boxes.
+const mdUrl=u=>/^(https?:|mailto:)/i.test(String(u).trim());
+const MD=new marked.Marked({gfm:true,breaks:true,renderer:{
+  html({text}){return esc(text)},
+  link({href,title,tokens}){const t=this.parser.parseInline(tokens);
+    return mdUrl(href)?`<a href="${esc(href)}"${title?` title="${esc(title)}"`:''} target="_blank" rel="noopener">${t}</a>`:t},
+  image({href,title,text}){return mdUrl(href)?`<img src="${esc(href)}" alt="${esc(text)}"${title?` title="${esc(title)}"`:''}>`:esc(text)},
+  blockquote({tokens}){const b=this.parser.parse(tokens),m=b.match(/^<p>\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s*<br>)?\s*/i);
+    if(!m)return`<blockquote>${b}</blockquote>`;const k=m[1].toLowerCase();
+    return`<div class="alert ${k}"><b>${k[0].toUpperCase()+k.slice(1)}</b>${('<p>'+b.slice(m[0].length)).replace(/^<p><\/p>\s*/,'')}</div>`}}});
+function md(s){return s?MD.parse(s):''}
 function setDT(n,key){const d=$(`[data-f=${key}-d]`).value,t=$(`[data-f=${key}-t]`).value;n[key]=d?(t?d+'T'+t:d):'';if(key==='reminder'){n.remDone=false;delete n.alert;delete n.snoozeUntil}}
 function addLinks(id,links){const n=S.nodes[id];if(!n||!links.length)return;mutate(()=>{links.forEach(l=>n.links.push({title:l.title,uri:l.uri}));touch(n)},{panel:id===ui.sel});toast(`Added ${links.length} link${links.length>1?'s':''} to “${n.name}”`)}
 function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!f||!n)return;const v=t.value;
@@ -858,7 +875,7 @@ function openPalette(){
   inp.onkeydown=e=>{if(e.key==='ArrowDown'){cur=Math.min(items.length-1,cur+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){cur=Math.max(0,cur-1);draw();e.preventDefault()}else if(e.key==='Enter')run(cur)};
   ul.onclick=e=>{const li=e.target.closest('li');if(li)run(+li.dataset.i)};draw();inp.focus()}
 function showHelp(){const K=[['Ctrl+K','Command palette'],['/','Search'],['N','Quick add'],['↑ ↓','Move selection'],['← →','Collapse / expand'],['Enter','New sibling below'],['Insert','New sub-item'],['F2','Rename'],['Space','Toggle done'],
-  ['Tab / Shift+Tab','Indent / outdent'],['Alt+↑ / ↓','Reorder'],['Delete','Move to trash'],['Ctrl+Z / Ctrl+Shift+Z','Undo / redo'],['1 2 3','Tree / Today / Stats'],['T','Timer'],['Ctrl+click','Multi-select'],['Esc','Clear filter / close']];
+  ['Tab / Shift+Tab','Indent / outdent'],['Alt+↑ / ↓','Reorder'],['Delete','Move to trash'],['Ctrl+Z / Ctrl+Shift+Z','Undo / redo'],['1 2 3','Tree / Today / Stats'],['T','Timer'],['Ctrl+click','Multi-select'],['Shift+click','Select a range'],['Esc','Clear filter / close']];
   openModal(`<h3 style="margin-top:0">Keyboard shortcuts</h3><div class="keys">${K.map(([k,d])=>`<span>${k.split(' / ').map(x=>`<kbd>${x}</kbd>`).join(' ')}</span><span>${d}</span>`).join('')}</div>
   <h3>Good to know</h3><ul style="color:var(--muted);padding-left:18px"><li>Drag the ⋮⋮ handle to move items; drop onto the dashed area under an item to nest.</li><li>Drop URLs, mails or files onto an item to attach them.</li><li>Right-click an entry (long-press on touch, Shift+F10, or the ⋯ button) for more actions.</li><li>Everything is saved automatically on the server (data/database.json) — the CLI and AI tools see the same data.</li></ul>`)}
 function showTrash(){const T=Object.values(S.nodes).filter(n=>n.trashed).sort((a,b)=>b.trashed-a.trashed);
@@ -1018,7 +1035,11 @@ $('#tree').addEventListener('click',e=>{
   if(e.target.closest('input.rename'))return;
   if(!e.target.closest('.row'))return;
   if(e.ctrlKey||e.metaKey){ui.multi.has(id)?ui.multi.delete(id):ui.multi.add(id);renderTree();return}
+  if(e.shiftKey&&ui.sel&&ui.sel!==id){// range from the current row to the clicked one, visible rows only
+    const ids=$$('#tree .node').map(li=>li.dataset.id),a=ids.indexOf(ui.sel),b=ids.indexOf(id);
+    if(a>=0&&b>=0){ui.multi=new Set(ids.slice(Math.min(a,b),Math.max(a,b)+1));renderTree();return}}
   ui.multi.clear();ui.sel=id;ui.panel=true;renderTree();renderDetail()});
+$('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
 $('#tree').addEventListener('dblclick',e=>{const nm=e.target.closest('.name');if(nm){const id=nm.closest('.node').dataset.id;ui.sel=id;rename(id)}});
 $('#detail').addEventListener('change',onDetailChange);
 $('#detail').addEventListener('click',onDetailClick);
@@ -1173,6 +1194,11 @@ const colorSub=N=>msub('Color',[msw([{c:'',t:'No color',on:N.every(n=>!n.color),
 function tagItems(N){const c={};allNodes().forEach(x=>x.tags.forEach(t=>c[t]=(c[t]||0)+1));
   const list=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).filter(t=>!N.every(n=>n.tags.includes(t))).slice(0,8).map(t=>mi('#'+t,()=>addTag(N,t)));
   return[...list,...(list.length?[MSEP]:[]),mi('New tag…',()=>addTag(N,prompt('New tag:')))]}
+function rmTag(N,t){mutate(()=>N.forEach(n=>{const i=n.tags.indexOf(t);if(i>=0){n.tags.splice(i,1);touch(n)}}),{panel:true})}
+function addPerson(N,p){p=(p||'').trim().replace(/^@/,'');if(!p)return;mutate(()=>N.forEach(n=>{if(!n.people.includes(p)){n.people.push(p);touch(n)}}),{panel:true})}
+function personItems(N){const c={};allNodes().forEach(x=>x.people.forEach(p=>c[p]=(c[p]||0)+1));
+  const list=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).filter(p=>!N.every(n=>n.people.includes(p))).slice(0,8).map(p=>mi(p,()=>addPerson(N,p)));
+  return[...list,...(list.length?[MSEP]:[]),mi('New person…',()=>addPerson(N,prompt('Person in charge:')))]}
 const focusField=(id,f)=>()=>{ui.sel=id;ui.panel=true;renderTree();renderDetail();setTimeout(()=>{const el=$(`[data-f="${f}"]`);if(el){el.focus();try{el.showPicker&&el.showPicker()}catch{}}},30)};
 function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexOf(id),kind=n.kind,isRem=kind==='reminder',url=openUrl(n);
   const doM=fn=>()=>mutate(fn,{panel:true});
@@ -1200,10 +1226,14 @@ function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexO
     mi('Duplicate',()=>dupAction(id)),mi('Move to trash',()=>trash(id),{danger:true,key:'Del'}));
   return items}
 function bulkMenu(ids){const N=ids.map(i=>S.nodes[i]).filter(Boolean),doM=fn=>()=>mutate(fn,{panel:true});
+  // statuses of all selected kinds; each entry only takes the ones its kind has
+  const sts=[...new Set(N.filter(n=>n.kind!=='reminder').flatMap(n=>KS[n.kind]))],tags=[...new Set(N.flatMap(n=>n.tags))].sort();
   return[mi(`${N.length} entries selected`,()=>{},{dis:true}),MSEP,
     mi('Mark done',doM(()=>N.forEach(n=>n.kind!=='reminder'&&setStatus(n,'done')))),
+    msub('Status',sts.map(s=>mi(STAT[s]+(s==='later'?' (postponed)':''),doM(()=>N.forEach(n=>KS[n.kind].includes(s)&&setStatus(n,s))))),{dis:!sts.length}),
     msub('Priority',PRIO.map((l,k)=>mi(l,doM(()=>N.forEach(n=>{n.prio=k;touch(n)}))))),
-    colorSub(N),msub('Add tag',tagItems(N)),mi('Move to…',()=>openMoveTo(ids)),MSEP,
+    colorSub(N),msub('Add tag',tagItems(N)),msub('Remove tag',tags.map(t=>mi('#'+t,()=>rmTag(N,t))),{dis:!tags.length}),
+    msub('Add person',personItems(N)),mi('Move to…',()=>openMoveTo(ids)),MSEP,
     mi('Move to trash',()=>trash(ids),{danger:true}),mi('Clear selection',()=>{ui.multi.clear();renderTree()})]}
 function openRowMenu(id,x,y){const n=S.nodes[id];if(!n)return;
   if(ui.multi.size>1&&ui.multi.has(id)){showCtx(bulkMenu([...ui.multi]),x,y);return}

@@ -56,19 +56,39 @@ a location, a deadline, a reminder, dependencies, notes, a URL, any number of li
 value. Every status change is recorded with its date, so you can always see when something was opened,
 started and finished.
 
+**Notes** use GitHub Markdown: headings, bold and italic, lists and tick boxes, tables, code blocks,
+quotes and links. A single line break stays a line break. GitHub's notice boxes work too
+(`[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`):
+
+```
+> [!WARNING]
+> Check the map scale before the next session.
+```
+
+Click **Preview** above the notes to see the result. HTML in notes is shown as plain text, and only
+`http`, `https` and `mailto` links become links, so a note added through the API or MCP can never run
+code in your browser.
+
 ### The tree
 
 - Nested entries of any depth, **drag and drop** to reorder or re-parent (SortableJS). Rows keep their
   height while you drag.
-- Rename in place, collapse and expand single branches or **all at once**, bulk-select with Ctrl-click.
+- Rename in place, collapse and expand single branches or **all at once**.
+- **Multi-select:** Ctrl+click adds or removes single entries; Shift+click selects every visible entry from
+  the current one to the clicked one (entries inside collapsed branches are left out). Esc clears the
+  selection.
 - A coloured stripe shows the colour of an entry, and the stripe also spans its sub-entries.
 - Keyboard: Tab / Shift+Tab to indent and outdent, Alt+↑/↓ to move, Space to toggle done, Ctrl+K for the
   command palette. A cheat sheet is under ⋯ → Keyboard shortcuts.
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open,
   rename, add sub-entry, status, priority, colour, change type, deadline, add tag, move to…, reorder and
   indent, open link, start a timer, announce on Discord, copy as text / copy ID, duplicate, trash.
-  With several entries selected, the menu acts on all of them.
+  With several entries selected, right-click one of them: the menu then acts on all of them (mark done,
+  status, priority, colour, add or remove a tag, add a person in charge, move to…, trash). Each entry only
+  takes a status that its type has.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
+- A page icon in the row shows that an entry has **notes**. Hover the icon or the name to read the first
+  lines of the notes without opening the entry.
 - Undo and redo for every change. Deleting only moves an entry (with everything below it) to the **trash**,
   from where it can be restored.
 
@@ -167,7 +187,7 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 the format follows the file name: `todo export plan.csv`, `todo export plan.ics`. By default the CSV
 includes finished entries and the calendar does not; add `--open` or `--closed` to change that.
 
-**Import** reads JSON (this app's export, or one from the prototype) and replaces everything after
+**Import** reads JSON (this app's export) and replaces everything after
 taking a backup. There is no CSV or calendar import.
 
 ### Look and feel
@@ -176,7 +196,7 @@ taking a backup. There is no CSV or calendar import.
 - Responsive: three columns on a wide screen, a drawer on a medium one, a bottom sheet on a phone.
 - Tooltips on every control, a row-height slider, a resizable and closable detail panel, a *Hide tags*
   button.
-- Works offline: SortableJS is bundled, no CDN.
+- Works offline: SortableJS and marked (Markdown) are bundled, no CDN.
 
 ### Settings (⋯ → Settings)
 
@@ -240,13 +260,14 @@ todo help
 
 ```
 ./build.sh          # tests + portable builds for Linux, Windows and macOS into dist/, plus release archives
-./test.sh           # all tests: Go tests + end-to-end run of the real program (temp data, 127.0.0.1 only)
+./test.sh           # all tests: Go tests, notes preview safety tests (Node), end-to-end run (temp data, 127.0.0.1 only)
 ./release.sh        # after build + test + commit: tag v<Version>, push, publish dist/ archives (needs gh)
 go test ./...
 ./todo serve --ui web     # develop the UI: serves web/ from disk instead of the embedded copy
 ```
 
-Go (standard library only) is the only requirement.
+Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes
+preview tests (`node notes_test.js`).
 
 ## Screenshots
 
