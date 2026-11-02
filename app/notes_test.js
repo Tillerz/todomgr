@@ -7,6 +7,8 @@ const fs = require('fs'), path = require('path');
 const web = path.join(__dirname, 'web');
 const html = fs.readFileSync(path.join(web, 'index.html'), 'utf8');
 global.marked = require(path.join(web, 'marked.umd.js'));
+// entries for the [[id]] link cases
+global.S = { nodes: { abc123: { id: 'abc123', name: 'Fix <the> bug' }, tag222: { id: 'tag222', name: '[b]x[/b]' }, old111: { id: 'old111', name: 'Old', trashed: true } } };
 
 // take the page's own esc() and md() code, so the test checks what the browser runs
 const cut = (from, to) => {
@@ -16,7 +18,7 @@ const cut = (from, to) => {
 };
 const md = new Function(cut('const esc=', ';\n') + cut('// notes preview:', "function md(s){return s?MD.parse(s):''}") + 'return md;')();
 const bb = new Function(cut('const esc=', ';\n') + cut('const mdUrl=', ';\n') + cut('const P={', '\n};') + cut('const ic=', ';\n') +
-  cut('// notes preview for BBCode', 'keep[i])}') + 'return bb;')();
+  cut('const RE_ELINK=', ';\n') + cut('function elink(', '</a>`}\n') + cut('// notes preview for BBCode', 'keep[i])}') + 'return bb;')();
 
 const cases = [
   // [name, notes, must contain (all), must not contain (none)]
@@ -47,6 +49,12 @@ const cases = [
   ['quote in URL cannot break out', '[t](https://x.y/"onmouseover="alert(1))', [], ['" onmouseover', '"onmouseover="']],
   ['quote in link title cannot break out', '[t](https://x.y "a\\" onmouseover=\\"alert(1)")', [], ['" onmouseover']],
   ['autolink with javascript: is not a link', '<javascript:alert(1)>', [], ['<a ']],
+  // [[id]] links to entries
+  ['entry link shows the name', 'see [[abc123]]', ['<a class="elink" data-act="goto" data-v="abc123"', '>Fix &lt;the&gt; bug</a>'], ['[[']],
+  ['entry link with own text', '[[abc123|my text]]', ['data-v="abc123"', '>my text</a>'], []],
+  ['entry link to a trashed or unknown entry', '[[old111]] [[zzz999]]', ['elink gone', '>Old</a>', '>[[zzz999]]</a>'], ['data-v=']],
+  ['entry link inside code stays text', '`[[abc123]]`', ['<code>[[abc123]]</code>'], ['elink']],
+  ['entry link text cannot inject HTML', '[[abc123|<img src=x onerror=alert(1)>]]', ['&lt;img'], ['<img']],
 ];
 
 const bbCases = [
@@ -75,6 +83,9 @@ const bbCases = [
   ['bbcode: colour cannot break the attribute', '[color:red" onmouseover="alert(1)]a[/color]', [], ['" onmouseover', 'style="color:red"']],
   ['bbcode: noparse cannot smuggle HTML', '[noparse]<script>x</script>[/noparse]', ['&lt;script&gt;'], ['<script']],
   ['bbcode: fake placeholder from the text', 'a\u00000\u0000b[noparse]<i>[/noparse]', ['a0b'], ['<i>']],
+  ['bbcode: entry links', '[b][[abc123]][/b] [[abc123|text]] [[zzz999]]', ['<strong><a class="elink" data-act="goto" data-v="abc123"', '>text</a>', 'elink gone'], []],
+  ['bbcode: tags in an entry name stay text', '[[tag222]]', ['>[b]x[/b]</a>'], ['<strong>']],
+  ['bbcode: entry link text stays harmless', '[[abc123|<b onclick=alert(1)>]]', ['&lt;b onclick'], ['<b onclick']],
   ['bbcode: tags inside a spoiler label stay harmless', '[spoiler]x|<b onclick=alert(1)>[/spoiler]', ['&lt;b onclick'], ['<b onclick']],
 ];
 

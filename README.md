@@ -80,6 +80,12 @@ code in your browser.
 For long notes, click **Expand** (or press **Alt+Enter**) to edit them in a large window. **Esc** brings
 them back to the sidebar.
 
+**Links between entries:** type `[[` in the notes and pick an entry from the list. This writes
+`[[id]]`, for example `[[pnwsey]]`, and the preview shows the entry's current name as a link that
+opens it. `[[pnwsey|own text]]` shows your own text instead. A link to an entry in the trash shows
+crossed out. Each entry lists the entries that link to it under **Linked from**. Links work in
+Markdown and BBCode notes.
+
 ### The tree
 
 - Nested entries of any depth, **drag and drop** to reorder or re-parent (SortableJS). Rows keep their

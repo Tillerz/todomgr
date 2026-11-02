@@ -212,6 +212,8 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .notesbox.max textarea,.notesbox.max .md{flex:1;min-height:0;overflow:auto;resize:none}
 .maxhint{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;font-size:12px}
 .copyid{cursor:pointer}
+.elink{color:var(--accent);cursor:pointer;text-decoration:underline dotted}.elink.gone{color:var(--muted);text-decoration:line-through;cursor:default}
+.qac small{color:var(--muted);margin-left:6px}
 .qac{position:fixed;z-index:70;min-width:180px;max-height:240px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:4px;font-size:13.5px}
 .qac .ci.on{background:var(--sel)}
 .md p,.md ul,.md ol,.md h1,.md h2,.md h3,.md h4,.md h5,.md h6,.md pre,.md table,.md blockquote,.md .alert{margin:.3em 0}.md code{background:var(--hover);padding:0 4px;border-radius:4px}.md a{color:var(--accent)}
@@ -771,6 +773,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
 <div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview">${ui.mdPrev?'Edit':'Preview'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode (World Anvil): [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax?'<span class="maxhint">Alt+Enter or Esc to close</span>':''}</h4>
 ${ui.mdPrev?`<div class="md">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
+${(()=>{const re=new RegExp(`\\[\\[${n.id}[\\]|]`),b=allNodes().filter(x=>x.id!==n.id&&re.test(x.notes||''));
+  return b.length?`<h4>Linked from</h4><div class="list">${b.map(x=>`<div class="li"><span class="t"><a class="elink" data-act="goto" data-v="${x.id}">${esc(x.name)}</a></span></div>`).join('')}</div>`:''})()}
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
@@ -783,7 +787,13 @@ function dependsOn(x,id,seen=new Set()){if(seen.has(x.id))return false;seen.add(
 // notes preview: GitHub markdown via marked. Notes can come from MCP/API, so raw HTML shows as text,
 // links and images only take http(s)/mailto, and > [!NOTE] … [!CAUTION] quotes become alert boxes.
 const mdUrl=u=>/^(https?:|mailto:)/i.test(String(u).trim());
-const MD=new marked.Marked({gfm:true,breaks:true,renderer:{
+// [[id]] and [[id|text]] link to another entry; its name is looked up when the notes are shown
+const RE_ELINK=/\[\[([a-z0-9]{1,20})(?:\|([^\]\n]*))?\]\]/g;
+function elink(id,html){const x=S.nodes[id],ok=x&&!x.trashed;
+  return`<a class="elink${ok?'':' gone'}"${ok?` data-act="goto" data-v="${id}"`:''} data-tip="${ok?esc('Open “'+x.name+'”'):'No such entry (in the trash or unknown)'}">${html||esc(x?x.name:'[['+id+']]')}</a>`}
+const MD=new marked.Marked({gfm:true,breaks:true,extensions:[{name:'elink',level:'inline',start:src=>src.indexOf('[['),
+  tokenizer(src){const m=/^\[\[([a-z0-9]{1,20})(?:\|([^\]\n]*))?\]\]/.exec(src);if(m)return{type:'elink',raw:m[0],id:m[1],text:m[2]}},
+  renderer:t=>elink(t.id,t.text&&esc(t.text))}],renderer:{
   html({text}){return esc(text)},
   link({href,title,tokens}){const t=this.parser.parseInline(tokens);
     return mdUrl(href)?`<a href="${esc(href)}"${title?` title="${esc(title)}"`:''} target="_blank" rel="noopener">${t}</a>`:t},
@@ -796,7 +806,7 @@ function md(s){return s?MD.parse(s):''}
 // known tags become HTML; colours must look like a colour and icons must exist, so nothing else gets in.
 function bb(s){if(!s)return'';const keep=[],put=h=>`\u0000${keep.push(h)-1}\u0000`;
   s=s.replace(/\u0000/g,'').replace(/\[noparse\]([\s\S]*?)\[\/noparse\]/gi,(_,x)=>put(esc(x).replace(/\n/g,'<br>'))).replace(/\/\*[\s\S]*?\*\//g,'');
-  s=esc(s);
+  s=esc(s).replace(RE_ELINK,(_,id,t)=>put(elink(id,t)));// t is escaped already
   const again=(re,fn)=>{let o;do{o=s;s=s.replace(re,fn)}while(s!==o)};
   const pair=t=>new RegExp(`\\[${t}\\]((?:(?!\\[${t}\\])[\\s\\S])*?)\\[\\/${t}\\]`,'gi');// innermost first, so tags can nest
   const col=c=>/^(#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(c=(c||'').trim())?c:'';
@@ -849,6 +859,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   switch(a){
     case'closepanel':ui.panel=false;renderDetail();break;
     case'copyid':copyText(n.id);break;
+    case'goto':reveal(v);break;
     case'notesmax':ui.notesMax=!ui.notesMax;renderDetail();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
@@ -1257,29 +1268,48 @@ $('#detail').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&modalKind!=='alarm')closeModal();timerClick(e);
   const tr=e.target.closest('[data-tr]');if(tr){if(tr.dataset.tr==='restore'){restoreNode(tr.dataset.id);showTrash()}else if(confirm('Permanently delete everything in the trash?')){push();Object.values(S.nodes).filter(n=>n.trashed).forEach(n=>purge(n.id));persist();showTrash()}}});
 let qh=-1,qDraft='';
-// Quick add: typing #… or @… lists the existing tags or people, so "#Work" does not become a second "#work"
+// Pick lists: in quick add, typing #… or @… lists the existing tags or people, so "#Work" does not
+// become a second "#work"; in the notes, typing [[ lists the entries to link to.
 const qac={el:null,items:[],cur:0};
-function qacClose(){qac.el?.remove();qac.el=null}
-function qacOpen(inp){const c=inp.selectionStart,m=inp.value.slice(0,c).match(/(^|\s)([#@])([^\s#@]*)$/);if(!m){qacClose();return}
-  const typed=m[3].toLowerCase(),cnt=new Map(),rank=t=>t.toLowerCase()===typed?2:t.toLowerCase().startsWith(typed)?1:0;
-  for(const n of allNodes())for(const t of n[m[2]==='#'?'tags':'people'])cnt.set(t,(cnt.get(t)||0)+1);
-  qac.items=[...cnt.keys()].filter(t=>t.toLowerCase().includes(typed)).sort((a,b)=>rank(b)-rank(a)||cnt.get(b)-cnt.get(a)||a.localeCompare(b));
-  if(!qac.items.length){qacClose();return}
-  Object.assign(qac,{sym:m[2],from:c-m[3].length-1,to:c,cur:0});
+function qacClose(){qac.el?.remove();qac.el=null;qac.inp=null}
+// items: [{html, ins}]; from…to is the typed text that the picked item replaces, eat matches what is left of it after the caret
+function qacShow(inp,from,to,eat,items,x,y){if(!items.length){qacClose();return}
+  Object.assign(qac,{inp,from,to,eat,items,cur:0});
   if(!qac.el){qac.el=document.createElement('div');qac.el.className='qac';document.body.append(qac.el)}
-  const r=inp.getBoundingClientRect();qac.el.style.left=r.left+'px';qac.el.style.top=r.bottom+2+'px';qacDraw()}
-function qacDraw(){qac.el.innerHTML=qac.items.map((t,i)=>`<div class="ci${i===qac.cur?' on':''}" data-qac="${i}">${esc(qac.sym+t)}</div>`).join('');qac.el.children[qac.cur]?.scrollIntoView({block:'nearest'})}
-function qacPick(inp,i){const v=inp.value,ins=qac.sym+qac.items[i]+' ',rest=v.slice(qac.to).replace(/^\S*\s?/,'');
-  inp.value=v.slice(0,qac.from)+ins+rest;const p=qac.from+ins.length;inp.setSelectionRange(p,p);qacClose()}
-$('#quick').addEventListener('input',e=>qacOpen(e.target));
-$('#quick').addEventListener('blur',qacClose);
-$('#quick').addEventListener('keydown',e=>{if(!qac.el)return;const k=e.key;
+  qac.el.style.left=Math.max(0,Math.min(x,innerWidth-280))+'px';qac.el.style.top=Math.min(y,innerHeight-250)+'px';qacDraw()}
+function qacDraw(){qac.el.innerHTML=qac.items.map((t,i)=>`<div class="ci${i===qac.cur?' on':''}" data-qac="${i}">${t.html}</div>`).join('');qac.el.children[qac.cur]?.scrollIntoView({block:'nearest'})}
+function qacPick(i){const inp=qac.inp,v=inp.value,ins=qac.items[i].ins,rest=v.slice(qac.to).replace(qac.eat,'');
+  inp.value=v.slice(0,qac.from)+ins+rest;const p=qac.from+ins.length;inp.setSelectionRange(p,p);qacClose();
+  inp.dispatchEvent(new Event('change',{bubbles:true}))}// the notes field saves on change
+function qacKey(e){if(!qac.el||e.target!==qac.inp)return;const k=e.key;
   if(k==='ArrowDown'||k==='ArrowUp'){qac.cur=(qac.cur+(k==='ArrowDown'?1:-1)+qac.items.length)%qac.items.length;qacDraw()}
-  else if(k==='Enter'||k==='Tab')qacPick(e.target,qac.cur);
+  else if(k==='Enter'||k==='Tab')qacPick(qac.cur);
   else if(k==='Escape')qacClose();
   else{if(k==='ArrowLeft'||k==='ArrowRight'||k==='Home'||k==='End')qacClose();return}
-  e.preventDefault();e.stopImmediatePropagation()});
-document.addEventListener('mousedown',e=>{const it=e.target.closest?.('[data-qac]');if(it){e.preventDefault();qacPick($('#quick'),+it.dataset.qac)}},true);
+  e.preventDefault();e.stopImmediatePropagation()}
+function tagAc(inp){const c=inp.selectionStart,m=inp.value.slice(0,c).match(/(^|\s)([#@])([^\s#@]*)$/);if(!m){qacClose();return}
+  const typed=m[3].toLowerCase(),cnt=new Map(),rank=t=>t.toLowerCase()===typed?2:t.toLowerCase().startsWith(typed)?1:0;
+  for(const n of allNodes())for(const t of n[m[2]==='#'?'tags':'people'])cnt.set(t,(cnt.get(t)||0)+1);
+  const items=[...cnt.keys()].filter(t=>t.toLowerCase().includes(typed)).sort((a,b)=>rank(b)-rank(a)||cnt.get(b)-cnt.get(a)||a.localeCompare(b));
+  const r=inp.getBoundingClientRect();qacShow(inp,c-m[3].length-1,c,/^\S*\s?/,items.map(t=>({html:esc(m[2]+t),ins:m[2]+t+' '})),r.left,r.bottom+2)}
+// screen position just below the caret of a textarea, measured with a hidden copy of its text
+function caretXY(ta){const r=ta.getBoundingClientRect(),cs=getComputedStyle(ta),d=document.createElement('div'),sp=document.createElement('span');
+  ['font','padding','border','boxSizing','lineHeight','letterSpacing','tabSize'].forEach(p=>d.style[p]=cs[p]);
+  Object.assign(d.style,{position:'fixed',left:'0',top:'0',visibility:'hidden',whiteSpace:'pre-wrap',overflowWrap:'break-word',width:r.width+'px'});
+  d.textContent=ta.value.slice(0,ta.selectionStart);sp.textContent='\u200b';d.append(sp);document.body.append(d);
+  const xy=[r.left+sp.offsetLeft-ta.scrollLeft,r.top+sp.offsetTop+sp.offsetHeight-ta.scrollTop+2];d.remove();return xy}
+function linkAc(ta){const c=ta.selectionStart,m=ta.value.slice(0,c).match(/\[\[([^\[\]|\n]{0,40})$/);if(!m){qacClose();return}
+  const typed=m[1].toLowerCase(),rank=x=>x.id.startsWith(typed)||x.name.toLowerCase().startsWith(typed)?1:0;
+  const items=allNodes().filter(x=>x.id!==ui.sel&&(x.name.toLowerCase().includes(typed)||x.id.startsWith(typed)))
+    .sort((a,b)=>rank(b)-rank(a)||b.updated-a.updated).slice(0,40);
+  qacShow(ta,c-m[1].length-2,c,/^[^\s\]]*(\]\])?/,items.map(x=>({html:`${esc(x.name)}<small>${x.id}</small>`,ins:`[[${x.id}]]`})),...caretXY(ta))}
+$('#quick').addEventListener('input',e=>tagAc(e.target));
+$('#quick').addEventListener('blur',qacClose);
+$('#quick').addEventListener('keydown',qacKey);
+$('#detail').addEventListener('input',e=>{if(e.target.matches('textarea[data-f=notes]'))linkAc(e.target)});
+$('#detail').addEventListener('keydown',qacKey);
+$('#detail').addEventListener('focusout',e=>{if(e.target===qac.inp)qacClose()});
+document.addEventListener('mousedown',e=>{const it=e.target.closest?.('[data-qac]');if(it){e.preventDefault();qacPick(+it.dataset.qac)}},true);
 $('#quick').addEventListener('keydown',e=>{const H=S.prefs.quickHist||(S.prefs.quickHist=[]);
   if(e.key==='ArrowUp'||e.key==='ArrowDown'){if(!H.length)return;e.preventDefault();
     if(e.key==='ArrowUp'){if(qh===-1)qDraft=e.target.value;if(qh<H.length-1)qh++}else if(qh>-1)qh--;
