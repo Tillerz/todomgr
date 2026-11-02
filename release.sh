@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publishes the archives in dist/ as a GitHub release for the Version in main.go.
+# Publishes the archives in dist/ as a GitHub release for the Version in app/main.go.
 # Order: ./build.sh, ./test.sh, try it yourself, git commit, then ./release.sh.
 # Release text: docs/releases/v<Version>.md if it exists (GitHub adds its changelog link below it).
 # Write one line per paragraph or list item: GitHub shows every line break in release texts.
@@ -7,14 +7,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' main.go)
-[ -n "$version" ] || { echo "no Version in main.go"; exit 1; }
+version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' app/main.go)
+[ -n "$version" ] || { echo "no Version in app/main.go"; exit 1; }
 tag="v$version"
 
 command -v gh >/dev/null || { echo "gh (GitHub CLI) is not installed"; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "uncommitted changes, commit them first:"; git status --short; exit 1; }
 if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-  echo "tag $tag already exists: raise Version in main.go first"; exit 1
+  echo "tag $tag already exists: raise Version in app/main.go first"; exit 1
 fi
 
 # publish exactly what was built and tested (./build.sh, ./test.sh), nothing is rebuilt here

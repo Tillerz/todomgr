@@ -300,17 +300,22 @@ todo help
 ./test.sh           # all tests: Go tests, notes preview safety tests (Node), end-to-end run (temp data, 127.0.0.1 only)
 ./release.sh        # after build + test + commit: tag v<Version>, push, publish dist/ archives (needs gh)
 go test ./...
-./todo serve --ui web     # develop the UI: serves web/ from disk instead of the embedded copy
+./todo serve --ui app/web     # develop the UI: serves app/web/ from disk instead of the embedded copy
 ```
 
+All program code is in `app/`: the Go files and the web page (`app/web/`), which is built into the program.
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes
-preview tests (`node notes_test.js`).
+preview tests (`node app/notes_test.js`).
 
 ## Screenshots
 
 ### The tree with the detail panel, light mode
 
 ![The tree with the detail panel, light mode](docs/tree.png)
+
+### The detail panel of a reminder, with a custom repeat rule
+
+<img alt="The detail panel of a reminder with a custom repeat rule" src="docs/detail-pane.png" width=400px>
 
 ### The Today view with reminders
 
@@ -414,12 +419,12 @@ share it, also at work, free of charge. You may not sell it or offer a product t
 ## Third-party licences
 
 The program uses these open-source parts. They are bundled into the program, and their licence texts
-are in [web/licenses/](web/licenses/). The app shows the same list under Settings → About.
+are in [app/web/licenses/](app/web/licenses/). The app shows the same list under Settings → About.
 
 | Part | Used for | Licence |
 |---|---|---|
-| [Go standard library](https://go.dev/) | the program itself | BSD 3-Clause, [go.txt](web/licenses/go.txt) |
-| [SortableJS](https://github.com/SortableJS/Sortable) 1.15.2 | drag and drop in the tree | MIT, [sortablejs.txt](web/licenses/sortablejs.txt) |
-| [marked](https://marked.js.org/) 18.1.2 | Markdown in notes | MIT (and BSD 3-Clause for Markdown), [marked.txt](web/licenses/marked.txt) |
-| [Lucide](https://lucide.dev/) 1.66.0 | tag icons | ISC, [lucide.txt](web/licenses/lucide.txt) |
-| [Feather](https://feathericons.com/) | app icons | MIT, [feather.txt](web/licenses/feather.txt) |
+| [Go standard library](https://go.dev/) | the program itself | BSD 3-Clause, [go.txt](app/web/licenses/go.txt) |
+| [SortableJS](https://github.com/SortableJS/Sortable) 1.15.2 | drag and drop in the tree | MIT, [sortablejs.txt](app/web/licenses/sortablejs.txt) |
+| [marked](https://marked.js.org/) 18.1.2 | Markdown in notes | MIT (and BSD 3-Clause for Markdown), [marked.txt](app/web/licenses/marked.txt) |
+| [Lucide](https://lucide.dev/) 1.66.0 | tag icons | ISC, [lucide.txt](app/web/licenses/lucide.txt) |
+| [Feather](https://feathericons.com/) | app icons | MIT, [feather.txt](app/web/licenses/feather.txt) |

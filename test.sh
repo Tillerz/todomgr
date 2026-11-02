@@ -31,9 +31,9 @@ if grep -q -E '^(FAIL|panic:|.*\[build failed\])' "$tmp/go.log" && ! grep -q '^-
 fi
 
 # ---------------------------------------------------------------- 2. notes preview
-echo "Notes preview (web/index.html with marked, in node)"
+echo "Notes preview (app/web/index.html with marked, in node)"
 if command -v node > /dev/null; then
-  node notes_test.js > "$tmp/notes.log" 2>&1
+  node app/notes_test.js > "$tmp/notes.log" 2>&1
   while read -r status rest; do
     [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
   done < <(grep -E '^(PASS|FAIL) ' "$tmp/notes.log")
@@ -45,7 +45,7 @@ fi
 # ---------------------------------------------------------------- 3. end-to-end
 echo "End-to-end (real program, temp data, 127.0.0.1 only)"
 bin=$tmp/todo data=$tmp/data
-if ! go build -o "$bin" . 2> "$tmp/build.log"; then
+if ! go build -o "$bin" ./app 2> "$tmp/build.log"; then
   bad "build" "$(tail -1 "$tmp/build.log")"
   echo "---"; echo "$pass passed, $fail failed"; exit 1
 fi
@@ -71,7 +71,7 @@ if start; then ok "server starts on port $port"; else bad "server starts on port
 token=$(todo token)
 api=http://127.0.0.1:$port
 
-version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' main.go)
+version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' app/main.go)
 check "todo version shows v$version" grep -q "v$version" <<< "$("$bin" version)"
 check "API without token is refused (401)" test "$(code "$api/api/info")" = 401
 check "API with token works (200)" test "$(code -H "Authorization: Bearer $token" "$api/api/info")" = 200

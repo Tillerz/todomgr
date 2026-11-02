@@ -4,14 +4,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 command -v go > /dev/null || { echo "go not found in PATH (is Go installed, and its bin folder in PATH?)"; exit 1; }
-gofmt -l . | (! grep .) || { echo "gofmt: run 'gofmt -w *.go' first"; exit 1; }
+gofmt -l app | (! grep .) || { echo "gofmt: run 'gofmt -w app' first"; exit 1; }
 go vet ./...
 go test ./...
 
 build() { # os arch outdir exe
   local dir="dist/$3"
   mkdir -p "$dir"
-  GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o "$dir/$4" .
+  GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o "$dir/$4" ./app
   cp -f README.md LICENSE "$dir/"
   echo "built $dir/$4 ($(du -h "$dir/$4" | cut -f1))"
 }
@@ -25,8 +25,8 @@ else
   build darwin  amd64 todomgr-macos-amd64   todo
 
   # Release archives: dist/todomgr-v<Version>-<platform>.zip|.tar.gz + SHA256SUMS.txt (never with a data folder).
-  version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' main.go)
-  [ -n "$version" ] || { echo "no Version in main.go"; exit 1; }
+  version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' app/main.go)
+  [ -n "$version" ] || { echo "no Version in app/main.go"; exit 1; }
   rm -f dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt
   (
     cd dist
@@ -38,4 +38,4 @@ else
   )
   echo "packed v$version:"; ls -1 dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt
 fi
-# The UI is embedded in the binary (web/). Data is created next to the program in ./data on first start.
+# The program code is in app/; the UI (app/web/) is embedded in the binary. Data is created next to the program in ./data on first start.

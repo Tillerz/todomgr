@@ -110,7 +110,7 @@ colour = stripe, priority = flag, status = checkbox; tooltips via one `data-tip`
 ## Status (2026-11-01)
 
 * Phase 1 done: `prototype/index.html` (standalone, browser storage).
-* Phase 2 done (v0.1): Go core in this folder — `web/` UI (embedded, SortableJS vendored), REST API, SSE live updates,
+* Phase 2 done (v0.1): Go core (now in `app/`) — `web/` UI (embedded, SortableJS vendored), REST API, SSE live updates,
   atomic saves + prev copy + snapshot backups with retention + auto-recovery, lock file, schema versioning with
   migrations (`migrate.go`; newer files are never touched), CLI, MCP (HTTP + stdio bridge; off by default, loopback only),
   unit tests (`go test ./...`), portable builds via `./build.sh`.
