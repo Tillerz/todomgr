@@ -7,3 +7,4 @@
 *.corrupt-*.json
 /todo
 /todo.exe
+*:Zone.Identifier
