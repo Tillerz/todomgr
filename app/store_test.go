@@ -418,3 +418,16 @@ func TestNotesFormat(t *testing.T) {
 		t.Error("notesFormat html must be refused")
 	}
 }
+
+func TestProjectIcon(t *testing.T) {
+	st, _ := testStore(t)
+	p := mustCreate(t, st, "Novel", "", map[string]any{"kind": "project", "icon": "book"})
+	if n, _ := st.Get(p); n["icon"] != "book" {
+		t.Fatalf("icon: %v", n["icon"])
+	}
+	for _, bad := range []any{"Book", "<svg>", "a b", 5, strings.Repeat("a", 31)} {
+		if _, err := st.Patch("test", p, map[string]any{"icon": bad}); err == nil {
+			t.Errorf("icon %v must be refused", bad)
+		}
+	}
+}

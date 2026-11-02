@@ -93,7 +93,7 @@ func validStatus(kind, s string) bool {
 func defaultNode(id, name string) Node {
 	t := nowMs()
 	return Node{
-		"id": id, "name": name, "kind": "todo", "status": "open", "color": "", "prio": 0.0,
+		"id": id, "name": name, "kind": "todo", "status": "open", "color": "", "icon": "", "prio": 0.0,
 		"tags": []any{}, "people": []any{}, "location": "", "deadline": "", "reminder": "", "end": "",
 		"deps": []any{}, "notes": "", "notesFormat": "markdown", "links": []any{},
 		"prog":  map[string]any{"mode": "percent", "done": 0.0, "total": 100.0, "unit": ""},
@@ -392,7 +392,7 @@ func (db *DB) view(n Node, now time.Time) map[string]any {
 		"prio": n["prio"], "parent": n["parent"], "path": db.path(n),
 		"progress": round2(db.frac(n)), "blocked": db.blocked(n), "children": len(n.Kids()),
 	}
-	for _, k := range []string{"deadline", "reminder", "end", "url", "location", "color", "recur"} {
+	for _, k := range []string{"deadline", "reminder", "end", "url", "location", "color", "icon", "recur"} {
 		if s := n.S(k); s != "" {
 			v[k] = s
 		}

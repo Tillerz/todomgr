@@ -106,6 +106,9 @@ Markdown and BBCode notes.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
 - **Tag icons:** entries with certain tags show an icon before the name, for example `#meeting`, `#stream`,
   `#nsfw` (18+), `#call`, `#mail`, `#bug`, `#research` and `#review`. Change the list under Settings.
+- **Project icons:** click **Icon** in a project's detail panel to show an icon instead of its square.
+  The icon's colour shows the status: grey while planning, blue when active, orange when paused, green
+  when done.
 - A page icon in the row shows that an entry has **notes**. Hover the icon or the name to read the first
   lines of the notes without opening the entry.
 - Undo and redo for every change. Deleting only moves an entry (with everything below it) to the **trash**,

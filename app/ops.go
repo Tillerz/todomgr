@@ -38,6 +38,7 @@ func (t *Tx) now() time.Time { return time.Now().In(t.loc) }
 
 var (
 	reColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+	reIcon  = regexp.MustCompile(`^[a-z0-9-]{1,30}$`)
 	// Discord webhook URLs only (https, discord.com / discordapp.com, optional ptb./canary.).
 	reHook = regexp.MustCompile(`^https://((ptb|canary)\.)?discord(app)?\.com/api(/v\d+)?/webhooks/\d+/[\w-]+$`)
 	reHTTP = regexp.MustCompile(`^https?://[^\s]+$`)
@@ -58,7 +59,7 @@ func normURL(v string) string {
 	return ""
 }
 
-var fieldOrder = []string{"kind", "name", "color", "prio", "tags", "people", "location", "deadline", "reminder", "end",
+var fieldOrder = []string{"kind", "name", "color", "icon", "prio", "tags", "people", "location", "deadline", "reminder", "end",
 	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "est", "lead", "discord", "collapsed", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
@@ -136,6 +137,12 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be empty or #rrggbb")
 		}
 		n["color"] = s
+	case "icon":
+		s, ok := v.(string)
+		if !ok || (s != "" && !reIcon.MatchString(s)) {
+			return errors.New("must be empty or an icon name (a-z, 0-9, -)")
+		}
+		n["icon"] = s
 	case "prio":
 		p := num(v)
 		if p < 0 || p > 4 || p != float64(int(p)) {

@@ -212,6 +212,8 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .notesbox.max textarea,.notesbox.max .md{flex:1;min-height:0;overflow:auto;resize:none}
 .maxhint{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;font-size:12px}
 .copyid{cursor:pointer}
+.chk.has-ic{border:none;border-radius:4px;background:none;display:grid;place-items:center;color:var(--muted)}.chk.has-ic::after{display:none}
+.chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
 .planbar b{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;background:var(--ink)}
@@ -432,6 +434,8 @@ const TAG_ICON_SET=['users','user','video','camera','image','mic','music','phone
   'alert','adult','bug','code','wrench','shield','lock','eye','search','book','pen','file','idea','trophy','gift','money','cart','home','map','pin',
   'globe','plane','coffee','game','play','link','tag'];
 const tagIcons=()=>S.prefs.tagIcons||TAG_ICONS;
+// a project's own icon replaces its square; the colour shows the status
+const projIc=n=>n.kind==='project'&&P[n.icon]?ic(n.icon,16):'';
 function tagIc(n,s=14){const m=tagIcons(),seen=new Set();
   return n.tags.map(t=>[t,m[t.toLowerCase()]]).filter(([,i])=>P[i]&&!seen.has(i)&&seen.add(i))
     .map(([t,i])=>`<span class="tic" data-tip="#${esc(t)}">${ic(i,s)}</span>`).join('')}
@@ -524,7 +528,7 @@ function recurText(r){const m=RE_RECUR.exec(r||'');if(!m)return'';
 let S,ui={sel:null,multi:new Set(),view:'tree',q:'',hideDone:false,panel:false,metric:'closed',dragging:false};
 const blank=()=>({v:2,rev:0,nodes:{root:{id:'root',name:'root',children:[]}},activity:[],timer:null,prefs:{theme:null,views:[]}});
 function uid(){let i;do i=Math.random().toString(36).slice(2,8);while(S.nodes[i]);return i}
-function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,tags:[],people:[],location:'',deadline:'',reminder:'',end:'',deps:[],notes:'',notesFormat:'markdown',links:[],
+function mk(name,p={}){const id=uid(),t=now();return S.nodes[id]={id,name,kind:'todo',status:'open',color:'',prio:0,icon:'',tags:[],people:[],location:'',deadline:'',reminder:'',end:'',deps:[],notes:'',notesFormat:'markdown',links:[],
   prog:{mode:'percent',done:0,total:100,unit:''},recur:'',est:0,time:[],url:'',webhook:'',collapsed:false,created:t,updated:t,parent:null,children:[],hist:[{s:p.status||'open',at:t}],...p}}
 const isClosed=n=>CLOSED.has(n.status);
 const kids=n=>n.children.map(i=>S.nodes[i]).filter(c=>c&&c.status!=='cancelled'&&c.status!=='rejected'&&c.status!=='archived'&&c.kind!=='reminder');
@@ -691,7 +695,7 @@ function liHTML(n,vis,force){
   return`<li class="node${n.color?' col':''}" data-id="${n.id}"${n.color?` style="--c:${n.color}"`:''}><div class="${cls.join(' ')}" style="${n.color?`--rc:${n.color}`:''}">
 <span class="grip" data-tip="Drag to move (or Alt+↑/↓, Tab / Shift+Tab)">${ic('grip')}</span>
 <button class="tw ${hasKids?(open?'open':''):'none'}" data-tip="Expand / collapse">${ic('chev')}</button>
-${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}"></button>`}
+${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}${projIc(n)?' has-ic':''}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}">${projIc(n)}</button>`}
 <span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
@@ -741,6 +745,8 @@ function renderDetail(){
 <span class="sp"></span><span class="bd copyid" data-act="copyid" data-tip="Item id (used by CLI/API) — click to copy">${n.id}</span><button class="ib close-panel" data-act="closepanel" data-tip="Close sidebar (Esc)">${ic('x')}</button></div>
 <input data-f="name" value="${esc(n.name)}" placeholder="Name (required)" data-tip="Name — required">
 ${urlSec(n)}
+${n.kind==='project'?`<h4>Icon <button class="chip" data-act="icpick" data-tip="Choose the icon shown in the tree instead of the square">${P[n.icon]?ic(n.icon,14):'None'}</button>${n.icon?` <button class="chip" data-act="seticon" data-v="" data-tip="Back to the square">${ic('x',12)}</button>`:''}</h4>
+${ui.icPick===n.id?`<div class="tipick">${TAG_ICON_SET.map(k=>`<button class="${k===n.icon?'on':''}" data-act="seticon" data-v="${k}" data-tip="${k}">${ic(k,18)}</button>`).join('')}</div>`:''}`:''}
 <h4>Status & priority</h4>
 <div class="grid2"><select data-f="status" data-tip="Status — every change is dated in the history below">${KS[n.kind].map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${STAT[s]}${s==='later'?' (postponed)':''}</option>`).join('')}</select>
 ${n.kind==='idea'?`<button class="btn pri" data-act="promote" data-tip="Turn this idea into a todo">Promote to todo →</button>`:`<span></span>`}</div>
@@ -863,6 +869,8 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'closepanel':ui.panel=false;renderDetail();break;
     case'copyid':copyText(n.id);break;
     case'goto':reveal(v);break;
+    case'icpick':ui.icPick=ui.icPick===n.id?null:n.id;renderDetail();break;
+    case'seticon':ui.icPick=null;m(()=>n.icon=v);break;
     case'notesmax':ui.notesMax=!ui.notesMax;renderDetail();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
@@ -1114,7 +1122,7 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   T(inbox.id,'Renew World Anvil subscription',{prio:3,deadline:addDays(-1),tags:['wa']});
 
   /* ---- World ---- */
-  const world=P('World of Aldermere',{color:'#4a7de0',url:WA,tags:['worldbuilding'],notes:'Main **World Anvil** world for the Ashen Crown saga.\n\nPaste a Discord webhook URL into the field above to get a prompt to announce finished tasks in your channel.'});
+  const world=P('World of Aldermere',{color:'#4a7de0',icon:'map',url:WA,tags:['worldbuilding'],notes:'Main **World Anvil** world for the Ashen Crown saga.\n\nPaste a Discord webhook URL into the field above to get a prompt to announce finished tasks in your channel.'});
   const geo=T(world.id,'Geography & maps',{color:'#2aa6a0'});
   const map=T(geo.id,'Draw the continent map',{status:'progress',prog:{mode:'percent',done:70,total:100,unit:''},tags:['maps'],people:['Sam'],deadline:addDays(9),est:300,time:[{at:t-2*D,secs:7200}]});
   const cities=T(geo.id,'Name the 12 major cities',{status:'progress',prog:{mode:'units',done:7,total:12,unit:'cities'},tags:['worldbuilding']});
@@ -1144,7 +1152,7 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   T(world.id,'World Anvil Community stream',{kind:'reminder',status:'set',recur:'w',lead:15,reminder:addDays(thu)+'T19:00',url:'https://www.worldanvil.com/',tags:['wa'],notes:'Weekly. Bring questions about the map tool.'});
 
   /* ---- Novel ---- */
-  const novel=P('Novel: The Ashen Crown',{color:'#8a63d2',tags:['novel'],deadline:addDays(150),notes:'Epic fantasy, ~90,000 words, three acts.'});
+  const novel=P('Novel: The Ashen Crown',{color:'#8a63d2',icon:'book',tags:['novel'],deadline:addDays(150),notes:'Epic fantasy, ~90,000 words, three acts.'});
   const plan=T(novel.id,'Planning');
   done(T(plan.id,'Outline the three acts',{tags:['novel']}),45,40);
   T(plan.id,'Character profiles: Mira, Teren, Vash',{status:'progress',prog:{mode:'units',done:2,total:3,unit:'characters'},tags:['novel','characters'],url:WA+'/c/characters'});
