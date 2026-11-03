@@ -62,7 +62,7 @@ More in [Screenshots](#screenshots).
 ### Nice to use
 
 - Light and dark mode. The layout adapts to narrow windows.
-- Keyboard shortcuts, a command palette (Ctrl+K), and undo for every change.
+- [Keyboard shortcuts](#keyboard-shortcuts), a command palette (Ctrl+K), and undo for every change.
 - Statistics with a GitHub-style heatmap of what you got done.
 
 Every feature in detail: [Features](#features).
@@ -152,8 +152,7 @@ Markdown and BBCode notes.
   the current one to the clicked one (entries inside collapsed branches are left out). Esc clears the
   selection.
 - A coloured stripe shows the colour of an entry, and the stripe also spans its sub-entries.
-- Keyboard: Tab / Shift+Tab to indent and outdent, Alt+↑/↓ to move, Space to toggle done, Ctrl+K for the
-  command palette. A cheat sheet is under ⋯ → Keyboard shortcuts.
+- Most actions work from the keyboard: see [Keyboard shortcuts](#keyboard-shortcuts).
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open,
   rename, add sub-entry, status, priority, colour, change type, deadline, add tag, move to…, reorder and
   indent, open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash.
@@ -170,6 +169,54 @@ Markdown and BBCode notes.
   lines of the notes without opening the entry.
 - Undo and redo for every change. Deleting only moves an entry (with everything below it) to the **trash**,
   from where it can be restored.
+
+### Keyboard shortcuts
+
+Press **?** in the app to see this list.
+
+| Keys | What they do |
+|---|---|
+| **Anywhere** | |
+| `Ctrl+K` | Command palette: every action, and jump to an entry |
+| `N` | Quick add |
+| `/` | Search |
+| `1` `2` `3` | Tree / Today / Stats |
+| `T` | Timer |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo (`Ctrl+Y` redoes too) |
+| `Esc` | Close a window or the panel, clear the search and selection |
+| `?` | Help with this list |
+| **Moving in the tree** | |
+| `↑` / `↓` | Previous / next entry |
+| `→` | Expand, then go to the first sub-entry |
+| `←` | Collapse, then go to the parent |
+| **Changing entries** | |
+| `Enter` | New entry below |
+| `Insert` | New sub-entry |
+| `F2` / double-click | Rename |
+| `Space` | Done / not done |
+| `Tab` / `Shift+Tab` | Indent / outdent |
+| `Alt+↑` / `Alt+↓` | Move up / down |
+| `Delete` | Move to the trash |
+| `Shift+F10` / Menu key | Actions menu (as right-click) |
+| **While renaming** | |
+| `Enter` | Save (a new entry: save and start the next one) |
+| `Esc` | Cancel |
+| **Notes** | |
+| `Alt+Enter` | Edit the notes in a large window (`Esc` closes it) |
+| `[[` | Pick an entry to link to |
+| **Quick add** | |
+| `Enter` | Add to the Inbox |
+| `↑` / `↓` | Earlier entries |
+| `#` / `@` | Pick a tag / person |
+| **Pick lists and menus** | |
+| `↑` / `↓` | Choose |
+| `Enter` / `Tab` | Take it (menus: `Enter` / `Space`) |
+| `→` / `←` | Open / close a sub-menu |
+| `Esc` | Close |
+| **Mouse** | |
+| `Ctrl`+click | Select several entries |
+| `Shift`+click | Select a range |
+| Right-click / long-press | Actions menu |
 
 ### Quick add
 
@@ -438,6 +485,10 @@ preview tests (`node app/notes_test.js`).
 
 <img alt="The command palette" src="docs/command-palette.png" width=450px>
 
+### The help window
+
+<img alt="The command palette" src="docs/help-window.png" width=450px>
+
 ### The writing/work timer
 
 <img alt="The writing/work timer" src="docs/timer.png" width=300px>
@@ -450,13 +501,13 @@ preview tests (`node app/notes_test.js`).
 
 <img alt="The menu" src="docs/menu.png" width=350px>
 
-### The printable list
-
-<img alt="The printable list" src="docs/print-list.png" width=450px>
-
 ### Notes in BBCode
 
 <img alt="Notes in BBCode, preview" src="docs/notes-bbcode.png" width=400px>
+
+### The printable list
+
+<img alt="The printable list" src="docs/print-list.png" width=450px>
 
 ---
 

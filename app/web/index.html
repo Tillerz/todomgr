@@ -272,7 +272,7 @@ svg text{fill:var(--muted);font-size:10px;font-family:inherit}
 .bigclock{font-size:44px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0}
 .presets{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:12px monospace}
-.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.keys .kg{grid-column:1/-1;margin-top:8px}
 #toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;align-items:center;width:max-content;max-width:94vw}
 .toast{background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:9px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
 .toast button{color:var(--accent);font-weight:700;filter:brightness(1.4)}
@@ -1084,10 +1084,20 @@ function openPalette(){
   inp.oninput=()=>{cur=0;draw()};
   inp.onkeydown=e=>{if(e.key==='ArrowDown'){cur=Math.min(items.length-1,cur+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){cur=Math.max(0,cur-1);draw();e.preventDefault()}else if(e.key==='Enter')run(cur)};
   ul.onclick=e=>{const li=e.target.closest('li');if(li)run(+li.dataset.i)};draw();inp.focus()}
-function showHelp(){const K=[['Ctrl+K','Command palette'],['/','Search'],['N','Quick add'],['↑ ↓','Move selection'],['← →','Collapse / expand'],['Enter','New sibling below'],['Insert','New sub-item'],['F2 / Double-click','Rename'],['Space','Toggle done'],
-  ['Tab / Shift+Tab','Indent / outdent'],['Alt+↑ / ↓','Reorder'],['Delete','Move to trash'],['Ctrl+Z / Ctrl+Shift+Z','Undo / redo'],['1 2 3','Tree / Today / Stats'],['T','Timer'],['Ctrl+click','Multi-select'],['Shift+click','Select a range'],['Alt+Enter','Large notes editor'],['Esc','Clear filter / close']];
-  openModal(`<h3 style="margin-top:0">Keyboard shortcuts</h3><div class="keys">${K.map(([k,d])=>`<span>${k.split(' / ').map(x=>`<kbd>${x}</kbd>`).join(' ')}</span><span>${d}</span>`).join('')}</div>
-  <h3>Good to know</h3><ul style="color:var(--muted);padding-left:18px"><li>Drag the ⋮⋮ handle to move items; drop onto the dashed area under an item to nest.</li><li>Drop URLs, mails or files onto an item to attach them.</li><li>Right-click an entry (long-press on touch, Shift+F10, or the ⋯ button) for more actions.</li><li>Everything is saved automatically on the server (data/database.json) — the CLI and AI tools see the same data.</li></ul>`)}
+// keys of the help window, grouped; README.md "Keyboard shortcuts" has the same list
+const KEYS=[['Anywhere',[['Ctrl+K','Command palette: every action, and jump to an entry'],['N','Quick add'],['/','Search'],['1 / 2 / 3','Tree / Today / Stats'],['T','Timer'],
+    ['Ctrl+Z / Ctrl+Shift+Z','Undo / redo (Ctrl+Y redoes too)'],['Esc','Close a window or the panel, clear the search and selection'],['?','This help']]],
+  ['Moving in the tree',[['↑ / ↓','Previous / next entry'],['→','Expand, then go to the first sub-entry'],['←','Collapse, then go to the parent']]],
+  ['Changing entries',[['Enter','New entry below'],['Insert','New sub-entry'],['F2 / Double-click','Rename'],['Space','Done / not done'],['Tab / Shift+Tab','Indent / outdent'],
+    ['Alt+↑ / Alt+↓','Move up / down'],['Delete','Move to the trash'],['Shift+F10 / Menu key','Actions menu (as right-click)']]],
+  ['While renaming',[['Enter','Save (a new entry: save and start the next one)'],['Esc','Cancel']]],
+  ['Notes',[['Alt+Enter','Edit the notes in a large window (Esc closes it)'],['[[','Pick an entry to link to']]],
+  ['Quick add',[['Enter','Add to the Inbox'],['↑ / ↓','Earlier entries'],['# / @','Pick a tag / person']]],
+  ['Pick lists and menus',[['↑ / ↓','Choose'],['Enter / Tab','Take it (menus: Enter / Space)'],['→ / ←','Open / close a sub-menu'],['Esc','Close']]],
+  ['Mouse',[['Ctrl+click','Select several entries'],['Shift+click','Select a range'],['Right-click / Long-press','Actions menu']]]];
+function showHelp(){
+  openModal(`<h3 style="margin-top:0">Keyboard shortcuts</h3><div class="keys">${KEYS.map(([g,K])=>`<b class="kg">${g}</b>`+K.map(([k,d])=>`<span>${k.split(' / ').map(x=>`<kbd>${x}</kbd>`).join(' ')}</span><span>${d}</span>`).join('')).join('')}</div>
+  <h3>Good to know</h3><ul style="color:var(--muted);padding-left:18px"><li>Drag the ⋮⋮ handle to move items; drop onto the dashed area under an item to nest.</li><li>Drop URLs, mails or files onto an item to attach them.</li><li>Right-click an entry (long-press on touch, Shift+F10, or the ⋯ button) for more actions.</li><li>Everything is saved automatically on the server (data/database.json) — the CLI and AI tools see the same data.</li></ul>`,{kind:'help'})}
 function showTrash(){const T=Object.values(S.nodes).filter(n=>n.trashed).sort((a,b)=>b.trashed-a.trashed);
   openModal(`<div class="row-between"><h3 style="margin:0">Trash</h3>${T.length?'<button class="btn dng" data-tr="empty">Empty trash</button>':''}</div><div class="list" style="margin-top:10px">${T.map(n=>`<div class="li"><span class="t">${esc(n.name)}</span><small style="color:var(--muted)">${fmtFull(n.trashed)}</small><button class="btn" data-tr="restore" data-id="${n.id}">Restore</button></div>`).join('')||'<div class="empty">Trash is empty.</div>'}</div>`,{kind:'trash'})}
 
