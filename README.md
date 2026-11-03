@@ -485,9 +485,9 @@ preview tests (`node app/notes_test.js`).
 
 <img alt="The command palette" src="docs/command-palette.png" width=450px>
 
-### The help window
+### The help window with all keyboard shortcuts
 
-<img alt="The command palette" src="docs/help-window.png" width=450px>
+<img alt="The help window with all keyboard shortcuts" src="docs/help-window.png" width=450px>
 
 ### The writing/work timer
 
