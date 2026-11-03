@@ -145,14 +145,24 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
   };
   const env = {S: {prefs: {}, nodes: N}, now: () => new Date(t0).setHours(10), startOfToday: () => new Date(t0),
     allNodes: () => Object.values(N), isClosed: n => n.status === 'done', dueState: n => n.deadline ? 'today' : ''};
-  const plan = new Function(...Object.keys(env), cut('const pad=', ';\n') + cut('function pd(s)', '}\n') + cut('const fmtDur=', ';\n') +
+  const plan = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('const pad=', ';\n') + cut('function pd(s)', '}\n') + cut('const fmtDur=', ';\n') +
     cut('const inSubtree=', ';\n') + cut('const remAt=', ';\n') + cut('const evEnd=', ';\n') + cut("// Today's plan, in minutes", '</div></div>`}') +
-    'return {dayPlan, planBar};')(...Object.values(env));
+    'return {dayPlan, planBar, fmtDur};')(...Object.values(env));
   const r = plan.dayPlan(), text = plan.planBar().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   check('today: plan', [r.left === 420 ? '' : `left ${r.left}, want 420`, r.tasks === 150 ? '' : `tasks ${r.tasks}, want 150`,
     r.events === 120 ? '' : `events ${r.events}, want 120`, text.includes('2h 30m free') ? '' : 'text: ' + text].filter(Boolean));
   env.S.prefs.workDay = {from: '09:00', to: '12:00'};
   check('today: too much', [plan.planBar().includes('1h 30m too much') ? '' : 'no warning'].filter(Boolean));
+  // an event marked free (it does not block time) is left out of the plan
+  env.S.prefs.workDay = undefined;
+  N.h = {id: 'h', kind: 'reminder', reminder: k + 'T13:00', end: k + 'T15:00', free: true, parent: 'r'};
+  check('today: free events do not count', [plan.dayPlan().events === 120 ? '' : `events ${plan.dayPlan().events}, want 120`].filter(Boolean));
+  env.S.prefs.planOpen = true;
+  const list = plan.planBar().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  check('today: the details list the entries', ['due today · estimate 2h, 30m tracked 1h 30m', 'event 10:00–11:00 1h', 'event 16:00–17:00 1h', 'due today · estimate 1h 1h']
+    .filter(w => !list.includes(w)).map(w => 'missing: ' + w).concat(list.includes('Old') || list.includes('estimate 10h') ? ['a closed entry or the parent is listed'] : []));
+  check('time format: whole minutes', [[4 * 3600 + 59.6 * 60, '5h'], [3599, '1h'], [90 * 60, '1h 30m'], [29, '0m'], [45 * 60, '45m']]
+    .map(([sec, want]) => plan.fmtDur(sec) === want ? '' : `fmtDur(${sec}) = ${plan.fmtDur(sec)}, want ${want}`).filter(Boolean));
 }
 
 process.exit(failed ? 1 : 0);

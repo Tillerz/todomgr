@@ -480,6 +480,9 @@ func icsEvent(c *icsComp, loc *time.Location, now time.Time) (*impItem, bool) {
 	if end == when { // a one-day all-day event
 		end = ""
 	}
+	if strings.EqualFold(c.text("TRANSP"), "TRANSPARENT") { // "free" in the calendar: does not block time
+		it.f["free"] = true
+	}
 	over := func() bool { // the event (or this occurrence) has ended
 		if end != "" {
 			return isPast(end, loc, now)

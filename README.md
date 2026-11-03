@@ -316,7 +316,10 @@ no window is open.
 - **Day plan:** a bar at the top of Today adds up the estimates of the todos due today or overdue
   (minus the time already tracked) and the timed events in the rest of the day. It compares the sum with
   the time left in your work day (Settings → Work day, default 09:00–17:00) and turns red when the plan
-  does not fit.
+  does not fit. An event that runs in the background, such as a month-long writing challenge, does not
+  count when you untick *Blocks time in the day plan* on it. Calendar files call this "free" time.
+  Click the bar to see which entries take the time, and why (overdue, due today, event); click an entry
+  to open it.
 - **Browser tab title:** shows the one most important thing, so you see it from any other tab: a running
   timer (`⏱ 12:34 · Write chapter 4`), a reminder that pops up, the number of overdue todos, or the next
   todo due today.

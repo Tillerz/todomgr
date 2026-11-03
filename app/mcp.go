@@ -146,7 +146,7 @@ var mcpTools = []mcpTool{
 		Schema: obj(map[string]any{"days": tInt}),
 		Run:    func(s *Store, a map[string]any) (any, error) { return s.Stats(argInt(a, "days", 30)), nil }},
 	{Name: "create_entry", Write: true, Desc: "Create an entry. Either give \"text\" in quick syntax (goes to the Inbox unless parent is given) or \"name\" plus optional \"fields\" " +
-		"(kind, status, notes, notesFormat markdown|bbcode, deadline, reminder, end (end of an event), tags[], people[], prio 0-4, url, location, color, icon (a project's icon in the tree, e.g. star, book, code, map), recur (d/w/m/y, every N: 2w 3d 6m, monthly on weekdays: m:1fr,3fr,-1fr; a + at the end counts from the day it is done: 3d+), est minutes, lead minutes, deps[], prog{mode,done,total,unit}).",
+		"(kind, status, notes, notesFormat markdown|bbcode, deadline, reminder, end (end of an event), free (true: the event does not block time in the day plan), tags[], people[], prio 0-4, url, location, color, icon (a project's icon in the tree, e.g. star, book, code, map), recur (d/w/m/y, every N: 2w 3d 6m, monthly on weekdays: m:1fr,3fr,-1fr; a + at the end counts from the day it is done: 3d+), est minutes, lead minutes, deps[], prog{mode,done,total,unit}).",
 		Schema: obj(map[string]any{"text": tStr, "name": tStr, "parent": withDesc(tStr, "parent id (default: Inbox for text, top level for name)"), "index": tInt, "fields": tObj}),
 		Run: func(s *Store, a map[string]any) (any, error) {
 			if t := argStr(a, "text"); t != "" {

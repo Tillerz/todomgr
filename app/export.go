@@ -236,6 +236,9 @@ func (s *Store) ExportICS(includeClosed bool) []byte {
 					icsLine(&b, "DTEND:"+e.Format("20060102T150405"))
 				}
 			}
+			if n.Bool("free") {
+				icsLine(&b, "TRANSP:TRANSPARENT") // shown as free time in calendars
+			}
 			if lead := int(n.N("lead")); lead > 0 {
 				alarm(fmt.Sprintf(":-PT%dM", lead), name)
 			}

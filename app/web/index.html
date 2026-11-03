@@ -267,6 +267,11 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
+.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
+.planlist{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.pli{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:6px}.pli:hover{background:var(--hover)}
+.pli i{width:10px;height:10px;border-radius:3px;flex:none}.pli i.ev{background:#8a63d2}.pli i.tk{background:var(--accent)}
+.pli .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pli small{color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pli b{flex:none}
 .planbar b{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;background:var(--ink)}
 .elink{color:var(--accent);cursor:pointer;text-decoration:underline dotted}.elink.gone{color:var(--muted);text-decoration:line-through;cursor:default}
 .qac small{color:var(--muted);margin-left:6px}
@@ -496,7 +501,7 @@ const dayKey=t=>{const d=new Date(t);return d.getFullYear()+'-'+pad(d.getMonth()
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return dayKey(d)};
 function pd(s){if(!s)return null;const[a,t]=s.split('T');const[y,m,d]=a.split('-').map(Number);const[h,mi]=(t||'0:0').split(':').map(Number);return new Date(y,m-1,d,h,mi)}
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d};
-const fmtDur=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.round((s%3600)/60);return h?`${h}h ${m?m+'m':''}`.trim():`${m}m`};
+const fmtDur=s=>{const t=Math.round(s/60),h=Math.floor(t/60),m=t%60;return h?`${h}h ${m?m+'m':''}`.trim():`${m}m`};// whole minutes first, so 4h 59.6m is 5h, not 4h 60m
 const fmtClock=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return(h?h+':'+pad(m):m)+':'+pad(s%60)};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function fmtWhen(s){const d=pd(s);if(!d)return'';const diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-startOfToday())/864e5);
@@ -905,7 +910,7 @@ function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
     case'reminder-d':case'reminder-t':m(()=>setDT(n,'reminder'));if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
     case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>n.end=x.end);break}
-    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>n.recur=v,true);break;
+    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'busy':m(()=>n.free=!t.checked);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>n.recur=v,true);break;
     case'rc':{const r=recurFromEditor();if(r!==null)m(()=>n.recur=r,true);break}case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
     case'pct':mutate(()=>setProgress(n,v),{panel:true});break;
     case'pdone':mutate(()=>setProgress(n,v),{panel:true});break;
@@ -948,20 +953,24 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
 /* ============================ today ============================ */
 function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span><span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 // Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
-// the timed events in the rest of the work day, against the time left in it (Settings → Work day)
+// the timed events in the rest of the work day (not the "free" ones), against the time left in it (Settings → Work day)
 function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startOfToday();
   const at=hm=>{const[h,m]=hm.split(':').map(Number);return new Date(t0.getFullYear(),t0.getMonth(),t0.getDate(),h,m).getTime()};
-  const from=Math.max(now(),at(wd.from)),to=at(wd.to);
+  const from=Math.max(now(),at(wd.from)),to=at(wd.to),items=[];
   const due=allNodes().filter(n=>n.kind==='todo'&&!isClosed(n)&&n.status!=='later'&&n.est>0&&['over','today'].includes(dueState(n)));
-  const tasks=due.filter(n=>!due.some(m=>m!==n&&inSubtree(m.id,n.id)))// a parent and its sub-items: only the sub-items count
-    .reduce((a,n)=>a+Math.max(0,n.est-n.time.reduce((s,t)=>s+t.secs,0)/60),0);
-  const events=allNodes().filter(n=>n.kind==='reminder'&&n.end&&n.reminder.includes('T'))
-    .reduce((a,n)=>a+Math.max(0,Math.min(evEnd(n),to)-Math.max(remAt(n),from))/6e4,0);
-  return{left:Math.max(0,to-from)/6e4,tasks,events}}
-function planBar(){const{left,tasks,events}=dayPlan(),plan=tasks+events;if(!plan)return'';
-  const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60);
-  return`<div class="plan${over>0?' over':''}"><div class="row-between"><span><b>Planned ${d(plan)}</b> · ${left?d(left)+' left in the work day':'the work day is over'}</span><span>${over>0?`<b>${d(over)} too much</b>`:d(-over)+' free'}</span></div>
-<div class="planbar"><i class="ev" style="width:${w(events)}" data-tip="Events: ${d(events)}"></i><i class="tk" style="width:${w(tasks)}" data-tip="Todos due today or overdue (estimate minus time tracked): ${d(tasks)}"></i>${over>0&&left?`<b style="left:${w(left)}" data-tip="End of the work day"></b>`:''}</div></div>`}
+  due.filter(n=>!due.some(m=>m!==n&&inSubtree(m.id,n.id)))// a parent and its sub-items: only the sub-items count
+    .forEach(n=>{const tr=n.time.reduce((s,t)=>s+t.secs,0)/60,min=Math.max(0,n.est-tr);if(min)items.push({n,min,tr,over:dueState(n)==='over'})});
+  allNodes().filter(n=>n.kind==='reminder'&&n.end&&!n.free&&n.reminder.includes('T')).forEach(n=>{
+    const a=Math.max(remAt(n),from),b=Math.min(evEnd(n),to);if(b>a)items.push({n,min:(b-a)/6e4,ev:[a,b]})});
+  const sum=f=>items.filter(f).reduce((s,x)=>s+x.min,0);
+  return{left:Math.max(0,to-from)/6e4,tasks:sum(x=>!x.ev),events:sum(x=>x.ev),items}}
+function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if(!plan)return'';
+  const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60),hm=t=>{const x=new Date(t);return pad(x.getHours())+':'+pad(x.getMinutes())},open=S.prefs.planOpen;
+  const why=x=>x.ev?`event ${hm(x.ev[0])}–${hm(x.ev[1])}`:`${x.over?'overdue':'due today'} · estimate ${d(x.n.est)}${x.tr>=.5?`, ${d(x.tr)} tracked`:''}`;
+  const list=open?`<div class="planlist">${items.sort((a,b)=>(a.ev?0:1)-(b.ev?0:1)||(a.ev&&b.ev?a.ev[0]-b.ev[0]:b.min-a.min))
+    .map(x=>`<div class="pli" data-goto="${x.n.id}"><i class="${x.ev?'ev':'tk'}"></i><span class="t">${esc(x.n.name)}</span><small>${why(x)}</small><b>${d(x.min)}</b></div>`).join('')}</div>`:'';
+  return`<div class="plan${over>0?' over':''}" data-tip="${open?'Click to hide the entries':'Click to see which entries take the time'}"><div class="row-between"><span><b>Planned ${d(plan)}</b> · ${left?d(left)+' left in the work day':'the work day is over'}</span><span>${over>0?`<b>${d(over)} too much</b>`:d(-over)+' free'} <small class="plantog">${open?'▾':'▸'} details</small></span></div>
+<div class="planbar"><i class="ev" style="width:${w(events)}" data-tip="Events: ${d(events)}"></i><i class="tk" style="width:${w(tasks)}" data-tip="Todos due today or overdue (estimate minus time tracked): ${d(tasks)}"></i>${over>0&&left?`<b style="left:${w(left)}" data-tip="End of the work day"></b>`:''}</div>${list}</div>`}
 function renderToday(){
   const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'),used=new Set();
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(trow).join('')}`:''};
@@ -1114,6 +1123,7 @@ function showRem(){const it=remQ[0],n=it&&S.nodes[it.id];if(!n||n.trashed){remQ.
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">${n.kind!=='reminder'?'<button class="btn pri" data-rm="show">Show</button>':''}${u?`<a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">Open link</a>`:''}<button class="btn" data-rm="snooze">Snooze 10 min</button><button class="btn${u?'':' pri'}" data-rm="ok">Dismiss</button></div></div>`,{cls:'center',kind:'remind'})}
 function remSec(n){const lead=(+n.lead||0),l=LEADS.find(x=>x[0]===lead);
   return`<h4>When</h4><div class="grid2"><div class="field"><span>Date & time</span>${dtFields('reminder',n.reminder)}</div><div class="field"><span data-tip="Optional: for events that last a while or several days. The pop-up stays at the start.">Ends (optional)</span>${dtFields('end',n.end)}</div></div>
+<label class="chk-row" data-tip="On: an event with an end counts as busy time in Today's day plan. Off: for events that run in the background, such as a month-long writing challenge. Calendars call this busy / free."><input type="checkbox" data-f="busy" ${n.free?'':'checked'}> Blocks time in the day plan</label>
 <div class="grid2" style="margin-top:8px"><label class="field"><span>Remind me</span><select data-f="lead" data-tip="You always get a pop-up at the time; this adds an earlier one">${LEADS.map(([m,t])=>`<option value="${m}" ${m===lead?'selected':''}>${t}</option>`).join('')}</select></label>
 ${recurHTML(n,'After the reminder fires it simply moves to the next occurrence')}</div>${recurEditor(n)}
 ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="checkbox" data-f="discord" ${n.discord?'checked':''}> Also post it to the Discord channel of “${esc(projectOf(n).name)}” at the time <small style="color:var(--muted)">(works even when no window is open)</small></label>`:''}
@@ -1450,7 +1460,8 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
   else if(a==='tag'){const t=prompt('Tag to add:');if(t)mutate(()=>ids.forEach(id=>{const n=S.nodes[id],tg=t.replace(/^#/,'').trim();if(tg&&!n.tags.includes(tg))n.tags.push(tg)}),{panel:true})}
   if(a!=='trash'){ui.multi.clear();renderTree()}});
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
-$('#vToday').addEventListener('click',e=>{const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday()}});
+$('#vToday').addEventListener('click',e=>{const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
+  if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
 $('#btnTimer').onclick=()=>S.timer&&S.timer.alarmed?showAlarm():openTimer();
 $('#btnPal').innerHTML=ic('cmd');$('#btnPal').onclick=openPalette;

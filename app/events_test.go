@@ -103,3 +103,28 @@ func TestEventImportICS(t *testing.T) {
 		t.Errorf("DURATION: %v", h)
 	}
 }
+
+// "free" events (they do not block time in the day plan) are TRANSP:TRANSPARENT in calendar files
+func TestEventFreeTime(t *testing.T) {
+	st, _ := testStore(t)
+	mustCreate(t, st, "Novelember", "", map[string]any{"kind": "reminder", "reminder": "2030-11-01T00:00", "end": "2030-11-30T23:00", "free": true})
+	mustCreate(t, st, "Convention", "", map[string]any{"kind": "reminder", "reminder": "2030-11-05T09:00", "end": "2030-11-07T18:00"})
+	ics := st.ExportICS(false)
+	if n := strings.Count(string(ics), "TRANSP:TRANSPARENT"); n != 1 {
+		t.Fatalf("TRANSP:TRANSPARENT %d times, want 1:\n%s", n, ics)
+	}
+	r, err := parseICSImport(ics, st.loc, st.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	free := map[string]any{}
+	for _, it := range r.items {
+		free[it.name] = it.f["free"]
+	}
+	if free["Novelember"] != true || free["Convention"] != nil {
+		t.Fatalf("free after import: %v", free)
+	}
+	if _, err := st.Create("test", "Bad", "", -1, map[string]any{"free": "yes"}); err == nil {
+		t.Fatal("free must be true or false")
+	}
+}

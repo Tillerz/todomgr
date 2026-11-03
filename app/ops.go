@@ -60,7 +60,7 @@ func normURL(v string) string {
 }
 
 var fieldOrder = []string{"kind", "name", "color", "icon", "prio", "tags", "people", "location", "deadline", "reminder", "end",
-	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "est", "lead", "discord", "collapsed", "status"}
+	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "est", "lead", "discord", "free", "collapsed", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
 	for k := range f {
@@ -293,7 +293,7 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be >= 0")
 		}
 		n[k] = x
-	case "collapsed", "discord":
+	case "collapsed", "discord", "free": // free: an event that does not block time in the day plan
 		b, ok := v.(bool)
 		if !ok {
 			return errors.New("must be true or false")
