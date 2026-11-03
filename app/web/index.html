@@ -1071,13 +1071,22 @@ document.addEventListener('mouseover',e=>{const el=e.target.closest?.('[data-tip
     tip.style.left=Math.max(6,Math.min(innerWidth-w-6,r.left+r.width/2-w/2))+'px';tip.style.top=(r.bottom+h+10>innerHeight?r.top-h-6:r.bottom+6)+'px';tip.classList.add('show')},450)});
 document.addEventListener('mousedown',()=>{clearTimeout(tipT);tip.classList.remove('show')});
 document.addEventListener('scroll',()=>tip.classList.remove('show'),true);
-function openPalette(){
-  const cmds=[['New item in Inbox',()=>{ui.view!=='tree'&&setView('tree');$('#quick').focus()}],['Go to Tree',()=>setView('tree')],['Go to Today',()=>setView('today')],['Go to Stats',()=>setView('stats')],['Start timer…',()=>openTimer()],
-   ['New project',newProject],['New reminder',newReminder],['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],['Undo',undo],['Redo',redo],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp],['Load demo data',loadDemo]];
+// the large notes editor of the selected entry, in edit mode (Alt+Enter)
+function toggleNotesMax(){ui.panel=true;ui.notesMax=!ui.notesMax;if(ui.notesMax){ui.prevFor=ui.sel;ui.mdPrev=false}renderDetail();
+  const ta=ui.notesMax&&$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}
+function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f()},sel=S.nodes[ui.sel],sn=sel&&!sel.trashed?' “'+sel.name+'”':'';
+  const cmds=[['New item in Inbox',tree(()=>$('#quick').focus()),'N'],['New idea in Inbox',tree(()=>newAndRename(inboxId(),null,{kind:'idea',status:'raw'}))],['New project',newProject],['New reminder',newReminder],
+   ['Go to Tree',()=>setView('tree'),'1'],['Go to Today',()=>setView('today'),'2'],['Go to Stats',()=>setView('stats'),'3'],['Go to Inbox',()=>reveal(inboxId())],
+   ...(S.prefs.views||[]).map(v=>['View: '+v.name,tree(()=>setQuery(v.q))]),
+   ...(sn?[['Edit notes of'+sn,toggleNotesMax,'Alt+Enter'],['Print list of'+sn,()=>printList(sel.id)],['Copy ID of'+sn,()=>copyText(sel.id)]]:[]),
+   ['Start timer…',()=>openTimer(),'T'],['Collapse all',tree(()=>setAllCollapsed(true))],['Expand all',tree(()=>setAllCollapsed(false))],
+   [ui.hideDone?'Show done entries':'Hide done entries',tree(()=>$('#hideDone').click())],[S.prefs.hideTags?'Show tags':'Hide tags',()=>$('#hideTags').click()],
+   ['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],
+   ['Undo',undo,'Ctrl+Z'],['Redo',redo,'Ctrl+Shift+Z'],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp,'?'],['Load demo data',loadDemo]];
   openModal(`<input id="pq" placeholder="Jump to an item or run a command…" autocomplete="off"><ul id="pl"></ul>`,{cls:'palette',kind:'palette'});
   const inp=$('#pq'),ul=$('#pl');let items=[],cur=0;
   const draw=()=>{const q=inp.value.toLowerCase().trim();items=[];
-    cmds.filter(c=>c[0].toLowerCase().includes(q)).slice(0,q?5:14).forEach(c=>items.push({l:c[0],s:'command',f:c[1]}));
+    cmds.filter(c=>c[0].toLowerCase().includes(q)).slice(0,q?8:14).forEach(c=>items.push({l:c[0],s:c[2]||'command',f:c[1]}));
     if(q)allNodes().filter(n=>(n.name+' '+n.tags.join(' ')).toLowerCase().includes(q)).slice(0,12).forEach(n=>items.push({l:n.name,s:path(n)||'item',f:()=>reveal(n.id)}));
     cur=Math.min(cur,Math.max(0,items.length-1));ul.innerHTML=items.map((it,i)=>`<li class="${i===cur?'on':''}" data-i="${i}"><span>${esc(it.l)}</span><small>${esc(it.s)}</small></li>`).join('')};
   const run=i=>{const it=items[i];if(it){closeModal();it.f()}};
@@ -1422,8 +1431,7 @@ document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();co
 document.addEventListener('keydown',e=>{
   const inField=e.target.closest('input,textarea,select,[contenteditable]'),ctrl=e.ctrlKey||e.metaKey;
   if(ctrl&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();return}
-  if(e.key==='Enter'&&e.altKey&&!modalKind&&S.nodes[ui.sel]&&(ui.panel||ui.view==='tree')){e.preventDefault();e.target.blur?.();ui.panel=true;ui.notesMax=!ui.notesMax;if(ui.notesMax){ui.prevFor=ui.sel;ui.mdPrev=false}renderDetail();
-    const ta=ui.notesMax&&$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(e.key==='Enter'&&e.altKey&&!modalKind&&S.nodes[ui.sel]&&(ui.panel||ui.view==='tree')){e.preventDefault();e.target.blur?.();toggleNotesMax();return}
   if(e.key==='Escape'){if(modalKind&&modalKind!=='alarm'){closeModal();return}if(ui.notesMax){e.target.blur?.();ui.notesMax=false;renderDetail();return}if(inField){e.target.blur();return}if(ui.q||ui.multi.size){ui.multi.clear();setQuery('');return}if(ui.panel){ui.panel=false;renderDetail()}return}
   if(inField)return;
   if(ctrl&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
