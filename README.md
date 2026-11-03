@@ -486,7 +486,7 @@ preview tests (`node app/notes_test.js`).
 
 ### Context Menu (right-click)
 
-![Context Menu (right-click)](docs/context-menu.png)
+<img alt="Context Menu (right-click)" src="docs/context-menu.png" width=350px>
 
 ### The tree with the detail panel, light mode, pastel theme
 
