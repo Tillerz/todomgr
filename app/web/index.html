@@ -18,11 +18,62 @@ html[data-theme=dark]{
   --shadow:0 6px 24px rgba(0,0,0,.5);
   --hm0:#232a38;--hm1:#1f4d3a;--hm2:#2a7a57;--hm3:#3fa56b;--hm4:#74d6a2;
 }
+/* Themes (Settings → Theme): html[data-style] sets the colours and the font; each has a light and a dark
+   version. Only fonts that come with the system, so the app stays offline. */
+html[data-style=modern]{--bg:#fafafa;--panel:#fff;--ink:#111318;--muted:#6e7280;--line:#ececef;--hover:#f3f3f5;--sel:#ededf0;
+  --accent:#1f2430;--accent-ink:#fff;--danger:#d43d3d;--ok:#2a9d6a;--warn:#c98612;--shadow:0 8px 30px rgba(0,0,0,.08);
+  --hm0:#ededf0;--hm1:#cfd2d8;--hm2:#9da2ad;--hm3:#5f6573;--hm4:#1f2430;
+  --font:"Segoe UI Variable Text","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif}
+html[data-style=modern][data-theme=dark]{--bg:#0b0b0d;--panel:#141417;--ink:#ededef;--muted:#8b8b93;--line:#232328;--hover:#1c1c21;--sel:#26262c;
+  --accent:#e8e8ea;--accent-ink:#111;--danger:#f06b6b;--ok:#4cc08a;--warn:#e8a23c;--shadow:0 8px 30px rgba(0,0,0,.6);
+  --hm0:#1c1c21;--hm1:#3a3a42;--hm2:#64646e;--hm3:#a0a0a8;--hm4:#e8e8ea}
+html[data-style=modern] .row{border-radius:6px}html[data-style=modern] .row.sel{box-shadow:inset 2px 0 0 var(--accent)}
+html[data-style=modern] header{border-bottom-color:transparent;box-shadow:0 1px 0 var(--line)}
+
+html[data-style=pastel]{--bg:#fbf7f4;--panel:#fffdfb;--ink:#3d3546;--muted:#857a8f;--line:#efe4ea;--hover:#f8eef2;--sel:#f3e8fb;
+  --accent:#a46cbd;--accent-ink:#fff;--danger:#d9667a;--ok:#4fa889;--warn:#d9954f;--shadow:0 8px 26px rgba(120,80,140,.14);
+  --hm0:#f3ecef;--hm1:#d7f0e4;--hm2:#aee0c9;--hm3:#7cc9a9;--hm4:#4fa889}
+html[data-style=pastel][data-theme=dark]{--bg:#221d27;--panel:#2b2531;--ink:#f1e9f3;--muted:#ab9fb3;--line:#3b3343;--hover:#342d3b;--sel:#3f3350;
+  --accent:#d4a5e8;--accent-ink:#221d27;--danger:#f29aa8;--ok:#8fd6b6;--warn:#f0c08c;--shadow:0 8px 26px rgba(0,0,0,.5);
+  --hm0:#2f2836;--hm1:#2f4a40;--hm2:#3f6e5c;--hm3:#62a68a;--hm4:#9fe0c4}
+html[data-style=pastel] .row{border-radius:12px}html[data-style=pastel] .tabs,html[data-style=pastel] .tabs button,html[data-style=pastel] .btn{border-radius:14px}
+html[data-style=pastel] .brand i{background:linear-gradient(135deg,#f4a6c0,#a6d8f4)}
+
+html[data-style=fantasy]{--bg:#efe3c8;--panel:#fbf4e3;--ink:#3b2a1a;--muted:#77603f;--line:#dcc9a3;--hover:#f1e4c6;--sel:#ead7ad;
+  --accent:#8b2e1f;--accent-ink:#fbf4e3;--danger:#a8321e;--ok:#4f7a3a;--warn:#a86a14;--shadow:0 8px 26px rgba(70,45,15,.22);
+  --hm0:#e6d8b8;--hm1:#d6c48f;--hm2:#b9a25c;--hm3:#8f7a35;--hm4:#5e4f1f;
+  --font:"Palatino Linotype",Palatino,"Book Antiqua","URW Palladio L",Georgia,serif;--fs:15px}
+html[data-style=fantasy][data-theme=dark]{--bg:#17120d;--panel:#221a13;--ink:#eadcc0;--muted:#a8946f;--line:#3a2e22;--hover:#2e241b;--sel:#3d2e1f;
+  --accent:#d4a84f;--accent-ink:#1b1510;--danger:#d0644c;--ok:#8fb36a;--warn:#e0a64a;--shadow:0 8px 26px rgba(0,0,0,.6);
+  --hm0:#2a2119;--hm1:#4a3a22;--hm2:#7a5f2e;--hm3:#b08a3e;--hm4:#e2bb5e}
+html[data-style=fantasy] body{background:radial-gradient(ellipse at top,var(--panel),var(--bg) 75%)}
+html[data-style=fantasy] .brand{font-variant:small-caps;letter-spacing:1px}html[data-style=fantasy] .brand i{background:linear-gradient(135deg,var(--accent),#c9962e)}
+html[data-style=fantasy] h2,html[data-style=fantasy] h3{font-variant:small-caps;letter-spacing:.5px}
+
+html[data-style=scifi]{--bg:#eef3f7;--panel:#fff;--ink:#0f1c2a;--muted:#55697e;--line:#d3dee8;--hover:#e4edf4;--sel:#dcf2fa;
+  --accent:#0087ad;--accent-ink:#fff;--danger:#d93a50;--ok:#0e9a78;--warn:#c4850a;--shadow:0 8px 26px rgba(0,60,90,.15);
+  --hm0:#e1eaf1;--hm1:#b5e3f0;--hm2:#6cc8e2;--hm3:#1fa3c9;--hm4:#006c8c;
+  --font:"Cascadia Code","JetBrains Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;--fs:13px}
+html[data-style=scifi][data-theme=dark]{--bg:#070b14;--panel:#0d1422;--ink:#d6f3ff;--muted:#6f8aa6;--line:#1a2a40;--hover:#12203a;--sel:#0f2d45;
+  --accent:#2fd4ff;--accent-ink:#04121c;--danger:#ff5470;--ok:#2de0a7;--warn:#ffb547;--shadow:0 8px 30px rgba(0,0,0,.7);
+  --hm0:#0f1a2b;--hm1:#0b3a4a;--hm2:#0f6178;--hm3:#1a9cc0;--hm4:#4fe0ff}
+html[data-style=scifi] .row{border-radius:3px}html[data-style=scifi] .row.sel{box-shadow:inset 0 0 0 1px var(--accent),0 0 12px color-mix(in srgb,var(--accent) 35%,transparent)}
+html[data-style=scifi] .brand{text-transform:uppercase;letter-spacing:2px}html[data-style=scifi] .brand i{border-radius:2px;background:linear-gradient(135deg,var(--accent),#7a5cff)}
+html[data-style=scifi] header{border-bottom-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+
+html[data-style=contrast]{--bg:#fff;--panel:#fff;--ink:#000;--muted:#333;--line:#666;--hover:#e8e8e8;--sel:#d6e4ff;
+  --accent:#0040c0;--accent-ink:#fff;--danger:#b00000;--ok:#006b2e;--warn:#8a4b00;--shadow:0 0 0 1px #000;
+  --hm0:#e8e8e8;--hm1:#9fd8b4;--hm2:#3fae6e;--hm3:#006b2e;--hm4:#00381a}
+html[data-style=contrast][data-theme=dark]{--bg:#000;--panel:#000;--ink:#fff;--muted:#d6d6d6;--line:#999;--hover:#262626;--sel:#00306e;
+  --accent:#66b3ff;--accent-ink:#000;--danger:#ff7070;--ok:#4cd98a;--warn:#ffb84d;--shadow:0 0 0 1px #fff;
+  --hm0:#262626;--hm1:#1f5a37;--hm2:#2e8a52;--hm3:#4cd98a;--hm4:#a6f5c8}
+html[data-style=contrast] .row.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+html[data-style=contrast] input:focus,html[data-style=contrast] select:focus,html[data-style=contrast] textarea:focus,html[data-style=contrast] button:focus-visible{outline-width:3px}
 *{box-sizing:border-box}
 html{color-scheme:light}html[data-theme=dark]{color-scheme:dark}
 *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted) 55%,transparent) transparent}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs,14px)/1.4 var(--font,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);display:flex;flex-direction:column;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
 input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
@@ -1095,7 +1146,7 @@ function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f(
    ...(sn?[['Edit notes of'+sn,toggleNotesMax,'Alt+Enter'],['Print list of'+sn,()=>printList(sel.id)],['Copy ID of'+sn,()=>copyText(sel.id)]]:[]),
    ['Start timer…',()=>openTimer(),'T'],['Collapse all',tree(()=>setAllCollapsed(true))],['Expand all',tree(()=>setAllCollapsed(false))],
    [ui.hideDone?'Show done entries':'Hide done entries',tree(()=>$('#hideDone').click())],[S.prefs.hideTags?'Show tags':'Hide tags',()=>$('#hideTags').click()],
-   ['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],
+   ['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],...THEMES.map(([k,l])=>['Theme: '+l,()=>setStyle(k)]),['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],
    ['Undo',undo,'Ctrl+Z'],['Redo',redo,'Ctrl+Shift+Z'],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp,'?'],['Load demo data',loadDemo]];
   openModal(`<input id="pq" placeholder="Jump to an item or run a command…" autocomplete="off"><ul id="pl"></ul>`,{cls:'palette',kind:'palette'});
   const inp=$('#pq'),ul=$('#pl');let items=[],cur=0;
@@ -1248,6 +1299,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   const m=cfg.mcp,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
+  <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style||'')===k?'selected':''}>${l}</option>`).join('')}</select></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
   <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc((S.prefs.workDay||{}).from||'09:00')}"><span>to</span><input type="time" id="wdTo" value="${esc((S.prefs.workDay||{}).to||'17:00')}"></label>
@@ -1273,6 +1325,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   const set=x=>{S.prefs.rowH=x;$('#rhv').textContent=x+'px';applyPrefs()};
   $('#rh').oninput=e=>set(+e.target.value);$('#rh').onchange=()=>persist();
   renderTagIcons();
+  $('#styleSel').onchange=e=>setStyle(e.target.value);
   $('#wdFrom').onchange=$('#wdTo').onchange=()=>{const from=$('#wdFrom').value,to=$('#wdTo').value;
     if(!from||!to||from>=to)return toast('The work day must end after it starts');S.prefs.workDay={from,to};persist()};
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
@@ -1298,7 +1351,10 @@ function renderTagIcons(pick){const el=$('#tagIcs');if(!el)return;const m=tagIco
     if(d.pick)renderTagIcons(d.pick===pick?null:d.pick);
     else if(d.rm){const c={...m};delete c[d.rm];save(c)}
     else if(d.ic)save({...m,[d.t]:d.ic})}}
-function applyTheme(){const th=S.prefs.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=th;$('#btnTheme').innerHTML=ic(th==='dark'?'sun':'moon')}
+const THEMES=[['','Default'],['modern','Modern'],['pastel','Pastel'],['fantasy','Fantasy (parchment)'],['scifi','Sci-fi'],['contrast','High contrast']];
+function setStyle(k){S.prefs.style=k;persist();applyTheme()}
+function applyTheme(){const st=S.prefs.style;if(THEMES.some(t=>t[0]===st)&&st)document.documentElement.dataset.style=st;else delete document.documentElement.dataset.style;
+  const th=S.prefs.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=th;$('#btnTheme').innerHTML=ic(th==='dark'?'sun':'moon')}
 function toggleTheme(){S.prefs.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';persist();applyTheme()}
 
 /* ============================ events ============================ */

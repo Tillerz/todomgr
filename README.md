@@ -61,7 +61,7 @@ More in [Screenshots](#screenshots).
 
 ### Nice to use
 
-- Light and dark mode. The layout adapts to narrow windows.
+- Six themes, each in light and dark mode. The layout adapts to narrow windows.
 - [Keyboard shortcuts](#keyboard-shortcuts), a command palette (Ctrl+K), and undo for every change.
 - Statistics with a GitHub-style heatmap of what you got done.
 
@@ -383,6 +383,10 @@ file twice gives the entries twice.
 ### Look and feel
 
 - Light and dark mode (follows the system, can be switched), dark scroll bars.
+- **Themes** (Settings → Theme, or "Theme:" in the command palette): *Default*, *Modern* (calm greys),
+  *Pastel* (soft colours, round corners), *Fantasy* (parchment and ink, serif font), *Sci-fi* (cyan glow,
+  monospace font) and *High contrast*. Each has a light and a dark version. The themes only use fonts that
+  come with the system, so nothing is downloaded.
 - Responsive: three columns on a wide screen, a drawer on a medium one, a bottom sheet on a phone.
 - Tooltips on every control, a row-height slider, a resizable and closable detail panel, a *Hide tags*
   button.
@@ -390,7 +394,7 @@ file twice gives the entries twice.
 
 ### Settings (⋯ → Settings)
 
-- **Row height** of the tree.
+- **Theme** and **row height** of the tree.
 - **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
@@ -510,6 +514,10 @@ preview tests (`node app/notes_test.js`).
 ### Notes in BBCode
 
 <img alt="Notes in BBCode, preview" src="docs/notes-bbcode.png" width=400px>
+
+### Theme: Fantasy (parchment)
+
+<img alt="Theme: Fantasy (parchment)" src="docs/theme-fantasy.png">
 
 ### The printable list
 
