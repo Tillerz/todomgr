@@ -267,7 +267,7 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
-.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
+.pace{margin-top:6px}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
 .planlist{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .pli{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:6px}.pli:hover{background:var(--hover)}
 .pli i{width:10px;height:10px;border-radius:3px;flex:none}.pli i.ev{background:#8a63d2}.pli i.tk{background:var(--accent)}
@@ -755,7 +755,7 @@ function liHTML(n,vis,force){
 <span class="grip" data-tip="Drag to move (or Alt+↑/↓, Tab / Shift+Tab)">${ic('grip')}</span>
 <button class="tw ${hasKids?(open?'open':''):'none'}" data-tip="Expand / collapse">${ic('chev')}</button>
 ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}${projIc(n)?' has-ic':''}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}">${projIc(n)}</button>`}
-<span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename · Alt+Enter to edit the notes">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
+<span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename · Alt+Enter to edit the notes">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}${paceTag(n)}</span>
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
 function renderTree(){
@@ -816,7 +816,7 @@ ${n.kind==='idea'?`<button class="btn pri" data-act="promote" data-tip="Turn thi
 ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div><div style="margin-top:4px;color:var(--muted);font-size:12px">${k.filter(c=>c.status==='done').length} of ${k.length} sub-items done · derived from sub-items (${Math.round(f*100)}%)</div>`:
 `<div class="seg"><button data-act="pmode" data-v="percent" class="${n.prog.mode==='percent'?'on':''}" data-tip="0–100 %">Percent</button><button data-act="pmode" data-v="units" class="${n.prog.mode==='units'?'on':''}" data-tip="Count something: words written, images created, steps run…">Units</button></div>
 <div style="margin-top:8px">${n.prog.mode==='percent'?`<div class="stepper"><input type="range" data-f="pct" min="0" max="100" step="5" value="${n.prog.done}"><b id="pctv" style="width:44px;text-align:right">${n.prog.done}%</b></div>`:
-`<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div>`}</div>`}
+`<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div><div class="pace-slot">${pace(n)}</div>`}</div>`}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
@@ -951,7 +951,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   }}
 
 /* ============================ today ============================ */
-function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span><span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 // Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
 // the timed events in the rest of the work day (not the "free" ones), against the time left in it (Settings → Work day)
 function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startOfToday();
@@ -964,6 +964,15 @@ function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startO
     const a=Math.max(remAt(n),from),b=Math.min(evEnd(n),to);if(b>a)items.push({n,min:(b-a)/6e4,ev:[a,b]})});
   const sum=f=>items.filter(f).reduce((s,x)=>s+x.min,0);
   return{left:Math.max(0,to-from)/6e4,tasks:sum(x=>!x.ev),events:sum(x=>x.ev),items}}
+// units progress with a deadline: what is left, and how much per day until the deadline (today counts)
+function paceOf(n){const left=n.prog.total-n.prog.done;if(n.prog.mode!=='units'||!n.deadline||isClosed(n)||kids(n).length||left<=0)return null;
+  const d=pd(n.deadline);d.setHours(0,0,0,0);
+  return{left,days:Math.round((d-startOfToday())/864e5)+1,u:n.prog.unit?' '+esc(n.prog.unit):'',num:x=>Math.ceil(x).toLocaleString('en')}}
+function pace(n){const p=paceOf(n);if(!p)return'';const{left,days,u,num}=p;
+  return`<div class="note pace">${num(left)}${u} left · ${days>0?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, until ${fmtWhen(n.deadline)}`:'<b>the deadline has passed</b>'}</div>`}
+// the same, short, after the name in the tree
+function paceTag(n){const p=paceOf(n);if(!p)return'';const{left,days,u,num}=p;
+  return`<span class="pace-t" data-tip="Left until the deadline${days>0?', and how much per day (today counts)':''}">${num(left)}${u} left${days>0?` · ${num(left/days)}${u}/day`:''}</span>`}
 function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if(!plan)return'';
   const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60),hm=t=>{const x=new Date(t);return pad(x.getHours())+':'+pad(x.getMinutes())},open=S.prefs.planOpen;
   const why=x=>x.ev?`event ${hm(x.ev[0])}–${hm(x.ev[1])}`:`${x.over?'overdue':'due today'} · estimate ${d(x.n.est)}${x.tr>=.5?`, ${d(x.tr)} tracked`:''}`;
@@ -1387,6 +1396,8 @@ $('#tree').addEventListener('click',e=>{
   ui.multi.clear();ui.sel=id;ui.panel=true;renderTree();renderDetail()});
 $('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
 $('#detail').addEventListener('change',onDetailChange);
+// the pace line depends on fields (deadline, unit…) whose change does not redraw the panel
+$('#detail').addEventListener('change',()=>{const ps=$('.pace-slot'),n=S.nodes[ui.sel];if(ps&&n)ps.innerHTML=pace(n)});
 // leaving the Ends fields with an end before the start brings the saved end back
 $('#detail').addEventListener('focusout',e=>{const f=e.target.dataset?.f||'',n=S.nodes[ui.sel];
   if(!n||!/^end-/.test(f)||/^end-/.test(e.relatedTarget?.dataset?.f||'')||!endInput(n).bad)return;showEnd(n);toast('The end must not be before the start')});

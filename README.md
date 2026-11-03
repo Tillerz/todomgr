@@ -270,6 +270,9 @@ the list.
 ### Progress
 
 - **Percent** or **units** ("450 of 1200 words"), set per entry.
+- **Daily pace:** units progress with a deadline shows what is left and how much per day you need, for
+  example "5,500 words left · 197 words per day for 28 days, until 30 Nov". The tree and Today show the short form
+  after the name: "5,500 words left · 197 words/day".
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
 - **Dependencies:** an entry that depends on unfinished entries is shown as blocked. Dependency cycles are

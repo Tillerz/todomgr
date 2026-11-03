@@ -165,4 +165,27 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
     .map(([sec, want]) => plan.fmtDur(sec) === want ? '' : `fmtDur(${sec}) = ${plan.fmtDur(sec)}, want ${want}`).filter(Boolean));
 }
 
+// daily pace of units progress with a deadline (today counts as a day)
+{
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const day = n => { const d = new Date(t0); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const env = {startOfToday: () => new Date(t0), isClosed: n => n.status === 'done', kids: () => [], fmtWhen: s => 'DUE'};
+  const pace = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') +
+    cut('// units progress with a deadline', '</div>`}') + 'return pace;')(...Object.values(env));
+  const n = (done, total, deadline, x) => ({prog: {mode: 'units', done, total, unit: 'words'}, deadline, status: 'open', ...x});
+  const txt = x => pace(x).replace(/<[^>]+>/g, '');
+  check('pace: words per day', [
+    [n(4500, 10000, day(27)), '5,500 words left · 197 words per day for 28 days, until DUE'],
+    [n(9000, 10000, day(0)), '1,000 words left · 1,000 words per day for 1 day, until DUE'],
+    [n(100, 200, day(-2)), '100 words left · the deadline has passed'],
+    [n(10000, 10000, day(5)), ''], [n(1, 10, ''), ''], [n(1, 10, day(3), {status: 'done'}), ''],
+    [{prog: {mode: 'percent', done: 10, total: 100, unit: ''}, deadline: day(3), status: 'open'}, ''],
+  ].map(([x, want]) => txt(x) === want ? '' : `got "${txt(x)}", want "${want}"`).filter(Boolean));
+  const tag = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') +
+    cut('// units progress with a deadline', "/day`:''}</span>`}") + 'return paceTag;')(...Object.values(env));
+  const short = x => tag(x).replace(/<[^>]+>/g, '');
+  check('pace: short text in the tree', [[n(4500, 10000, day(27)), '5,500 words left · 197 words/day'], [n(100, 200, day(-2)), '100 words left'], [n(10000, 10000, day(5)), '']]
+    .map(([x, want]) => short(x) === want ? '' : `got "${short(x)}", want "${want}"`).filter(Boolean));
+}
+
 process.exit(failed ? 1 : 0);
