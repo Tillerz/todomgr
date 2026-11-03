@@ -364,7 +364,14 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   .grid2{grid-template-columns:1fr}
   .treewrap{padding:10px 8px 90px}
   .children{padding-left:14px!important}
+  #tagbar{flex-wrap:wrap}
+  /* the name keeps at least about half the row; badges and progress that do not fit go to a second line */
+  .row{flex-wrap:wrap;row-gap:2px}
+  .row>.namewrap{min-width:55%}
+  .row>.badges{margin-left:auto}
 }
+/* narrow with a mouse: the hidden + and ⋯ buttons take no room, except on the selected row */
+@media (max-width:700px) and (pointer:fine){.row .add,.row .more{display:none}.row.sel .add,.row.sel .more{display:grid}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>

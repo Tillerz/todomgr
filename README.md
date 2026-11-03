@@ -22,7 +22,8 @@ More in [Screenshots](#screenshots).
 
 ### Plan your day
 
-- **Today** shows what is overdue, due, running and coming up.
+- **Today** shows what is overdue, due, running and coming up, and **Next 7 days** shows the week ahead,
+  day by day.
 - A day plan bar warns you when your estimates and meetings do not fit into the work day.
 - A countdown timer or stopwatch logs the time to the task you worked on.
 
@@ -54,14 +55,16 @@ More in [Screenshots](#screenshots).
 
 ### Works with your other tools
 
-- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel.
+- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel. Import an
+  updated file again and you only get the new entries.
 - Export to CSV, a calendar file, Markdown, or a printed list.
 - A command line (`todo add "…"`), and an MCP server, so AI assistants such as Claude can read and
   update your list.
 
 ### Nice to use
 
-- Six themes, each in light and dark mode. The layout adapts to narrow windows.
+- Six themes, each in light and dark mode, with your choice of font and text size. The layout adapts to
+  narrow windows.
 - [Keyboard shortcuts](#keyboard-shortcuts), a command palette (Ctrl+K), and undo for every change.
 - Statistics with a GitHub-style heatmap of what you got done.
 
@@ -485,17 +488,17 @@ preview tests (`node app/notes_test.js`).
 
 ![Context Menu (right-click)](docs/context-menu.png)
 
-### The tree with the detail panel, light mode
+### The tree with the detail panel, light mode, pastel theme
 
-![The tree with the detail panel, light mode](docs/tree.png)
+![The tree with the detail panel, light mode, pastel theme](docs/tree.png)
 
 ### The detail panel of a reminder, with a custom repeat rule
 
 <img alt="The detail panel of a reminder with a custom repeat rule" src="docs/detail-pane.png" width=400px>
 
-### The Today view with reminders
+### The Today view with reminders, sci-fi theme
 
-<img alt="The Today view with reminders" src="docs/today.png" width=65%>
+<img alt="The Today view with reminders, sci-fi theme" src="docs/today.png" width=65%>
 
 ### The statistics page with the heatmap
 
