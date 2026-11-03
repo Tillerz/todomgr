@@ -27,7 +27,7 @@ type rpcReq struct {
 const mcpInstructions = `Tillerz Todo Mgr: a tree of entries. Every entry is a todo, idea, project or reminder and can contain sub-entries.
 Statuses — todo: open, progress, waiting, later (postponed, no plan), done, cancelled; idea: raw, exploring, parked, rejected;
 project: planning, active, paused, done, archived; reminders have no status. Dates are YYYY-MM-DD or YYYY-MM-DDTHH:MM (local time).
-Use create_entry with "text" for quick syntax ("Call Anna #work @anna !high due:fri at:14:00 ~30m"; start with "?" for an idea, "r:" for a reminder).
+Use create_entry with "text" for quick syntax ("Call Anna #work @anna !high due:fri at:14:00 ~30m"; start with "i:" or "?" for an idea, "p:" for a top-level project, "r:" for a reminder).
 There is no hard delete: trash_entry moves to the trash and restore_entry brings it back.`
 
 func obj(props map[string]any, required ...string) map[string]any {

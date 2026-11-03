@@ -658,7 +658,8 @@ const usageText = `Tillerz Todo Mgr ` + "v" + Version + `
 
 Commands (talk to the running app):
   add "Call Anna #work @anna !high due:fri at:14:00 ~30m"   quick add into the Inbox
-        "? idea text"  = idea,  "r: Stream at:19:00 due:thu repeat:weekly" = reminder
+        "i: idea text" (or "? …") = idea,  "p: Name" = top-level project,
+        "r: Stream at:19:00 due:thu repeat:weekly" = reminder,  "t: …" = todo
         --parent ID    add below an entry instead of the Inbox
   list [words] [--status s,s] [--kind k] [--tag t] [--person p] [--project name]
        [--parent ID] [--overdue] [--all] [--trashed] [--limit N]

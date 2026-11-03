@@ -333,7 +333,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   <section id="vTree" class="view">
     <div class="treewrap">
       <div class="toolbar"><input id="quick" autocomplete="off" placeholder="Quick add to Inbox — type a name and press Enter  (↑ ↓ = history)"><button class="btn" id="newProj" data-tip="Create a new top-level project">+ Project</button><button class="btn" id="newRem" data-tip="Create a reminder (pops up at a set time, no status)">+ Reminder</button></div>
-      <div class="hint"><span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span><b>?</b> idea · <b>r:</b> reminder (at the start)</span></div>
+      <div class="hint"><span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span>at the start: <b>i:</b> or <b>?</b> idea · <b>p:</b> project · <b>r:</b> reminder · <b>t:</b> todo</span></div>
       <div class="filters">
         <div class="search"><span id="ico-search"></span><input id="q" placeholder="Search / filter" autocomplete="off" data-tip="Text, #tag, @person, !high, is:open|done|blocked|overdue|idea (key: /)"></div>
         <button class="chip" id="collapseAll" data-tip="Collapse every entry">Collapse all</button>
@@ -622,7 +622,10 @@ function parseWhen(v){v=v.toLowerCase();if(v==='today')return addDays(0);if(v===
   let m=v.match(/^\+(\d+)([dw])$/);if(m)return addDays(+m[1]*(m[2]==='w'?7:1));
   const i=['sun','mon','tue','wed','thu','fri','sat'].indexOf(v.slice(0,3));if(i>=0&&v.length>=3){const d=new Date();let diff=(i-d.getDay()+7)%7||7;return addDays(diff)}
   if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;if(/^\d{2}-\d{2}$/.test(v)){const y=new Date().getFullYear();return y+'-'+v}return''}
-function parseQuick(txt){const o={tags:[],people:[]};if(/^r:\s*/i.test(txt)){o.kind='reminder';o.status='set';o.lead=15;txt=txt.replace(/^r:\s*/i,'')}if(/^\?\s*/.test(txt)){o.kind='idea';o.status='raw';txt=txt.replace(/^\?\s*/,'')}
+// t: todo (the default), i: or ? idea, p: project, r: reminder; same as parseQuick in ops.go
+function parseQuick(txt){const o={tags:[],people:[]},k=txt.match(/^(?:([tipr]):|\?)\s*/i);
+  if(k){txt=txt.slice(k[0].length);const c=(k[1]||'i').toLowerCase();
+    if(c==='r'){o.kind='reminder';o.status='set';o.lead=15}else if(c==='i'){o.kind='idea';o.status='raw'}else if(c==='p'){o.kind='project';o.status='planning'}}
   const PR={low:1,l:1,med:2,medium:2,m:2,high:3,h:3,urgent:4,u:4,'1':1,'2':2,'3':3,'4':4};
   txt=txt.replace(/(^|\s)(due:|at:|repeat:|[#@!~])(\S+)/g,(m,sp,k,v)=>{
     if(k==='#')o.tags.push(v);else if(k==='@')o.people.push(v);else if(k==='!'&&PR[v.toLowerCase()])o.prio=PR[v.toLowerCase()];
@@ -1366,7 +1369,7 @@ $('#quick').addEventListener('keydown',e=>{const H=S.prefs.quickHist||(S.prefs.q
   if(e.key!=='Enter')return;
   const raw=e.target.value.trim();if(raw){S.prefs.quickHist=[raw,...H.filter(x=>x!==raw)].slice(0,50);qh=-1;qDraft='';persist()}
   const{name,props}=parseQuick(e.target.value);if(!name)return;
-  const id=inboxId(),n=addNode(id,null,name,props);e.target.value='';ui.sel=n.id;renderTree();renderDetail();toast(`Added to Inbox: ${name}`)});
+  const pr=props.kind==='project',n=addNode(pr?'root':inboxId(),null,name,props);e.target.value='';ui.sel=n.id;renderTree();renderDetail();toast(pr?`New project: ${name}`:`Added to Inbox: ${name}`)});
 function setQuery(q){ui.q=q;$('#q').value=q;renderTree()}
 $('#q').addEventListener('input',e=>{ui.q=e.target.value;renderTree()});
 $('#hideDone').onclick=()=>{ui.hideDone=!ui.hideDone;renderTree()};

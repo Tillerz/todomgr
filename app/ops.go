@@ -546,8 +546,7 @@ func (t *Tx) logTime(id string, secs float64) (Node, error) {
 
 var (
 	reQuickTok  = regexp.MustCompile(`(^|\s)(due:|at:|repeat:|[#@!~])(\S+)`)
-	reQuickRem  = regexp.MustCompile(`(?i)^r:\s*`)
-	reQuickIdea = regexp.MustCompile(`^\?\s*`)
+	reQuickKind = regexp.MustCompile(`(?i)^(?:([tipr]):|\?)\s*`)
 	reHM        = regexp.MustCompile(`^\d{1,2}:\d{2}$`)
 	reEst       = regexp.MustCompile(`^(\d+)(m|h)?$`)
 )
@@ -591,17 +590,23 @@ func parseWhenWord(v string, now time.Time) string {
 
 // parseQuick understands the same syntax as the UI's quick-add field:
 //
-//	[r: | ?] Name #tag @person !high due:fri at:19:00 repeat:weekly ~30m
+//	[t: | i: | ? | p: | r:] Name #tag @person !high due:fri at:19:00 repeat:weekly ~30m
+//
+// t: todo (the default), i: or ? idea, p: project, r: reminder.
 func parseQuick(text string, now time.Time) (string, map[string]any) {
 	f := map[string]any{}
 	var tags, people []string
 	var date, tm string
-	if reQuickRem.MatchString(text) {
-		f["kind"], f["lead"] = "reminder", 15.0
-		text = reQuickRem.ReplaceAllString(text, "")
-	} else if reQuickIdea.MatchString(text) {
-		f["kind"] = "idea"
-		text = reQuickIdea.ReplaceAllString(text, "")
+	if m := reQuickKind.FindStringSubmatch(text); m != nil {
+		switch strings.ToLower(m[1]) {
+		case "r":
+			f["kind"], f["lead"] = "reminder", 15.0
+		case "i", "": // "" is "?"
+			f["kind"] = "idea"
+		case "p":
+			f["kind"] = "project"
+		}
+		text = text[len(m[0]):]
 	}
 	prio := map[string]float64{"low": 1, "l": 1, "med": 2, "medium": 2, "m": 2, "high": 3, "h": 3, "urgent": 4, "u": 4, "1": 1, "2": 2, "3": 3, "4": 4}
 	var sb strings.Builder

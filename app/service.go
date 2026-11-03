@@ -29,7 +29,9 @@ func (s *Store) Quick(actor, text, parent string) (map[string]any, error) {
 	if name == "" {
 		return nil, errors.New("nothing to add: the text has no name")
 	}
-	if parent == "" {
+	if parent == "" && f["kind"] == "project" {
+		parent = "root" // projects group other entries, so they start at the top level
+	} else if parent == "" {
 		var err error
 		if parent, err = s.inboxID(actor); err != nil {
 			return nil, err

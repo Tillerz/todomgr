@@ -431,3 +431,21 @@ func TestProjectIcon(t *testing.T) {
 		}
 	}
 }
+
+func TestQuickKinds(t *testing.T) {
+	now := time.Date(2026, 11, 1, 10, 0, 0, 0, time.Local)
+	for in, want := range map[string][2]string{"t: Buy milk": {"Buy milk", ""}, "i:Board game": {"Board game", "idea"}, "I: Board game": {"Board game", "idea"},
+		"p: Garden": {"Garden", "project"}, "R: Call mum": {"Call mum", "reminder"}, "x: Not a prefix": {"x: Not a prefix", ""}, "Ratio p: 2": {"Ratio p: 2", ""}} {
+		if name, f := parseQuick(in, now); name != want[0] || str(f["kind"]) != want[1] {
+			t.Errorf("parseQuick(%q) = %q %v, want %q kind %q", in, name, f["kind"], want[0], want[1])
+		}
+	}
+	st, _ := testStore(t)
+	p, err := st.Quick("test", "p: Garden #home", "")
+	if err != nil || p["parent"] != "root" || p["kind"] != "project" || p["status"] != "planning" {
+		t.Fatalf("p: must be a top-level project: %v %v", err, p)
+	}
+	if n, _ := st.Quick("test", "t: Buy milk", ""); n["parent"] == "root" || n["kind"] != "todo" {
+		t.Fatalf("t: must go into the Inbox: %v", n)
+	}
+}

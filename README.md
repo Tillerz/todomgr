@@ -234,8 +234,10 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 | `at:19:00` | time of day |
 | `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday), `repeat:3d+` (3 days after it is done) | recurrence |
 | `~30m` `~2h` (a number alone means minutes) | time estimate |
-| `?` at the start | an idea |
+| `i:` or `?` at the start | an idea |
+| `p:` at the start | a project, at the top level instead of the Inbox |
 | `r:` at the start | a reminder |
+| `t:` at the start | a todo (the default, for when a name itself starts with a prefix) |
 
 **Examples** (written on Monday, 2 November 2026):
 
@@ -249,7 +251,8 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 | `Send the weekly report #work due:mon repeat:weekly` | due next Monday, then every Monday |
 | `Pay the rent due:12-01 repeat:monthly` | due 1 December, then on the 1st of every month |
 | `Water the plants #home repeat:3d+` | due again 3 days after you tick it off |
-| `?A board game about trains #ideas` | an idea, not a todo |
+| `i: A board game about trains #ideas` | an idea, not a todo (`?A board game…` works too) |
+| `p: Garden makeover #home` | a new top-level project |
 | `r: Call mum` | a reminder at the next full hour |
 | `r: Dentist due:2026-12-03 at:09:30` | a reminder on 3 December at 09:30, with a warning 15 minutes before |
 | `r: Stand up and stretch at:15:00 repeat:daily` | a reminder every day at 15:00 |
