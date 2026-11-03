@@ -696,7 +696,7 @@ function liHTML(n,vis,force){
 <span class="grip" data-tip="Drag to move (or Alt+↑/↓, Tab / Shift+Tab)">${ic('grip')}</span>
 <button class="tw ${hasKids?(open?'open':''):'none'}" data-tip="Expand / collapse">${ic('chev')}</button>
 ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}${projIc(n)?' has-ic':''}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}">${projIc(n)}</button>`}
-<span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
+<span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename · Alt+Enter to edit the notes">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}</span>
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
 function renderTree(){
@@ -1412,7 +1412,8 @@ document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();co
 document.addEventListener('keydown',e=>{
   const inField=e.target.closest('input,textarea,select,[contenteditable]'),ctrl=e.ctrlKey||e.metaKey;
   if(ctrl&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();return}
-  if(e.key==='Enter'&&e.altKey&&!modalKind&&ui.panel&&S.nodes[ui.sel]){e.preventDefault();e.target.blur?.();ui.notesMax=!ui.notesMax;renderDetail();if(ui.notesMax&&!ui.mdPrev)$('.notesbox textarea')?.focus();return}
+  if(e.key==='Enter'&&e.altKey&&!modalKind&&S.nodes[ui.sel]&&(ui.panel||ui.view==='tree')){e.preventDefault();e.target.blur?.();ui.panel=true;ui.notesMax=!ui.notesMax;if(ui.notesMax){ui.prevFor=ui.sel;ui.mdPrev=false}renderDetail();
+    const ta=ui.notesMax&&$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
   if(e.key==='Escape'){if(modalKind&&modalKind!=='alarm'){closeModal();return}if(ui.notesMax){e.target.blur?.();ui.notesMax=false;renderDetail();return}if(inField){e.target.blur();return}if(ui.q||ui.multi.size){ui.multi.clear();setQuery('');return}if(ui.panel){ui.panel=false;renderDetail()}return}
   if(inField)return;
   if(ctrl&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
