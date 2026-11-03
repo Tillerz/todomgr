@@ -99,13 +99,16 @@ func TestImportCSVRoundTrip(t *testing.T) {
 	// progress is exported for entries without sub-entries only (otherwise it comes from them)
 	mustCreate(t, st, "Sub", a, map[string]any{"kind": "idea", "status": "exploring", "prog": map[string]any{"mode": "units", "done": 450, "total": 1200, "unit": "words"}})
 
-	res, err := st.ImportEntries("test", "csv", "plan.csv", st.ExportCSV(true))
+	// into a second, empty store: in the same store the entries are already there and are skipped
+	st2, _ := testStore(t)
+	res, err := st2.ImportEntries("test", "csv", "plan.csv", st.ExportCSV(true))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res["added"] != 3 || res["skipped"] != 0 {
 		t.Fatalf("result %v", res)
 	}
+	st = st2
 	book := importedKids(t, st, str(res["id"]))["Book"]
 	if book == nil || book.S("kind") != "project" {
 		t.Fatalf("Book not rebuilt: %v", book)
@@ -169,5 +172,44 @@ func TestImportCSVOtherTools(t *testing.T) {
 	}
 	if _, err := st.ImportEntries("test", "", "x.txt", []byte("a")); err == nil {
 		t.Error("unknown format must fail")
+	}
+}
+
+// importing a file again skips what is already there; entries in the trash do not count
+func TestImportSkipsEntriesAlreadyThere(t *testing.T) {
+	st, _ := testStore(t)
+	day := st.Now().AddDate(0, 0, 3).Format("20060102")
+	ev := func(uid, name string) string {
+		return "BEGIN:VEVENT\r\nUID:" + uid + "\r\nSUMMARY:" + name + "\r\nDTSTART:" + day + "T190000\r\nDTEND:" + day + "T210000\r\nEND:VEVENT\r\n"
+	}
+	cal := func(evs ...string) []byte {
+		return []byte("BEGIN:VCALENDAR\r\n" + strings.Join(evs, "") + "END:VCALENDAR\r\n")
+	}
+	first, err := st.ImportEntries("test", "ics", "a.ics", cal(ev("a", "Stream")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.ImportEntries("test", "ics", "a.ics", cal(ev("a", "Stream"))); err == nil || !strings.Contains(err.Error(), "already there") {
+		t.Fatalf("second import of the same file: %v", err)
+	}
+	res, err := st.ImportEntries("test", "ics", "b.ics", cal(ev("a", "Stream"), ev("b", "Meetup")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res["added"] != 1 || res["duplicates"] != 1 {
+		t.Fatalf("result %v, want 1 added and 1 already there", res)
+	}
+	if err := st.Trash("test", str(first["id"])); err != nil {
+		t.Fatal(err)
+	}
+	if res, err := st.ImportEntries("test", "ics", "a.ics", cal(ev("a", "Stream"))); err != nil || res["added"] != 1 {
+		t.Fatalf("an entry in the trash must not count: %v %v", res, err)
+	}
+	// entries without a date are always added
+	if res, err := st.ImportEntries("test", "csv", "c.csv", []byte("name\nBuy milk\n")); err != nil || res["added"] != 1 {
+		t.Fatal(res, err)
+	}
+	if res, err := st.ImportEntries("test", "csv", "c.csv", []byte("name\nBuy milk\n")); err != nil || res["added"] != 1 {
+		t.Fatalf("a todo without a date must not be skipped: %v %v", res, err)
 	}
 }

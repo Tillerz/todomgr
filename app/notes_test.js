@@ -16,8 +16,8 @@ const cut = (from, to) => {
   if (a < 0 || b < 0) throw new Error('code not found in index.html: ' + from);
   return html.slice(a, b + to.length);
 };
-const md = new Function(cut('const esc=', ';\n') + cut('// notes preview:', "function md(s){return s?MD.parse(s):''}") + 'return md;')();
-const bb = new Function(cut('const esc=', ';\n') + cut('const mdUrl=', ';\n') + cut('const P={', '\n};') + cut('const ic=', ';\n') +
+const md = new Function(cut('const esc=', ';\n') + cut('// the entry or one of its parents is in the trash', 'return false}\n') + cut('// notes preview:', "function md(s){return s?MD.parse(s):''}") + 'return md;')();
+const bb = new Function(cut('const esc=', ';\n') + cut('// the entry or one of its parents is in the trash', 'return false}\n') + cut('const mdUrl=', ';\n') + cut('const P={', '\n};') + cut('const ic=', ';\n') +
   cut('const RE_ELINK=', ';\n') + cut('function elink(', '</a>`}\n') + cut('// notes preview for BBCode', 'keep[i])}') + 'return bb;')();
 
 const cases = [
@@ -186,6 +186,27 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
   const short = x => tag(x).replace(/<[^>]+>/g, '');
   check('pace: short text in the tree', [[n(4500, 10000, day(27)), '5,500 words left · 197 words/day'], [n(100, 200, day(-2)), '100 words left'], [n(10000, 10000, day(5)), '']]
     .map(([x, want]) => short(x) === want ? '' : `got "${short(x)}", want "${want}"`).filter(Boolean));
+}
+
+// Today → Next 7 days: every occurrence of a repeat, after-done repeats and closed todos only as they are
+{
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const day = n => { const d = new Date(t0); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const N = [
+    {id: 'daily', kind: 'reminder', reminder: day(0) + 'T09:00', recur: 'd'},
+    {id: 'wk', kind: 'todo', status: 'open', deadline: day(2), recur: 'w'},
+    {id: 'after', kind: 'todo', status: 'open', deadline: day(1), recur: 'd+'},
+    {id: 'done', kind: 'todo', status: 'done', deadline: day(3)},
+    {id: 'later', kind: 'todo', status: 'later', deadline: day(3)},
+    {id: 'far', kind: 'todo', status: 'open', deadline: day(8)},
+    {id: 'words', kind: 'todo', status: 'progress', deadline: day(3), pace: true},
+  ];
+  const env = {paceOf: n => n.pace || null, nextOcc: rc.nextOcc, startOfToday: () => new Date(t0), allNodes: () => N, isClosed: n => n.status === 'done'};
+  const weekDays = new Function(...Object.keys(env), cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('function weekDays()', 'return days}') +
+    'return weekDays;')(...Object.values(env));
+  const days = weekDays(), got = days.map(d => d.items.map(([at, n]) => n.id + (at.includes('T') ? '@' + at.slice(11) : '')).join(','));
+  const want = [1, 2, 3, 4, 5, 6, 7].map(i => ['daily@09:00', ...(i === 1 ? ['after'] : []), ...(i === 2 ? ['wk'] : []), ...(i <= 3 ? ['words'] : [])].sort((a, b) => a === 'daily@09:00' ? 1 : b === 'daily@09:00' ? -1 : 0).join(','));
+  check('today: next 7 days', [days[0].k === day(1) ? '' : 'first day ' + days[0].k, ...got.map((g, i) => g === want[i] ? '' : `day ${i + 1}: "${g}", want "${want[i]}"`)].filter(Boolean));
 }
 
 process.exit(failed ? 1 : 0);

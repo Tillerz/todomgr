@@ -76,7 +76,7 @@ func (s *Store) SetStatus(actor, id, status string) (map[string]any, error) {
 		if err != nil {
 			return err
 		}
-		if n["trashed"] != nil {
+		if tx.db.inTrash(n) {
 			return errors.New("entry is in the trash; restore it first")
 		}
 		if err := tx.setStatus(n, status); err != nil {

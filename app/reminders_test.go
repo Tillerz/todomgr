@@ -241,3 +241,17 @@ func TestRedactSecrets(t *testing.T) {
 		t.Fatal("an empty webhook stays empty")
 	}
 }
+
+// a reminder inside a project in the trash must not fire (only the project has the trash mark)
+func TestReminderInTrashedProjectIsQuiet(t *testing.T) {
+	st, _ := testStore(t)
+	p := mustCreate(t, st, "Old import", "", map[string]any{"kind": "project"})
+	id := mustCreate(t, st, "Stream", p, map[string]any{"kind": "reminder", "reminder": "2030-05-01T19:00"})
+	if err := st.Trash("test", p); err != nil {
+		t.Fatal(err)
+	}
+	st.checkReminders(at(st, "2030-05-01T19:00"))
+	if w, _ := alertOf(nodeOf(st, id)); w != "" {
+		t.Fatalf("a reminder in the trash fired: %q", w)
+	}
+}

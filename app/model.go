@@ -203,9 +203,21 @@ func (db *DB) path(n Node) string {
 
 func (db *DB) isClosed(n Node) bool { return closedStatus[n.S("status")] }
 
+// inTrash: the entry or one of its parents is in the trash. Only the entry that was moved
+// to the trash has the mark; its sub-entries keep their parent.
+func (db *DB) inTrash(n Node) bool {
+	for i := 0; n != nil && i < 1000; i++ {
+		if n["trashed"] != nil {
+			return true
+		}
+		n = db.Nodes[n.S("parent")]
+	}
+	return false
+}
+
 func (db *DB) blocked(n Node) bool {
 	for _, d := range strs(n["deps"]) {
-		if x, ok := db.Nodes[d]; ok && x["trashed"] == nil && x.S("status") != "done" && x.S("status") != "cancelled" {
+		if x, ok := db.Nodes[d]; ok && !db.inTrash(x) && x.S("status") != "done" && x.S("status") != "cancelled" {
 			return true
 		}
 	}
@@ -406,7 +418,7 @@ func (db *DB) view(n Node, now time.Time) map[string]any {
 	if ds := db.dueState(n, now); ds == "over" || ds == "today" {
 		v["due"] = ds
 	}
-	if n["trashed"] != nil {
+	if db.inTrash(n) {
 		v["trashed"] = true
 	}
 	return v

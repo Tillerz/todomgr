@@ -604,7 +604,7 @@ func runCLI(cmd string, args []string) error {
 			if err := c.do("POST", "/api/import/entries", map[string]any{"format": ext[1:], "name": filepath.Base(a.pos[0]), "data": string(b)}, &res); err != nil {
 				return fmt.Errorf("import failed: %w", err)
 			}
-			fmt.Printf("added %v entries to %q (%v skipped)\n", res["added"], res["name"], res["skipped"])
+			fmt.Printf("added %v entries to %q (%v skipped, %v already there)\n", res["added"], res["name"], res["skipped"], res["duplicates"])
 			return nil
 		}
 		if !a.flag["yes"] {

@@ -130,7 +130,8 @@ switch that entry to BBCode. Supported: `[b]` `[i]` `[u]` `[s]` `[small]` `[sup]
 `[url:https://…]text[/url]`, `[br]`, `[ul]` / `[ol]` with `- item` lines, `[noparse]`, `/* hidden comments */` and `[icon:name]` with any
 icon name from Settings → Tag icons. Unknown tags stay as text.
 
-Click **Preview** above the notes to see the result. HTML in notes is shown as plain text, and only
+Notes with text show as a preview. Double-click the preview to edit; click outside the text to see the
+preview again. HTML in notes is shown as plain text, and only
 `http`, `https` and `mailto` links become links, so a note added through the API or MCP can never run
 code in your browser.
 
@@ -296,11 +297,12 @@ no window is open.
 - **Events with an end:** give a reminder an optional *Ends* time, for a stream from 19:00 to 21:00 or a
   convention over three days. The tree shows "Sat 19:00–21:00" or "5–7 Dec", Today lists the event on
   every day it runs, and the pop-up stays at the start. Moving the start moves the end along.
+  The **+1h** button next to *Ends* sets the end to one hour after the start.
 - A normal todo, idea or project can also have a **reminder time** and pops up once.
 - A pop-up offers *Open link*, *Snooze 10 min* and *Dismiss* (and *Show* for tasks). If the program was off or no
   window was open, the pop-up waits and appears as **Missed reminder** the next time you open the page.
 - When several windows are open, dismissing in one dismisses it everywhere.
-- Optionally the browser shows a desktop notification (⋯ → Enable notifications) and plays a sound.
+- Optionally the browser shows a desktop notification (Settings → Notifications) and plays a sound.
 - A reminder inside a project that has a Discord webhook can also be **posted to Discord** at its time –
   even when no window is open (switch in the reminder's panel).
 
@@ -316,6 +318,9 @@ no window is open.
 
 - **Today** gathers upcoming reminders, overdue and due-today items, reminders that fired and what is in
   progress. "Later" items are left out.
+- **Next 7 days:** the switch at the top of Today shows tomorrow and the 6 days after it, day by day, with
+  the open todos due and the reminders on each day. A repeat shows on every day it comes up, and a todo
+  with a daily pace (see below) shows on every day until its deadline, with the words per day.
 - **Day plan:** a bar at the top of Today adds up the estimates of the todos due today or overdue
   (minus the time already tracked) and the timed events in the rest of the day. It compares the sum with
   the time left in your work day (Settings → Work day, default 09:00–17:00) and turns red when the plan
@@ -370,8 +375,9 @@ boxes. The browser's print dialog can also save it as a PDF.
 **Import JSON** reads this app's export and replaces everything after taking a backup.
 
 **Import CSV / calendar** (⋯ → *Import CSV / calendar…*, or `todo import FILE.csv`) only **adds** entries.
-They go into a new project "Import: file name, date"; nothing that exists is changed. Importing the same
-file twice gives the entries twice.
+They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is
+already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an
+updated file again and only get the new entries. Entries without any date are always added.
 
 - **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos**
   (title, description, due date, status, priority, categories as tags, location, link, repeat, progress,
@@ -400,7 +406,9 @@ file twice gives the entries twice.
 
 ### Settings (⋯ → Settings)
 
-- **Theme** and **row height** of the tree.
+- **Theme**, **font**, **font size** and **row height**. The font list only shows fonts that are installed
+  on the computer that opens the page.
+- **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
 - **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.

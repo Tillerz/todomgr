@@ -482,13 +482,62 @@ const P={
   wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>',
   plane:'<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
   game:'<line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
-  adult:'<text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor" stroke="none">18+</text>'
+  adult:'<text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" font-family="system-ui,sans-serif" fill="currentColor" stroke="none">18+</text>',
+  // more Lucide 1.66.0 icons for the project and tag icon pickers
+  archive:'<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+  box:'<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/>',
+  folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  checks:'<path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  layers:'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>',
+  rocket:'<path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"/><path d="M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"/>',
+  terminal:'<path d="M12 19h8"/><path d="m4 17 6-6-6-6"/>',
+  git:'<path d="M15 6a9 9 0 0 0-9 9V3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>',
+  server:'<rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>',
+  database:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+  bot:'<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+  flask:'<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/>',
+  hammer:'<path d="m15 12-9.373 9.373a1 1 0 0 1-3.001-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"/>',
+  feather:'<path d="M14.086 18.412A2 2 0 0112.67 19H5v-7.672a2 2 0 01.586-1.414L11.75 3.75a6 6 0 118.49 8.49z"/><path d="M16 8 2 22"/><path d="M17.488 15H9"/>',
+  scroll:'<path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>',
+  library:'<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+  notebook:'<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>',
+  palette:'<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>',
+  castle:'<path d="M10 5V3"/><path d="M14 5V3"/><path d="M15 21v-3a3 3 0 0 0-6 0v3"/><path d="M18 3v8"/><path d="M18 5H6"/><path d="M22 11H2"/><path d="M22 9v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9"/><path d="M6 3v8"/>',
+  swords:'<path d="m13 19 6-6"/><path d="M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5"/><path d="m14.828 6.172 2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="m5 14 4 4"/><path d="m5 21-2-2"/><path d="M7.5 16.5 4 20"/>',
+  crown:'<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/>',
+  skull:'<path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/>',
+  wand:'<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/>',
+  flame:'<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>',
+  mountain:'<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>',
+  trees:'<path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/>',
+  compass:'<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>',
+  dice:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/>',
+  drama:'<path d="M10 11h.01"/><path d="M14 6h.01"/><path d="M18 6h.01"/><path d="M6.5 13.1h.01"/><path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3"/><path d="M17.4 9.9c-.8.8-2 .8-2.8 0"/><path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7"/><path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4"/>',
+  party:'<path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/>',
+  ticket:'<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>',
+  cake:'<path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/>',
+  megaphone:'<path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/>',
+  film:'<path d="m12.296 3.464 3.02 3.956"/><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m6.18 5.276 3.1 3.899"/>',
+  tent:'<path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/><path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/>',
+  dumbbell:'<path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z"/><path d="m2.5 21.5 1.4-1.4"/><path d="m20.1 3.9 1.4-1.4"/><path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z"/><path d="m9.6 14.4 4.8-4.8"/>',
+  bike:'<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
+  food:'<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  school:'<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
+  work:'<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
+  chart:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
+  health:'<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
+  leaf:'<path d="M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20"/><path d="M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13"/>',
+  paw:'<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
+  car:'<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
 };
 // tag → icon shown before the entry name; S.prefs.tagIcons replaces the defaults once edited in Settings
 const TAG_ICONS={meeting:'users',stream:'video',nsfw:'adult',call:'phone',mail:'mail',bug:'bug',research:'search',review:'eye'};
 const TAG_ICON_SET=['users','user','video','camera','image','mic','music','phone','mail','chat','send','bell','calendar','clock','flag','star','heart',
   'alert','adult','bug','code','wrench','shield','lock','eye','search','book','pen','file','idea','trophy','gift','money','cart','home','map','pin',
-  'globe','plane','coffee','game','play','link','tag'];
+  'globe','plane','coffee','game','play','link','tag',
+  'archive','box','folder','inbox','checks','target','layers','rocket','terminal','git','server','database','bot','flask','hammer','feather','scroll','library','notebook','palette','castle','swords','crown','skull','wand','flame','mountain','trees','compass','dice','drama','party','ticket','cake','megaphone','film','tent','dumbbell','bike','food','school','work','chart','health','leaf','paw','car'];
 const tagIcons=()=>S.prefs.tagIcons||TAG_ICONS;
 // a project's own icon replaces its square; the colour shows the status
 const projIc=n=>n.kind==='project'&&P[n.icon]?ic(n.icon,16):'';
@@ -594,14 +643,16 @@ const inSubtree=(id,anc)=>{for(let x=S.nodes[id];x;x=S.nodes[x.parent])if(x.id==
 function moveNode(id,pid,idx){if(inSubtree(pid,id))return false;const n=S.nodes[id];detach(n);attach(n,pid,idx);log('move',id);touch(n,true);return true}
 function log(type,id,x){S.activity.push({t:now(),id,type,by:'ui',...x})}
 function touch(n,quiet){n.updated=now();if(!quiet){const l=S.activity[S.activity.length-1];if(!(l&&l.id===n.id&&l.type==='edit'&&now()-l.t<60000))log('edit',n.id)}}
-function blocked(n){return n.deps.some(d=>{const x=S.nodes[d];return x&&!x.trashed&&x.status!=='done'&&x.status!=='cancelled'})}
+function blocked(n){return n.deps.some(d=>{const x=S.nodes[d];return x&&!inTrash(x)&&x.status!=='done'&&x.status!=='cancelled'})}
 function frac(n){const k=kids(n);if(k.length)return k.reduce((a,c)=>a+frac(c),0)/k.length;if(n.status==='done')return 1;return Math.min(1,n.prog.done/(n.prog.total||1))}
 const complete=n=>n.prog.mode==='percent'?100:n.prog.total;
 function dueState(n){const d=pd(n.deadline);if(!d)return'';const timed=n.deadline.includes('T');
   if(isClosed(n))return'';if(timed?d<new Date():d<startOfToday())return'over';
   if(dayKey(d)===dayKey(new Date()))return'today';return'soon'}
 function path(n){const a=[];for(let x=S.nodes[n.parent];x&&x.id!=='root';x=S.nodes[x.parent])a.unshift(x.name);return a.join(' › ')}
-function allNodes(){return Object.values(S.nodes).filter(n=>n.id!=='root'&&!n.trashed)}
+// the entry or one of its parents is in the trash: only the entry moved there has the mark
+function inTrash(n){for(let i=0;n&&i<1000;i++){if(n.trashed)return true;n=S.nodes[n.parent]}return false}
+function allNodes(){return Object.values(S.nodes).filter(n=>n.id!=='root'&&!inTrash(n))}
 function treeTime(n){let s=n.time.reduce((a,t)=>a+t.secs,0);n.children.forEach(c=>{if(S.nodes[c])s+=treeTime(S.nodes[c])});return s}
 
 /* ---- urls & discord webhook ---- */
@@ -628,7 +679,7 @@ function openUrl(n){const u=safeUrl(n.url);if(u)return u;
 function nameLink(n){const u=openUrl(n);
   return u?`<a class="urlbtn" href="${esc(u)}" target="_blank" rel="noopener" data-tip="Open ${esc(u.replace(/^(https?:\/\/)?(www\.)?/,'').slice(0,60))}">${ic('globe',14)}</a>`:''}
 function urlSec(n){const pr=n.kind==='project',su=safeUrl(n.url),hook=!pr&&projectOf(n);
-  return`<h4>${pr?'World / project URL':'URL'}</h4><div class="stepper"><input type="text" data-f="url" value="${esc(n.url||'')}" placeholder="${pr?'e.g. https://www.worldanvil.com/w/your-world':(n.kind==='reminder'?'e.g. link to the stream or meeting':'e.g. link to an article')}" style="flex:1">${su?`<a class="btn" target="_blank" rel="noopener" href="${esc(su)}" data-tip="Open in browser">${ic('globe',14)}</a>`:''}</div>`
+  return`<h4>${pr?'Project URL':'URL'}</h4><div class="stepper"><input type="text" data-f="url" value="${esc(n.url||'')}" placeholder="${pr?'e.g. the project website, wiki or repository':(n.kind==='reminder'?'e.g. link to the stream or meeting':'e.g. link to an article')}" style="flex:1">${su?`<a class="btn" target="_blank" rel="noopener" href="${esc(su)}" data-tip="Open in browser">${ic('globe',14)}</a>`:''}</div>`
   +(pr?`<h4>Discord webhook <span class="bd" data-tip="Channel settings → Integrations → Webhooks → Copy URL">?</span></h4><div class="stepper"><input type="password" autocomplete="off" data-f="webhook" value="${esc(n.webhook||'')}" placeholder="https://discord.com/api/webhooks/…" style="flex:1"><button class="btn" data-act="whtest" data-tip="Post a test message to the channel">${ic('send',14)} Test</button></div><div style="font-size:12px;color:var(--muted);margin-top:4px">When a todo below this project is set to done, you can announce it in this channel. The URL is a secret — it is included in JSON exports.</div>`:'')
   +(hook?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${ic('send',12)} Marking this done offers a Discord post to “${esc(hook.name)}”.</div>`:'')}
 function newProject(){setView('tree');const n=addNode('root',null,'',{kind:'project',status:'planning',color:'#4a7de0'});ui.sel=n.id;ui.panel=true;renderTree();renderDetail();rename(n.id,true)}
@@ -663,7 +714,7 @@ function newAndRename(pid,idx,props){const n=addNode(pid,idx,'',props);ui.sel=n.
 function inboxId(){let id=S.nodes.root.children.map(i=>S.nodes[i]).find(c=>c.name==='Inbox');if(!id){push();id=mk('Inbox');attach(id,'root',0)}return id.id}
 function trash(ids){ids=[].concat(ids);mutate(()=>ids.forEach(id=>{const n=S.nodes[id];if(!n||n.trashed)return;n.trashed=now();n.tparent=n.parent;detach(n);n.parent=null;log('trash',id)}),{panel:true});
   if(ids.includes(ui.sel))ui.sel=null;ui.multi.clear();renderAll();toast(`Moved ${ids.length} item${ids.length>1?'s':''} to trash`,{action:{label:'Undo',fn:undo}})}
-function restoreNode(id){mutate(()=>{const n=S.nodes[id];const p=S.nodes[n.tparent];delete n.trashed;attach(n,p&&!p.trashed?p.id:'root')},{panel:true})}
+function restoreNode(id){mutate(()=>{const n=S.nodes[id];const p=S.nodes[n.tparent];delete n.trashed;attach(n,p&&!inTrash(p)?p.id:'root')},{panel:true})}
 function purge(id){const n=S.nodes[id];if(!n)return;n.children.slice().forEach(purge);delete S.nodes[id]}
 function dupNode(id,pid,idx,top){const o=S.nodes[id],n=mk(top?o.name+' (copy)':o.name,JSON.parse(JSON.stringify({...o,id:undefined,name:undefined,children:[],parent:null,hist:undefined,time:[],created:undefined,updated:undefined,trashed:undefined,alert:undefined,snoozeUntil:undefined,preDone:undefined,atDone:undefined,remDone:undefined})));
   n.hist=[{s:n.status,at:now()}];attach(n,pid,idx);o.children.forEach(c=>S.nodes[c]&&dupNode(c,n.id,null,false));return n}
@@ -800,7 +851,7 @@ function renderDetail(){
   const blocking=allNodes().filter(x=>x.deps.includes(n.id));
   const f=frac(n);
   let html=`
-<div class="hd"><div class="seg"><button data-act="kind" data-v="todo" class="${n.kind==='todo'?'on':''}" data-tip="Something to do">Todo</button><button data-act="kind" data-v="idea" class="${n.kind==='idea'?'on':''}" data-tip="An idea to explore — can be promoted to a todo">Idea</button><button data-act="kind" data-v="project" class="${n.kind==='project'?'on':''}" data-tip="A project groups todos and ideas; can have a world/project URL and a Discord webhook">Project</button><button data-act="kind" data-v="reminder" class="${n.kind==='reminder'?'on':''}" data-tip="Just a reminder: pops up before and at the set time. No status to manage; can repeat.">Reminder</button></div>
+<div class="hd"><div class="seg"><button data-act="kind" data-v="todo" class="${n.kind==='todo'?'on':''}" data-tip="Something to do">Todo</button><button data-act="kind" data-v="idea" class="${n.kind==='idea'?'on':''}" data-tip="An idea to explore — can be promoted to a todo">Idea</button><button data-act="kind" data-v="project" class="${n.kind==='project'?'on':''}" data-tip="A project groups todos and ideas; can have a project URL and a Discord webhook">Project</button><button data-act="kind" data-v="reminder" class="${n.kind==='reminder'?'on':''}" data-tip="Just a reminder: pops up before and at the set time. No status to manage; can repeat.">Reminder</button></div>
 <span class="sp"></span><span class="bd copyid" data-act="copyid" data-tip="Item id (used by CLI/API) — click to copy">${n.id}</span><button class="ib close-panel" data-act="closepanel" data-tip="Close sidebar (Esc)">${ic('x')}</button></div>
 <input data-f="name" value="${esc(n.name)}" placeholder="Name (required)" data-tip="Name — required">
 ${urlSec(n)}
@@ -825,7 +876,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 <h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
 <h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
 <h4>Depends on <span class="bd" data-tip="This item is blocked until all of these are done">?</span></h4>
-<div class="list">${n.deps.map((d,i)=>{const x=S.nodes[d];return x&&!x.trashed?`<div class="li"><span class="chk st-${x.status}" style="width:14px;height:14px;border-width:2px;flex:none"></span><span class="t lnk" data-act="goto" data-id="${x.id}">${esc(x.name)}</span><button data-act="rmdep" data-i="${i}" data-tip="Remove dependency">${ic('x',12)}</button></div>`:''}).join('')}</div>
+<div class="list">${n.deps.map((d,i)=>{const x=S.nodes[d];return x&&!inTrash(x)?`<div class="li"><span class="chk st-${x.status}" style="width:14px;height:14px;border-width:2px;flex:none"></span><span class="t lnk" data-act="goto" data-id="${x.id}">${esc(x.name)}</span><button data-act="rmdep" data-i="${i}" data-tip="Remove dependency">${ic('x',12)}</button></div>`:''}).join('')}</div>
 <input data-f="depadd" list="dl-nodes" placeholder="Type to find an item to depend on…" style="margin-top:5px">
 ${blocking.length?`<div style="margin-top:6px;font-size:12px;color:var(--muted)">Blocking: ${blocking.map(x=>`<a class="lnk" style="color:var(--accent);cursor:pointer" data-act="goto" data-id="${x.id}">${esc(x.name)}</a>`).join(', ')}</div>`:''}
 <h4>Time</h4>
@@ -839,8 +890,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
-<div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="mdtoggle" data-tip="Switch between editing and preview">${ui.mdPrev?'Edit':'Preview'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode (World Anvil): [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax?'<span class="maxhint">Alt+Enter or Esc to close</span>':''}</h4>
-${ui.mdPrev?`<div class="md">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
+<div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
+${ui.mdPrev?`<div class="md" data-tip="Double-click to edit">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
 ${(()=>{const re=new RegExp(`\\[\\[${n.id}[\\]|]`),b=allNodes().filter(x=>x.id!==n.id&&re.test(x.notes||''));
   return b.length?`<h4>Linked from</h4><div class="list">${b.map(x=>`<div class="li"><span class="t"><a class="elink" data-act="goto" data-v="${x.id}">${esc(x.name)}</a></span></div>`).join('')}</div>`:''})()}
 <h4>History</h4>
@@ -857,7 +908,7 @@ function dependsOn(x,id,seen=new Set()){if(seen.has(x.id))return false;seen.add(
 const mdUrl=u=>/^(https?:|mailto:)/i.test(String(u).trim());
 // [[id]] and [[id|text]] link to another entry; its name is looked up when the notes are shown
 const RE_ELINK=/\[\[([a-z0-9]{1,20})(?:\|([^\]\n]*))?\]\]/g;
-function elink(id,html){const x=S.nodes[id],ok=x&&!x.trashed;
+function elink(id,html){const x=S.nodes[id],ok=x&&!inTrash(x);
   return`<a class="elink${ok?'':' gone'}"${ok?` data-act="goto" data-v="${id}"`:''} data-tip="${ok?esc('Open “'+x.name+'”'):'No such entry (in the trash or unknown)'}">${html||esc(x?x.name:'[['+id+']]')}</a>`}
 const MD=new marked.Marked({gfm:true,breaks:true,extensions:[{name:'elink',level:'inline',start:src=>src.indexOf('[['),
   tokenizer(src){const m=/^\[\[([a-z0-9]{1,20})(?:\|([^\]\n]*))?\]\]/.exec(src);if(m)return{type:'elink',raw:m[0],id:m[1],text:m[2]}},
@@ -930,7 +981,9 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'goto':reveal(v);break;
     case'icpick':ui.icPick=ui.icPick===n.id?null:n.id;renderDetail();break;
     case'seticon':ui.icPick=null;m(()=>n.icon=v);break;
-    case'notesmax':ui.notesMax=!ui.notesMax;renderDetail();break;
+    case'end1h':{if(!n.reminder){toast('Set the date & time first');break}const d=pd(n.reminder);d.setHours(d.getHours()+1);
+      m(()=>n.end=n.reminder.includes('T')?dayKey(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()):n.reminder);break}
+    case'notesmax':toggleNotesMax();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
     case'prio':m(()=>n.prio=+v);break;case'color':m(()=>n.color=v);break;
@@ -943,7 +996,6 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'timer':openTimer(n.id);break;
     case'addtime':{const mi=+$('[data-f=mintime]').value;if(mi>0)m(()=>{n.time.push({at:now(),secs:mi*60});log('time',n.id,{secs:mi*60})});break}
     case'rmtime':m(()=>n.time=n.time.filter(t=>t.at!==+b.dataset.at));break;
-    case'mdtoggle':ui.mdPrev=!ui.mdPrev;renderDetail();break;
     case'fmttoggle':mutate(()=>{n.notesFormat=n.notesFormat==='bbcode'?'markdown':'bbcode';touch(n)},{panel:true});break;
     case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
     case'dup':{let c;mutate(()=>{c=dupNode(n.id,n.parent,S.nodes[n.parent].children.indexOf(n.id)+1,true);log('create',c.id)});ui.sel=c.id;renderAll();break}
@@ -951,7 +1003,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   }}
 
 /* ============================ today ============================ */
-function trow(n){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 // Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
 // the timed events in the rest of the work day (not the "free" ones), against the time left in it (Settings → Work day)
 function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startOfToday();
@@ -980,15 +1032,27 @@ function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if
     .map(x=>`<div class="pli" data-goto="${x.n.id}"><i class="${x.ev?'ev':'tk'}"></i><span class="t">${esc(x.n.name)}</span><small>${why(x)}</small><b>${d(x.min)}</b></div>`).join('')}</div>`:'';
   return`<div class="plan${over>0?' over':''}" data-tip="${open?'Click to hide the entries':'Click to see which entries take the time'}"><div class="row-between"><span><b>Planned ${d(plan)}</b> · ${left?d(left)+' left in the work day':'the work day is over'}</span><span>${over>0?`<b>${d(over)} too much</b>`:d(-over)+' free'} <small class="plantog">${open?'▾':'▸'} details</small></span></div>
 <div class="planbar"><i class="ev" style="width:${w(events)}" data-tip="Events: ${d(events)}"></i><i class="tk" style="width:${w(tasks)}" data-tip="Todos due today or overdue (estimate minus time tracked): ${d(tasks)}"></i>${over>0&&left?`<b style="left:${w(left)}" data-tip="End of the work day"></b>`:''}</div>${list}</div>`}
+// Today → Next 7 days: tomorrow and the 6 days after it, with the open todos due and the reminders on each day.
+// Repeats show every occurrence; "after done" repeats only the current one, because the next date is not known yet.
+// A todo with a daily pace (units progress and a deadline) shows on every day before its deadline too.
+function weekDays(){const t0=startOfToday(),days=[...Array(7)].map((_,i)=>{const d=new Date(t0);d.setDate(d.getDate()+i+1);return{d,k:dayKey(d),items:[]}}),
+    by=Object.fromEntries(days.map(x=>[x.k,x])),last=days[6].k;
+  allNodes().forEach(n=>{let s=n.kind==='reminder'?n.reminder:n.kind==='todo'&&!isClosed(n)&&n.status!=='later'?n.deadline:'';
+    if(n.kind==='todo'&&s&&paceOf(n))days.forEach(x=>{if(x.k<s.slice(0,10))x.items.push([x.k,n,1])});
+    for(let i=0;s&&i<400&&s.slice(0,10)<=last;i++){by[s.slice(0,10)]?.items.push([s,n]);
+      if(!n.recur||n.recur.endsWith('+'))break;const x=nextOcc(s,n.recur);if(x<=s)break;s=x}});
+  days.forEach(x=>x.items.sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0));return days}
+function renderWeek(){return weekDays().map(({d,items})=>`<h2>${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}<small>${items.length||'nothing planned'}</small></h2>${items.map(([at,n,daily])=>trow(n,daily?'':at)).join('')}`).join('')}
 function renderToday(){
   const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'),used=new Set();
-  const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(trow).join('')}`:''};
+  const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(n=>trow(n)).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
   const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
   const html=sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
    +sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
-  $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small></h2>${planBar()}${html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>'}</div>`}
+  const wk7=ui.todayWeek,seg=`<span class="seg" style="float:right"><button data-tv="" class="${wk7?'':'on'}">Today</button><button data-tv="1" class="${wk7?'on':''}" data-tip="Tomorrow and the 6 days after it">Next 7 days</button></span>`;
+  $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">${seg}${wk7?'Next 7 days':`Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small>`}</h2>${wk7?renderWeek():planBar()+(html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>')}</div>`}
 
 /* ============================ stats ============================ */
 const MET={closed:['Closed','items completed'],created:['Created','items created'],activity:['Activity','changes'],time:['Time','minutes tracked']};
@@ -1122,7 +1186,7 @@ function syncAlerts(){const have=new Set();
   for(let i=remQ.length-1;i>=0;i--)if(!have.has(remQ[i].key)){if(i===0&&modalKind==='remind')closeModal();else remQ.splice(i,1)}
   for(const k of [...ackd])if(!have.has(k))ackd.delete(k);
   if(ui.view==='today')renderToday()}
-function showRem(){const it=remQ[0],n=it&&S.nodes[it.id];if(!n||n.trashed){remQ.shift();return}
+function showRem(){const it=remQ[0],n=it&&S.nodes[it.id];if(!n||inTrash(n)){remQ.shift();return}
   const mins=Math.round((it.at-now())/60000),d=new Date(it.at),u=openUrl(n);
   const late=it.when==='now'&&now()-it.at>120000,head=it.when==='soon'?`Starts in ${mins>=60?Math.round(mins/6)/10+' h':Math.max(1,mins)+' min'}`:late?'Missed reminder':it.when==='snoozed'?'Snoozed reminder':it.when==='task'?'Task reminder':'It is time';
   notify(n.name,head);beep();
@@ -1131,7 +1195,7 @@ function showRem(){const it=remQ[0],n=it&&S.nodes[it.id];if(!n||n.trashed){remQ.
   ${n.location?`<p style="margin:2px 0">${ic('pin',13)} ${esc(n.location)}</p>`:''}
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">${n.kind!=='reminder'?'<button class="btn pri" data-rm="show">Show</button>':''}${u?`<a class="btn pri" href="${esc(u)}" target="_blank" rel="noopener">Open link</a>`:''}<button class="btn" data-rm="snooze">Snooze 10 min</button><button class="btn${u?'':' pri'}" data-rm="ok">Dismiss</button></div></div>`,{cls:'center',kind:'remind'})}
 function remSec(n){const lead=(+n.lead||0),l=LEADS.find(x=>x[0]===lead);
-  return`<h4>When</h4><div class="grid2"><div class="field"><span>Date & time</span>${dtFields('reminder',n.reminder)}</div><div class="field"><span data-tip="Optional: for events that last a while or several days. The pop-up stays at the start.">Ends (optional)</span>${dtFields('end',n.end)}</div></div>
+  return`<h4>When</h4><div class="grid2"><div class="field"><span>Date & time</span>${dtFields('reminder',n.reminder)}</div><div class="field"><span data-tip="Optional: for events that last a while or several days. The pop-up stays at the start.">Ends (optional) <button class="chip" data-act="end1h" data-tip="Set the end to one hour after the start (same day for an all-day date)">+1h</button></span>${dtFields('end',n.end)}</div></div>
 <label class="chk-row" data-tip="On: an event with an end counts as busy time in Today's day plan. Off: for events that run in the background, such as a month-long writing challenge. Calendars call this busy / free."><input type="checkbox" data-f="busy" ${n.free?'':'checked'}> Blocks time in the day plan</label>
 <div class="grid2" style="margin-top:8px"><label class="field"><span>Remind me</span><select data-f="lead" data-tip="You always get a pop-up at the time; this adds an earlier one">${LEADS.map(([m,t])=>`<option value="${m}" ${m===lead?'selected':''}>${t}</option>`).join('')}</select></label>
 ${recurHTML(n,'After the reminder fires it simply moves to the next occurrence')}</div>${recurEditor(n)}
@@ -1208,7 +1272,7 @@ async function importEntries(f){
     await Store.sync();
     const r=await Store.api('POST','/api/import/entries',{format:f.name.split('.').pop(),name:f.name,data:text});
     await Store.refresh();ui.sel=r.id;ui.panel=true;renderAll();
-    toast(`Added ${r.added} entr${r.added===1?'y':'ies'} to “${r.name}”${r.skipped?` · ${r.skipped} skipped`:''}${r.partly?` · ${r.partly} with problems (see their notes)`:''}`,{ms:9000})}
+    toast(`Added ${r.added} entr${r.added===1?'y':'ies'} to “${r.name}”${r.skipped?` · ${r.skipped} skipped`:''}${r.duplicates?` · ${r.duplicates} already there`:''}${r.partly?` · ${r.partly} with problems (see their notes)`:''}`,{ms:9000})}
   catch(e){toast('Import failed: '+e.message,{ms:9000})}}
 async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current data with the demo data? (A backup of the current data is kept in data/backups.)'))return;
   const keep=S,keepSel=ui.sel;seed();const data=JSON.stringify(S);S=keep;ui.sel=keepSel;
@@ -1301,7 +1365,16 @@ function setView(v){ui.view=v;document.body.dataset.view=v;$$('.tabs button').fo
   if(v==='today')renderToday();if(v==='stats')renderStats();if(v==='tree')renderTree();ui.panel=ui.panel&&v!=='stats';renderDetail()}
 function chrome(){$('#btnUndo').disabled=!U.undo.length;$('#btnRedo').disabled=!U.redo.length;if(ui.view==='today')renderToday();if(ui.view==='stats')renderStats()}
 function renderAll(){renderTree();renderDetail();renderTimerBtn();chrome()}
+// Settings → Font: [CSS value, label, font name to look for]. Named fonts are only listed when installed.
+const FONTS=[['system-ui,sans-serif','System sans-serif'],['serif','System serif'],['monospace','System monospace'],
+  ...['Segoe UI','Arial','Verdana','Tahoma','Trebuchet MS','Calibri','Helvetica Neue','Ubuntu','Cantarell','Noto Sans','DejaVu Sans','Liberation Sans','Roboto','Open Sans','Inter'].map(n=>[`"${n}",sans-serif`,n,n]),
+  ...['Georgia','Times New Roman','Palatino Linotype','Book Antiqua','Cambria','Garamond','Noto Serif','DejaVu Serif','Liberation Serif'].map(n=>[`"${n}",serif`,n,n]),
+  ...['Cascadia Code','Consolas','Courier New','JetBrains Mono','Fira Code','Menlo','DejaVu Sans Mono','Ubuntu Mono'].map(n=>[`"${n}",monospace`,n,n])];
+// a font is installed when text in it is not as wide as in the fallback fonts
+const hasFont=css=>{const c=hasFont.c||(hasFont.c=document.createElement('canvas').getContext('2d')),name=css.split(',')[0],w=f=>{c.font='72px '+f;return c.measureText('mmmmmmmmmmlliWwQ@#0').width};
+  return['monospace','sans-serif','serif'].some(b=>w(name+','+b)!==w(b))};
 function applyPrefs(){const r=document.documentElement.style;r.setProperty('--rowh',(S.prefs.rowH||36)+'px');r.setProperty('--detailw',(S.prefs.detailW||420)+'px');
+  S.prefs.font?r.setProperty('--font',S.prefs.font):r.removeProperty('--font');S.prefs.fontSize?r.setProperty('--fs',S.prefs.fontSize+'px'):r.removeProperty('--fs');
   const ht=!!S.prefs.hideTags,b=$('#hideTags');document.body.classList.toggle('notags',ht);b.classList.toggle('on',ht);b.textContent=ht?'Show tags':'Hide tags'}
 function setDetailW(w){S.prefs.detailW=Math.round(Math.max(300,Math.min(innerWidth*.7,760,w)));applyPrefs()}
 function setAllCollapsed(c){Object.values(S.nodes).forEach(n=>{if(n.id!=='root'&&n.children.length)n.collapsed=c});persist();renderTree()}
@@ -1319,9 +1392,13 @@ async function showSettings(){const v=S.prefs.rowH||36;
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
   <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style||'')===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label class="field"><span>Font</span><select id="fontSel" data-tip="Only fonts installed on this computer are listed">${[['','Theme default'],...FONTS.filter(f=>!f[2]||f[0]===S.prefs.font||hasFont(f[0]))].map(([k,l])=>`<option value="${esc(k)}" ${(S.prefs.font||'')===k?'selected':''}>${esc(l||k)}</option>`).join('')}</select></label>
+  <label class="field"><span>Font size: <b id="fsv">${S.prefs.fontSize?S.prefs.fontSize+'px':'theme default'}</b> <button class="chip" id="fsReset" ${S.prefs.fontSize?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${S.prefs.fontSize||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
   <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc((S.prefs.workDay||{}).from||'09:00')}"><span>to</span><input type="time" id="wdTo" value="${esc((S.prefs.workDay||{}).to||'17:00')}"></label>
+  <div class="sh">Notifications <span class="bd" data-tip="Desktop pop-ups for reminders and the timer, also when this tab is in the background">?</span></div>
+  <div class="row-between"><span>${!('Notification'in window)?'This browser does not support notifications.':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked. To allow them, click the icon left of the address bar and set Notifications to Allow.':'Not allowed yet'}</span>${'Notification'in window&&Notification.permission==='default'?'<button class="btn" id="notifOn">Enable notifications</button>':''}</div>
   <div class="sh">Tag icons <span class="bd" data-tip="Entries with one of these tags show its icon before the name">?</span></div>
   <div id="tagIcs"></div>
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
@@ -1345,6 +1422,10 @@ async function showSettings(){const v=S.prefs.rowH||36;
   $('#rh').oninput=e=>set(+e.target.value);$('#rh').onchange=()=>persist();
   renderTagIcons();
   $('#styleSel').onchange=e=>setStyle(e.target.value);
+  $('#fontSel').onchange=e=>{S.prefs.font=e.target.value;applyPrefs();persist()};
+  $('#fs').oninput=e=>{S.prefs.fontSize=+e.target.value;$('#fsv').textContent=e.target.value+'px';$('#fsReset').hidden=false;applyPrefs()};$('#fs').onchange=()=>persist();
+  $('#fsReset').onclick=e=>{e.preventDefault();delete S.prefs.fontSize;applyPrefs();persist();showSettings()};
+  if($('#notifOn'))$('#notifOn').onclick=()=>Notification.requestPermission().then(()=>showSettings());
   $('#wdFrom').onchange=$('#wdTo').onchange=()=>{const from=$('#wdFrom').value,to=$('#wdTo').value;
     if(!from||!to||from>=to)return toast('The work day must end after it starts');S.prefs.workDay={from,to};persist()};
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
@@ -1402,6 +1483,14 @@ $('#detail').addEventListener('change',()=>{const ps=$('.pace-slot'),n=S.nodes[u
 $('#detail').addEventListener('focusout',e=>{const f=e.target.dataset?.f||'',n=S.nodes[ui.sel];
   if(!n||!/^end-/.test(f)||/^end-/.test(e.relatedTarget?.dataset?.f||'')||!endInput(n).bad)return;showEnd(n);toast('The end must not be before the start')});
 $('#detail').addEventListener('click',onDetailClick);
+let ptrDown=false;addEventListener('pointerdown',()=>ptrDown=true,true);addEventListener('pointerup',()=>ptrDown=false,true);
+const afterPointer=fn=>ptrDown?addEventListener('pointerup',()=>setTimeout(fn),{once:true,capture:true}):fn();
+// notes: double-click the preview to edit; leaving the text goes back to the preview
+$('#detail').addEventListener('dblclick',e=>{if(!e.target.closest('.notesbox .md')||e.target.closest('a'))return;
+  ui.mdPrev=false;renderDetail();const ta=$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}});
+$('#detail').addEventListener('focusout',e=>{const ta=e.target;if(ta.dataset?.f!=='notes')return;
+  // wait for the mouse button to come up, so that a click on a button below the notes is not lost when the panel redraws
+  afterPointer(()=>{const n=S.nodes[ui.sel];if(!ta.isConnected||document.activeElement===ta||!n||!n.notes.trim())return;ui.mdPrev=true;renderDetail()})});
 $('#detail').addEventListener('input',e=>{if(e.target.dataset.f==='pct')$('#pctv').textContent=e.target.value+'%'});
 $('#detail').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-f=tagadd],[data-f=peopleadd],[data-f=depadd],[data-f=linkadd],[data-f=name]')){e.preventDefault();e.target.blur()}
   if(e.key===','&&e.target.matches('[data-f=tagadd],[data-f=peopleadd]')){e.preventDefault();e.target.blur()}});
@@ -1472,13 +1561,14 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
   if(a!=='trash'){ui.multi.clear();renderTree()}});
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
 $('#vToday').addEventListener('click',e=>{const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
+  const tv=e.target.closest('[data-tv]');if(tv){ui.todayWeek=!!tv.dataset.tv;renderToday();return}
   if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
 $('#btnTimer').onclick=()=>S.timer&&S.timer.alarmed?showAlarm():openTimer();
 $('#btnPal').innerHTML=ic('cmd');$('#btnPal').onclick=openPalette;
 $('#btnUndo').innerHTML=ic('undo');$('#btnUndo').onclick=undo;$('#btnRedo').innerHTML=ic('redo');$('#btnRedo').onclick=redo;
 $('#btnTheme').onclick=toggleTheme;$('#btnMenu').innerHTML=ic('menu');$('#ico-search').innerHTML=ic('search',14);
-const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp],['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],['Load demo data',loadDemo]];
+const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp]];
 $('#btnMenu').onclick=()=>openModal(`<div class="list">${MENU.map(([l],i)=>`<button class="btn" data-m="${i}" style="text-align:left">${l}</button>`).join('')}</div><div style="margin-top:10px;color:var(--muted);font-size:12px;text-align:center">${APP.name} ${APP.version}</div>`,{cls:'pop-right',kind:'menu'});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&modalKind==='menu'){const f=MENU[+b.dataset.m][1];closeModal();f()}});
 $('#newProj').onclick=newProject;$('#newRem').onclick=newReminder;
@@ -1666,7 +1756,7 @@ $('#tree').addEventListener('touchstart',e=>{const row=e.target.closest('.row');
   document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();
   Store.connect();setInterval(tick,1000);setTimeout(syncAlerts,800);
   if(S.timer&&S.timer.alarmed)showAlarm();
-  if(Object.keys(S.nodes).length<=1&&!S.prefs.welcomed){S.prefs.welcomed=true;persist();setTimeout(()=>toast('Welcome! Type in the quick-add field above, or open ⋯ → Load demo data for an example.',{ms:14000}),700)}
+  if(Object.keys(S.nodes).length<=1&&!S.prefs.welcomed){S.prefs.welcomed=true;persist();setTimeout(()=>toast('Welcome! Type in the quick-add field above, or open ⋯ → Settings → Load demo data for an example.',{ms:14000}),700)}
 })();
 </script>
 </body>

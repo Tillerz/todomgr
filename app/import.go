@@ -14,6 +14,7 @@ import (
 
 // CSV and calendar (ICS) import. Both only add entries: everything goes below a new
 // top-level project "Import: <file>, <date>", so nothing that exists is changed.
+// An entry that is already there (see sameEntry) is skipped, so a file can be imported again.
 // Past one-time events are skipped, and values that have no field here go into the
 // notes, so nothing is dropped silently. The JSON import (Store.Import) replaces all.
 
@@ -79,6 +80,15 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 	title := "Import: " + name + ", " + now.Format("2006-01-02 15:04")
 	res := map[string]any{"name": title, "skipped": r.skipped}
 	_, err = s.Mutate(actor, "", func(tx *Tx) error {
+		known := 0
+		for _, it := range r.items {
+			if tx.db.sameEntry(it.name, it.f) != "" {
+				known++
+			}
+		}
+		if known == len(r.items) {
+			return fmt.Errorf("nothing new to import: all %d entries are already there", known)
+		}
 		p, err := tx.create(title, "", 0, map[string]any{"kind": "project", "status": "active"})
 		if err != nil {
 			return err
@@ -91,10 +101,15 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 			}
 		}
 		made, busy := map[*impItem]string{}, map[*impItem]bool{}
-		added, partly := 0, 0
+		added, partly, dups := 0, 0, 0
 		var add func(it *impItem) error
 		add = func(it *impItem) error {
 			if _, ok := made[it]; ok {
+				return nil
+			}
+			if id := tx.db.sameEntry(it.name, it.f); id != "" { // its sub-entries from the file go below the one that is there
+				made[it] = id
+				dups++
 				return nil
 			}
 			busy[it] = true
@@ -126,13 +141,33 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 				return err
 			}
 		}
-		res["id"], res["added"], res["partly"] = pid, added, partly
+		res["id"], res["added"], res["partly"], res["duplicates"] = pid, added, partly, dups
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+// sameEntry returns the id of a live entry with the same kind, name and dates as an entry
+// to import, or "". Entries without any date never match: two todos "Buy milk" can both be meant.
+func (db *DB) sameEntry(name string, f map[string]any) string {
+	kind, rem, end, dl := str(f["kind"]), str(f["reminder"]), str(f["end"]), str(f["deadline"])
+	if kind == "" {
+		kind = "todo"
+	}
+	if rem == "" && dl == "" {
+		return ""
+	}
+	name = strings.TrimSpace(name)
+	for id, n := range db.Nodes {
+		if n.S("kind") == kind && n.S("reminder") == rem && n.S("end") == end && n.S("deadline") == dl &&
+			strings.TrimSpace(n.S("name")) == name && !db.inTrash(n) {
+			return id
+		}
+	}
+	return ""
 }
 
 // cp1252 holds the characters of Windows-1252 bytes 0x80–0x9F; the other bytes are Latin-1.

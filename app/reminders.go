@@ -138,7 +138,7 @@ func (s *Store) checkReminders(now time.Time) {
 	s.mu.RLock()
 	var due []string
 	for id, n := range s.db.Nodes {
-		if id == "root" || n["trashed"] != nil || (n.S("reminder") == "" && n.N("snoozeUntil") == 0) {
+		if id == "root" || s.db.inTrash(n) || (n.S("reminder") == "" && n.N("snoozeUntil") == 0) {
 			continue
 		}
 		if ch, _ := stepReminder(maps.Clone(n), now, s.loc); ch {

@@ -63,11 +63,12 @@ func TestEventExportImport(t *testing.T) {
 		if f.format == "csv" {
 			data = st.ExportCSV(true)
 		}
-		res, err := st.ImportEntries("test", f.format, f.name, data)
+		st2, _ := testStore(t) // a second, empty store: in the same one the events are already there
+		res, err := st2.ImportEntries("test", f.format, f.name, data)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := importedKids(t, st, str(res["id"]))
+		got := importedKids(t, st2, str(res["id"]))
 		if c := got["Convention"]; c == nil || c.S("reminder") != "2030-12-05" || c.S("end") != "2030-12-07" {
 			t.Errorf("%s: all-day event %v", f.format, c)
 		}

@@ -84,7 +84,7 @@ func (s *Store) Announce(id, title, url string) error {
 	s.mu.RLock()
 	n, ok := s.db.Nodes[id]
 	var hook string
-	if ok && id != "root" && n["trashed"] == nil {
+	if ok && id != "root" && !s.db.inTrash(n) {
 		_, hook = s.db.hookFor(id)
 	}
 	s.mu.RUnlock()

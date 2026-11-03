@@ -204,7 +204,7 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		}
 		for _, d := range strs(l) {
 			x, ok := t.db.Nodes[d]
-			if !ok || d == id || d == "root" || x["trashed"] != nil {
+			if !ok || d == id || d == "root" || t.db.inTrash(x) {
 				return fmt.Errorf("unknown entry %q", d)
 			}
 			if t.db.dependsOn(x, id, nil) {
@@ -396,7 +396,7 @@ func (t *Tx) create(name, parent string, index int, f map[string]any) (Node, err
 		parent = "root"
 	}
 	p, ok := t.db.Nodes[parent]
-	if !ok || p["trashed"] != nil {
+	if !ok || t.db.inTrash(p) {
 		return nil, fmt.Errorf("parent %q not found", parent)
 	}
 	id := newID(t.db)
@@ -444,7 +444,7 @@ func (t *Tx) patch(id string, f map[string]any) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if n["trashed"] != nil {
+	if t.db.inTrash(n) {
 		return nil, errors.New("entry is in the trash; restore it first")
 	}
 	if len(f) == 0 {
@@ -468,10 +468,10 @@ func (t *Tx) move(id, parent string, index int) (Node, error) {
 		parent = "root"
 	}
 	p, ok := t.db.Nodes[parent]
-	if !ok || p["trashed"] != nil {
+	if !ok || t.db.inTrash(p) {
 		return nil, fmt.Errorf("target %q not found", parent)
 	}
-	if n["trashed"] != nil {
+	if t.db.inTrash(n) {
 		return nil, errors.New("entry is in the trash")
 	}
 	if t.db.inSubtree(parent, id) {
@@ -492,7 +492,7 @@ func (t *Tx) trash(id string) error {
 	if err != nil {
 		return err
 	}
-	if n["trashed"] != nil {
+	if t.db.inTrash(n) { // the entry or a parent of it
 		return errors.New("already in the trash")
 	}
 	old := n.S("parent")
@@ -514,7 +514,7 @@ func (t *Tx) restore(id string) (Node, error) {
 		return nil, errors.New("not in the trash")
 	}
 	pid := n.S("tparent")
-	if p, ok := t.db.Nodes[pid]; !ok || p["trashed"] != nil {
+	if p, ok := t.db.Nodes[pid]; !ok || t.db.inTrash(p) { // the old parent is gone or in the trash itself
 		pid = "root"
 	}
 	delete(n, "trashed")

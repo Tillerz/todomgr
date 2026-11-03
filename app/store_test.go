@@ -449,3 +449,50 @@ func TestQuickKinds(t *testing.T) {
 		t.Fatalf("t: must go into the Inbox: %v", n)
 	}
 }
+
+// only the entry moved to the trash has the mark; its sub-entries count as in the trash too, in every action
+func TestTrashCoversSubEntries(t *testing.T) {
+	st, _ := testStore(t)
+	p := mustCreate(t, st, "Project", "", map[string]any{"kind": "project"})
+	a := mustCreate(t, st, "A", p, nil)
+	b := mustCreate(t, st, "B", a, nil)
+	other := mustCreate(t, st, "Other", "", nil)
+	if err := st.Trash("test", b); err != nil { // B alone first, then the whole project
+		t.Fatal(err)
+	}
+	if err := st.Trash("test", p); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Trash("test", a); err == nil {
+		t.Error("a sub-entry of a trashed project must count as in the trash already")
+	}
+	if _, err := st.Patch("test", a, map[string]any{"name": "x"}); err == nil {
+		t.Error("editing a sub-entry of a trashed project must fail")
+	}
+	if _, err := st.SetStatus("test", a, "done"); err == nil {
+		t.Error("setting the status of a sub-entry of a trashed project must fail")
+	}
+	if _, err := st.Create("test", "New", a, -1, nil); err == nil {
+		t.Error("creating below a sub-entry of a trashed project must fail")
+	}
+	if _, err := st.Move("test", other, a, -1); err == nil {
+		t.Error("moving into a trashed project must fail")
+	}
+	if _, err := st.Move("test", a, "", -1); err == nil {
+		t.Error("moving out of a trashed project must fail (restore it instead)")
+	}
+	// B's old parent A is in the trash: restoring B alone puts it at the top
+	if _, err := st.Restore("test", b); err != nil {
+		t.Fatal(err)
+	}
+	if got := nodeOf(st, b).S("parent"); got != "root" {
+		t.Errorf("restored B went to %q, want root", got)
+	}
+	// restoring the project brings its sub-entries back with it
+	if _, err := st.Restore("test", p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Patch("test", a, map[string]any{"name": "A2"}); err != nil {
+		t.Errorf("A must be live again after its project is restored: %v", err)
+	}
+}
