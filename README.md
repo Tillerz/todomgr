@@ -42,7 +42,7 @@ More in [Screenshots](#screenshots).
 
 ### Notes that work like a wiki
 
-- Markdown or BBCode (World Anvil style), with a preview.
+- Markdown or BBCode, with a preview.
 - Link entries with `[[`, and see which entries link back.
 - A large editor for long notes.
 
@@ -124,11 +124,11 @@ quotes and links. A single line break stays a line break. GitHub's notice boxes 
 > Check the map scale before the next session.
 ```
 
-Notes can use **BBCode** instead, as on World Anvil: click the **Markdown** button above the notes to
+Notes can use **BBCode** instead: click the **Markdown** button above the notes to
 switch that entry to BBCode. Supported: `[b]` `[i]` `[u]` `[s]` `[small]` `[sup]` `[sub]` `[dc]` (drop cap),
 `[color:red|yellow]`, `[h1]`–`[h4]`, `[quote]…|Author[/quote]`, `[aloud]`, `[code]`, `[spoiler]…|Label[/spoiler]`,
 `[url:https://…]text[/url]`, `[br]`, `[ul]` / `[ol]` with `- item` lines, `[noparse]`, `/* hidden comments */` and `[icon:name]` with any
-icon name from Settings → Tag icons. Other World Anvil tags (mentions, sections, containers) stay as text.
+icon name from Settings → Tag icons. Unknown tags stay as text.
 
 Click **Preview** above the notes to see the result. HTML in notes is shown as plain text, and only
 `http`, `https` and `mailto` links become links, so a note added through the API or MCP can never run
@@ -273,7 +273,7 @@ no window is open.
 
 ### Projects and Discord
 
-A project can have a **URL** (for example your World Anvil world) and a **Discord webhook**.
+A project can have a **URL** (to an article, webpage, etc.) and a **Discord webhook**.
 
 - When a todo below such a project is set to done – by the checkbox, the status menu, a bulk action or
   progress reaching 100 % – a dialog offers to **announce it on Discord**: the title is filled in, the URL
@@ -410,6 +410,10 @@ preview tests (`node app/notes_test.js`).
 
 ## Screenshots
 
+### Context Menu (right-click)
+
+![Context Menu (right-click)](docs/context-menu.png)
+
 ### The tree with the detail panel, light mode
 
 ![The tree with the detail panel, light mode](docs/tree.png)
@@ -450,7 +454,7 @@ preview tests (`node app/notes_test.js`).
 
 <img alt="The printable list" src="docs/print-list.png" width=450px>
 
-### Notes in BBCode (World Anvil style)
+### Notes in BBCode
 
 <img alt="Notes in BBCode, preview" src="docs/notes-bbcode.png" width=400px>
 
