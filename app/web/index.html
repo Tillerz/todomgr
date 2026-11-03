@@ -961,7 +961,17 @@ function beep(){if(!ac)return;const t=ac.currentTime;[0,.28,.56].forEach(d=>{con
 function notify(title,body){try{if('Notification'in window&&Notification.permission==='granted')new Notification(title,{body})}catch{}}
 function ring(){ensureAudio();beep();clearInterval(alarmIv);alarmIv=setInterval(beep,2200);const t0=document.title;let f=0;clearInterval(titleIv);titleIv=setInterval(()=>document.title=(f^=1)?'⏰ Time is up!':t0,800);
   const T=S.timer,n=T&&S.nodes[T.id];notify('Time is up',n?n.name:'Timer finished');showAlarm()}
-function stopAlarm(){clearInterval(alarmIv);clearInterval(titleIv);document.title=APP.name+' '+APP.version}
+function stopAlarm(){clearInterval(alarmIv);clearInterval(titleIv);titleIv=null;document.title=pageTitle()}
+// the browser tab shows the one most important thing: a running timer, a reminder that pops up,
+// overdue todos, or the next todo due today; else the app name
+function pageTitle(){const T=S.timer;
+  if(T&&!(T.end&&T.alarmed)){const n=S.nodes[T.id];return`⏱ ${T.end?fmtClock((T.end-now())/1000):fmtClock(elapsedSec())}${n?' · '+n.name:''}`}
+  const r=remQ.length&&S.nodes[remQ[0].id];if(r)return'🔔 '+r.name;
+  const A=allNodes().filter(n=>n.kind==='todo'&&!isClosed(n)&&n.status!=='later'),over=A.filter(n=>dueState(n)==='over').length;
+  if(over)return`⚠ ${over} overdue · ${APP.name}`;
+  const d=A.filter(n=>dueState(n)==='today').sort((a,b)=>pd(a.deadline)-pd(b.deadline))[0];
+  if(d)return`📅 ${d.deadline.includes('T')?d.deadline.slice(11)+' ':'Today: '}${d.name} · ${APP.name}`;
+  return APP.name+' '+APP.version}
 function showAlarm(){const T=S.timer;if(!T)return;const n=S.nodes[T.id];
   openModal(`<div style="text-align:center"><div style="font-size:42px">⏰</div><h3 style="margin:4px 0">Time is up!</h3><p style="color:var(--muted)">${T.min} minute${T.min>1?'s':''}${n?` on “${esc(n.name)}”`:''}</p>
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn pri" data-t="stop">${n?'Log time & close':'Close'}</button><button class="btn" data-t="plus5">+5 min</button><button class="btn" data-t="plus15">+15 min</button><button class="btn dng" data-t="discard">Discard</button></div></div>`,{cls:'center',kind:'alarm'})}
@@ -1060,7 +1070,8 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;if(remQ.length&&!['alarm','ann','remind'].includes(modalKind))showRem()}
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;if(remQ.length&&!['alarm','ann','remind'].includes(modalKind))showRem();
+  if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
 let modalKind=null;

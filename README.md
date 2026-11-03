@@ -317,6 +317,9 @@ no window is open.
   (minus the time already tracked) and the timed events in the rest of the day. It compares the sum with
   the time left in your work day (Settings → Work day, default 09:00–17:00) and turns red when the plan
   does not fit.
+- **Browser tab title:** shows the one most important thing, so you see it from any other tab: a running
+  timer (`⏱ 12:34 · Write chapter 4`), a reminder that pops up, the number of overdue todos, or the next
+  todo due today.
 - **Search** with filters (open, done, blocked, overdue, ideas, todos, reminders, projects, later,
   today, tags, people) and **saved views**.
 - A command palette (Ctrl+K) for every action.
