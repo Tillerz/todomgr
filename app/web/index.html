@@ -114,6 +114,7 @@ body[data-view=stats] #detail,body[data-view=stats] #resizer{display:none}
 @media (min-width:1101px){body[data-panel="0"] main{grid-template-columns:minmax(0,1fr)}body[data-panel="0"] #detail,body[data-panel="0"] #resizer{display:none}}
 .view{overflow:auto;min-height:0}
 .treewrap{max-width:980px;margin:0 auto;padding:14px 16px 90px}
+.wide .treewrap,.wide .page{max-width:none}
 .toolbar{display:flex;gap:8px;margin-bottom:8px}
 .toolbar input{flex:1;padding:9px 12px;font-size:14px;border-radius:9px}
 .filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
@@ -737,6 +738,11 @@ function dupNode(id,pid,idx,top){const o=S.nodes[id],n=mk(top?o.name+' (copy)':o
 function indent(id){const n=S.nodes[id],p=S.nodes[n.parent],i=p.children.indexOf(id);if(i<1)return;const prev=S.nodes[p.children[i-1]];mutate(()=>{moveNode(id,prev.id);prev.collapsed=false})}
 function outdent(id){const n=S.nodes[id],p=S.nodes[n.parent];if(!p||p.id==='root')return;mutate(()=>moveNode(id,p.parent,S.nodes[p.parent].children.indexOf(p.id)+1))}
 function reorder(id,d){const n=S.nodes[id],p=S.nodes[n.parent],i=p.children.indexOf(id),j=i+d;if(j<0||j>=p.children.length)return;mutate(()=>moveNode(id,p.id,j))}
+// one-time sort of the direct sub-items; Undo brings the old order back. Equal ones keep their order, entries without a date go last.
+const SORTS={name:(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}),prio:(a,b)=>b.prio-a.prio,
+  due:(a,b)=>{const x=a.deadline||a.reminder||'',y=b.deadline||b.reminder||'';return !x-!y||(x<y?-1:x>y?1:0)}};
+function sortChildren(id,by){const p=S.nodes[id];mutate(()=>{p.children=[...p.children].sort((a,b)=>SORTS[by](S.nodes[a],S.nodes[b]));touch(p,true)});
+  toast('Sub-items sorted',{action:{label:'Undo',fn:undo}})}
 function reveal(id){for(let x=S.nodes[S.nodes[id]?.parent];x&&x.id!=='root';x=S.nodes[x.parent])x.collapsed=false;ui.sel=id;ui.panel=true;ui.q='';$('#q').value='';setView('tree');
   requestAnimationFrame(()=>$(`.node[data-id="${id}"]>.row`)?.scrollIntoView({block:'center',behavior:'smooth'}))}
 
@@ -1401,6 +1407,7 @@ const hasFont=css=>{const c=hasFont.c||(hasFont.c=document.createElement('canvas
   return['monospace','sans-serif','serif'].some(b=>w(name+','+b)!==w(b))};
 function applyPrefs(){const r=document.documentElement.style;r.setProperty('--rowh',(S.prefs.rowH||DEF.rowH)+'px');r.setProperty('--detailw',(S.prefs.detailW||DEF.detailW)+'px');
   const font=S.prefs.font??DEF.font,fs=S.prefs.fontSize??DEF.fontSize;font?r.setProperty('--font',font):r.removeProperty('--font');fs?r.setProperty('--fs',fs+'px'):r.removeProperty('--fs');
+  document.body.classList.toggle('wide',!!(S.prefs.wide??DEF.wide));
   const ht=!!S.prefs.hideTags,b=$('#hideTags');document.body.classList.toggle('notags',ht);b.classList.toggle('on',ht);b.textContent=ht?'Show tags':'Hide tags'}
 function setDetailW(w){S.prefs.detailW=Math.round(Math.max(300,Math.min(innerWidth*.7,760,w)));applyPrefs()}
 function setAllCollapsed(c){Object.values(S.nodes).forEach(n=>{if(n.id!=='root'&&n.children.length)n.collapsed=c});persist();renderTree()}
@@ -1421,12 +1428,13 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   <label class="field"><span>Font</span><select id="fontSel" data-tip="Only fonts installed on this computer are listed">${[['','Theme default'],...FONTS.filter(f=>!f[2]||f[0]===font||hasFont(f[0]))].map(([k,l])=>`<option value="${esc(k)}" ${font===k?'selected':''}>${esc(l||k)}</option>`).join('')}</select></label>
   <label class="field"><span>Font size: <b id="fsv">${fsz?fsz+'px':'theme default'}</b> <button class="chip" id="fsReset" ${'fontSize' in S.prefs?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${fsz||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
+  <label class="chk-row"><input type="checkbox" id="wideOn" ${(S.prefs.wide??DEF.wide)?'checked':''}> Full page width <small style="color:var(--muted)">(the tree and the pages use the whole window)</small></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
   <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc(wd.from)}"><span>to</span><input type="time" id="wdTo" value="${esc(wd.to)}"></label>
   <div class="sh">Notifications <span class="bd" data-tip="Desktop pop-ups for reminders and the timer, also when this tab is in the background">?</span></div>
   <div class="row-between"><span>${!('Notification'in window)?'This browser does not support notifications.':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked. To allow them, click the icon left of the address bar and set Notifications to Allow.':'Not allowed yet'}</span>${'Notification'in window&&Notification.permission==='default'?'<button class="btn" id="notifOn">Enable notifications</button>':''}</div>
   <div class="sh">Tag icons <span class="bd" data-tip="Entries with one of these tags show its icon before the name">?</span></div>
-  <div id="tagIcs"></div>
+  <button class="btn" id="tiShow">${ui.showTi?'Hide':'Show'} tag icons</button><div id="tagIcs" ${ui.showTi?'':'hidden'} style="margin-top:6px"></div>
   <div class="sh">LAN access <span class="bd" data-tip="Open the app on your phone, tablet or another computer in the same network">?</span></div>
   <label class="chk-row"><input type="checkbox" id="lanOn" ${L.enabled?'checked':''}> Allow other devices in my network <small style="color:var(--muted)">(off by default)</small></label>
   ${L.enabled!==L.active?`<div class="note" style="color:var(--warn)">Restart the program to switch LAN access ${L.enabled?'on':'off'}.</div>`:''}
@@ -1446,7 +1454,8 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   <div class="note" style="margin-top:8px">Client config (HTTP): <button class="chip" id="cfgCopy">copy</button> &nbsp; or for stdio clients use the command <code>todo mcp</code></div>`:''}
   <div class="sh">Backups</div>
   <div class="row-between"><label class="field row2" style="align-items:center;gap:8px"><span>Snapshot every</span><input type="number" id="bkInt" min="1" max="1440" value="${cfg.backupIntervalMin}" style="width:70px"><span>min (when something changed)</span></label><button class="btn" id="bkNow">Back up now</button></div>
-  <div class="list" style="margin-top:8px">${bk.slice(0,6).map(b=>`<div class="li"><span class="t">${esc(b.kind)} · ${fmtFull(new Date(b.time).getTime())}</span><small style="color:var(--muted)">${Math.max(1,Math.round(b.size/1024))} KB</small><button class="btn" data-restore="${esc(b.name)}" data-tip="Replace all data with this backup (the current data is backed up first)">Restore</button></div>`).join('')||'<div class="note">No backups yet.</div>'}</div>
+  <button class="btn" id="bkShow" style="margin-top:6px">${ui.showBk?'Hide':'Show'} backups</button><div id="bkBox" ${ui.showBk?'':'hidden'}>
+  <div class="list" style="margin-top:8px">${bk.slice(0,6).map(b=>`<div class="li"><span class="t">${esc(b.kind)} · ${fmtFull(new Date(b.time).getTime())}</span><small style="color:var(--muted)">${Math.max(1,Math.round(b.size/1024))} KB</small><button class="btn" data-restore="${esc(b.name)}" data-tip="Replace all data with this backup (the current data is backed up first)">Restore</button></div>`).join('')||'<div class="note">No backups yet.</div>'}</div></div>
   <div class="note">Kept: all from the last 2 hours, then hourly, daily and weekly. ${bk.length} on disk.</div>
   <div class="sh">Data</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport" data-tip="Download everything as one JSON file (the complete backup)">Export JSON</button><button class="btn" id="dCsv" data-tip="All entries as a table for Excel, LibreOffice or Google Sheets">Export CSV</button><button class="btn" id="dIcs" data-tip="Open entries with a date as a calendar file for Outlook, Google Calendar, Apple Calendar, Thunderbird…">Export calendar (.ics)</button><button class="btn" id="dImport" data-tip="Replace everything with a JSON export">Import JSON…</button><button class="btn" id="dImport2" data-tip="Add the entries of a CSV file or a calendar file (.ics) below a new project — nothing is replaced">Import CSV / calendar…</button><button class="btn" id="dDemo" data-tip="Replace everything with example data">Load demo data</button><button class="btn dng" id="dReset" data-tip="Remove all entries and statistics — a backup is kept">Start with empty data…</button></div>
@@ -1458,6 +1467,10 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   const set=x=>{S.prefs.rowH=x;$('#rhv').textContent=x+'px';applyPrefs()};
   $('#rh').oninput=e=>set(+e.target.value);$('#rh').onchange=()=>persist();
   renderTagIcons();
+  // long lists are folded; they stay open while Settings redraws
+  const fold=(btn,box,key,label)=>{$(btn).onclick=e=>{ui[key]=!ui[key];$(box).hidden=!ui[key];e.target.textContent=(ui[key]?'Hide ':'Show ')+label}};
+  fold('#tiShow','#tagIcs','showTi','tag icons');fold('#bkShow','#bkBox','showBk','backups');
+  $('#wideOn').onchange=e=>{S.prefs.wide=e.target.checked;applyPrefs();persist()};
   $('#styleSel').onchange=e=>setStyle(e.target.value);
   $('#fontSel').onchange=e=>{S.prefs.font=e.target.value;applyPrefs();persist()};
   $('#fs').oninput=e=>{S.prefs.fontSize=+e.target.value;$('#fsv').textContent=e.target.value+'px';$('#fsReset').hidden=false;applyPrefs()};$('#fs').onchange=()=>persist();
@@ -1759,6 +1772,7 @@ function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexO
     mi('Move up',()=>reorder(id,-1),{key:'Alt+↑',dis:i<=0}),mi('Move down',()=>reorder(id,1),{key:'Alt+↓',dis:i>=sibs.length-1}),
     mi('Indent',()=>indent(id),{key:'Tab',dis:i<1}),mi('Outdent',()=>outdent(id),{key:'Shift+Tab',dis:n.parent==='root'}));
   if(n.children.length)items.push(mi('Collapse all below',()=>setBelow(id,true)),mi('Expand all below',()=>setBelow(id,false)));
+  if(n.children.length>1)items.push(msub('Sort sub-items',[['name','By name'],['prio','By priority (highest first)'],['due','By date (soonest first)']].map(([k,l])=>mi(l,()=>sortChildren(id,k)))));
   items.push(MSEP);
   if(url)items.push(mi('Open link',()=>window.open(url,'_blank','noopener')));
   if(!isRem)items.push(mi('Start timer on this',()=>openTimer(id)));

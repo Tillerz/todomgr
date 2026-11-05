@@ -39,7 +39,7 @@ More in [Screenshots](#screenshots).
 
 ### Keep big projects under control
 
-- Nest entries as deep as you like, and drag and drop to reorder them.
+- Nest entries as deep as you like, drag and drop to reorder them, or sort them by name, priority or date.
 - Progress adds up from the sub-entries, and dependencies show what is blocked.
 - Give projects an icon and a colour. Select many entries and change them together.
 - Announce finished tasks in your Discord channel.
@@ -209,7 +209,7 @@ Markdown and BBCode notes.
 - Most actions work from the keyboard: see [Keyboard shortcuts](#keyboard-shortcuts).
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open,
   rename, add sub-entry, status, priority, colour, change type, deadline, add tag, move to…, reorder and
-  indent, open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash.
+  indent, sort sub-items (by name, priority or date; *Undo* brings the old order back), open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash.
   With several entries selected, right-click one of them: the menu then acts on all of them (mark done,
   status, priority, colour, add or remove a tag, add a person in charge, move to…, trash). Each entry only
   takes a status that its type has.
@@ -482,15 +482,15 @@ themselves, so changes show up there without copies (each event keeps the entry 
 
 ### Settings (⋯ → Settings)
 
-- **Theme**, **font**, **font size** and **row height**. The font list only shows fonts that are installed
+- **Theme**, **font**, **font size**, **row height** and **full page width** (use the whole window on wide screens). The font list only shows fonts that are installed
   on the computer that opens the page.
 - **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
-- **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
+- **Tag icons** (behind *Show tag icons*): which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **LAN access** on/off (off by default; needs a restart), with the addresses, the token and a QR code for other devices.
 - **Calendar subscription** on/off (off by default), with the links, a QR code and *New link*.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
-- **Backups:** the snapshot interval, *Back up now* and one-click restore from the list.
+- **Backups:** the snapshot interval, *Back up now*, and *Show backups* for one-click restore from the list.
 - **Data:** export JSON / CSV / calendar, import JSON, load demo data, and **Start with empty data** – clears everything
   (after taking a backup) without restarting the program. Your settings stay.
 - **About:** version (linked to the GitHub project), data schema version, time zone and data folder.
@@ -559,7 +559,7 @@ the top), with the Go version from `go.mod`.
 
 **Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port,
 backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme,
-light/dark, font, font size, row height, panel width, work day and default tag icons. Change them there and
+light/dark, font, font size, row height, panel width, full page width, work day and default tag icons. Change them there and
 run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings.
 The version number stays in `app/main.go`, where the build and release scripts read it.
 
