@@ -119,6 +119,11 @@ body[data-view=stats] #detail,body[data-view=stats] #resizer{display:none}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;background:var(--hover);color:var(--muted);font-size:12px;white-space:nowrap}
 button.chip:hover{color:var(--ink)}
 .chip.on{background:var(--accent);color:var(--accent-ink)}
+/* tag filter chips: tinted with the accent and less round, so they do not look like the buttons next to the
+   search. The text mixes the accent with --ink: at least 4.5:1 contrast in every theme, light and dark. */
+.chip.tagchip{border-radius:6px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,var(--bg));background:color-mix(in srgb,var(--accent) 14%,var(--bg));color:color-mix(in srgb,var(--accent) 60%,var(--ink))}
+button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--bg))}
+.chip.tagchip.on{background:var(--accent);color:var(--accent-ink)}
 .chip .x{opacity:.6;margin-left:2px}
 .chip .x:hover{opacity:1}
 .scrollx{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;max-width:100%}
@@ -267,7 +272,7 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
-.pace{margin-top:6px}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
+.pace{margin-top:6px}.pace.late,.pace-t .late{color:var(--danger)}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
 .planlist{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .pli{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:6px}.pli:hover{background:var(--hover)}
 .pli i{width:10px;height:10px;border-radius:3px;flex:none}.pli i.ev{background:#8a63d2}.pli i.tk{background:var(--accent)}
@@ -364,7 +369,6 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   .grid2{grid-template-columns:1fr}
   .treewrap{padding:10px 8px 90px}
   .children{padding-left:14px!important}
-  #tagbar{flex-wrap:wrap}
   /* the name keeps at least about half the row; badges and progress that do not fit go to a second line */
   .row{flex-wrap:wrap;row-gap:2px;justify-content:flex-end}
   .row>.namewrap{min-width:55%}
@@ -405,7 +409,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
         <button class="chip" id="saveView" data-tip="Save the current search as a quick view">+ Save view</button>
         <div class="scrollx" id="views"></div>
       </div>
-      <div class="scrollx" id="tagbar" style="margin-bottom:10px"></div>
+      <div class="scrollx" id="tagbar" style="margin-bottom:10px;flex-wrap:wrap"></div>
       <div id="bulk" class="bulk" hidden></div>
       <div id="tree" class="tree"></div>
     </div>
@@ -830,7 +834,7 @@ function renderTree(){
   renderTags();renderBulk()}
 function renderTags(){const c={};allNodes().forEach(n=>n.tags.forEach(t=>c[t]=(c[t]||0)+1));
   const act=parseQ(ui.q).tags;
-  $('#tagbar').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([t,k])=>`<button class="chip ${act.includes(t.toLowerCase())?'on':''}" data-tag="${esc(t)}" data-tip="Filter by #${esc(t)}">#${esc(t)} <small>${k}</small></button>`).join('');
+  $('#tagbar').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([t,k])=>`<button class="chip tagchip ${act.includes(t.toLowerCase())?'on':''}" data-tag="${esc(t)}" data-tip="Filter by #${esc(t)}">#${esc(t)} <small>${k}</small></button>`).join('');
   $('#views').innerHTML=S.prefs.views.map((v,i)=>`<button class="chip" data-view-q="${i}" data-tip="Saved view: ${esc(v.q)}">${esc(v.name)} <span class="x" data-del-view="${i}" data-tip="Remove view">×</span></button>`).join('');
   $('#hideDone').classList.toggle('on',ui.hideDone)}
 function renderBulk(){const b=$('#bulk'),n=ui.multi.size;b.hidden=!n;if(!n)return;
@@ -1026,11 +1030,21 @@ function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startO
 function paceOf(n){const left=n.prog.total-n.prog.done;if(n.prog.mode!=='units'||!n.deadline||isClosed(n)||kids(n).length||left<=0)return null;
   const d=pd(n.deadline);d.setHours(0,0,0,0);
   return{left,days:Math.round((d-startOfToday())/864e5)+1,u:n.prog.unit?' '+esc(n.prog.unit):'',num:x=>Math.ceil(x).toLocaleString('en')}}
-function pace(n){const p=paceOf(n);if(!p)return'';const{left,days,u,num}=p;
-  return`<div class="note pace">${num(left)}${u} left · ${days>0?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, until ${fmtWhen(n.deadline)}`:'<b>the deadline has passed</b>'}</div>`}
+// the real speed of units progress: done so far per day since the entry was created (today counts), and the
+// day it is finished at that speed. The app keeps no history of the count, so the start is the day it was created.
+function speedOf(n){const p=n.prog,left=p.total-p.done;if(p.mode!=='units'||isClosed(n)||kids(n).length||left<=0||p.done<=0||!n.created)return null;
+  const since=new Date(n.created);since.setHours(0,0,0,0);const t0=startOfToday(),days=Math.max(1,Math.round((t0-since)/864e5)+1),per=p.done/days;
+  const fin=new Date(t0);fin.setDate(fin.getDate()+Math.ceil(left/per)-1);const dl=n.deadline?pd(n.deadline):null;if(dl)dl.setHours(0,0,0,0);
+  return{per,since,fin,late:dl?Math.round((fin-dl)/864e5):null}}
+const unitTxt=n=>n.prog.unit?' '+esc(n.prog.unit):'',finTxt=d=>{const w=fmtWhen(dayKey(d));return/^(Today|Tomorrow)$/.test(w)?w.toLowerCase():w};
+function forecast(n){const f=speedOf(n);if(!f)return'';const u=unitTxt(n),days=x=>x+' day'+(x>1?'s':''),w=finTxt(f.fin);
+  return`<div class="note pace${f.late>0?' late':''}">At your speed so far, ${Math.round(f.per).toLocaleString('en')}${u} per day since ${f.since.getDate()} ${MON[f.since.getMonth()]}: <b>done ${/^(today|tomorrow)$/.test(w)?'':'on '}${w}</b>${f.late>0?`, ${days(f.late)} after the deadline`:f.late<0?`, ${days(-f.late)} early`:''}</div>`}
+function pace(n){const p=paceOf(n),fc=forecast(n);if(!p)return fc;const{left,days,u,num}=p;
+  return`<div class="note pace">${num(left)}${u} left · ${days>0?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, until ${fmtWhen(n.deadline)}`:'<b>the deadline has passed</b>'}</div>${fc}`}
 // the same, short, after the name in the tree
-function paceTag(n){const p=paceOf(n);if(!p)return'';const{left,days,u,num}=p;
-  return`<span class="pace-t" data-tip="Left until the deadline${days>0?', and how much per day (today counts)':''}">${num(left)}${u} left${days>0?` · ${num(left/days)}${u}/day`:''}</span>`}
+function paceTag(n){const p=paceOf(n),f=speedOf(n);if(!p&&!f)return'';const left=n.prog.total-n.prog.done,u=unitTxt(n),num=x=>Math.ceil(x).toLocaleString('en'),days=p?p.days:0;
+  const tip=(p?'Left until the deadline'+(days>0?', and how much per day (today counts)':''):'Left')+(f?'. done ~: when it is finished at your speed so far':'');
+  return`<span class="pace-t" data-tip="${tip}">${num(left)}${u} left${days>0?` · ${num(left/days)}${u}/day`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</span>`}
 function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if(!plan)return'';
   const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60),hm=t=>{const x=new Date(t);return pad(x.getHours())+':'+pad(x.getMinutes())},open=S.prefs.planOpen;
   const why=x=>x.ev?`event ${hm(x.ev[0])}–${hm(x.ev[1])}`:`${x.over?'overdue':'due today'} · estimate ${d(x.n.est)}${x.tr>=.5?`, ${d(x.tr)} tracked`:''}`;

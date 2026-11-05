@@ -277,6 +277,10 @@ the list.
 - **Daily pace:** units progress with a deadline shows what is left and how much per day you need, for
   example "5,500 words left · 197 words per day for 28 days, until 30 Nov". The tree and Today show the short form
   after the name: "5,500 words left · 197 words/day".
+- **Forecast:** units progress also shows your real speed so far and when you will be done at that speed,
+  with or without a deadline: "At your speed so far, 300 words per day since 2 Nov: done on 4 Dec, 4 days
+  after the deadline". It turns red when that is after the deadline. The tree adds "done ~4 Dec". The speed
+  counts from the day the entry was created, because the app does not keep a history of the count.
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
 - **Dependencies:** an entry that depends on unfinished entries is shown as blocked. Dependency cycles are
@@ -472,7 +476,7 @@ todo help
 
 ```
 ./build.sh          # tests + portable builds for Linux, Windows and macOS into dist/, plus release archives
-./test.sh           # all tests: Go tests, notes preview safety tests (Node), end-to-end run (temp data, 127.0.0.1 only)
+./test.sh           # all tests: Go tests, notes preview safety tests and page smoke test (Node), end-to-end run (temp data, 127.0.0.1 only)
 ./release.sh        # after build + test + commit: tag v<Version>, push, publish dist/ archives (needs gh)
 go test ./...
 ./todo serve --ui app/web     # develop the UI: serves app/web/ from disk instead of the embedded copy
@@ -480,7 +484,9 @@ go test ./...
 
 All program code is in `app/`: the Go files and the web page (`app/web/`), which is built into the program.
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes
-preview tests (`node app/notes_test.js`).
+preview tests (`node app/notes_test.js`) and the page smoke test (`node app/page_check.js`), which draws the
+main views of the page with the demo data. Give it a data file to check your own data, read only:
+`node app/page_check.js test/data/database.json`.
 
 ## Screenshots
 

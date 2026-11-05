@@ -170,8 +170,9 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
   const t0 = new Date(); t0.setHours(0, 0, 0, 0);
   const day = n => { const d = new Date(t0); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const env = {startOfToday: () => new Date(t0), isClosed: n => n.status === 'done', kids: () => [], fmtWhen: s => 'DUE'};
-  const pace = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') +
-    cut('// units progress with a deadline', '</div>`}') + 'return pace;')(...Object.values(env));
+  const dates = cut('const pad=', ';\n') + cut('const dayKey=', ';\n') + cut('const MON=', ';\n');
+  const pace = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') + dates +
+    cut('// units progress with a deadline', '${fc}`}') + 'return pace;')(...Object.values(env));
   const n = (done, total, deadline, x) => ({prog: {mode: 'units', done, total, unit: 'words'}, deadline, status: 'open', ...x});
   const txt = x => pace(x).replace(/<[^>]+>/g, '');
   check('pace: words per day', [
@@ -181,11 +182,24 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
     [n(10000, 10000, day(5)), ''], [n(1, 10, ''), ''], [n(1, 10, day(3), {status: 'done'}), ''],
     [{prog: {mode: 'percent', done: 10, total: 100, unit: ''}, deadline: day(3), status: 'open'}, ''],
   ].map(([x, want]) => txt(x) === want ? '' : `got "${txt(x)}", want "${want}"`).filter(Boolean));
-  const tag = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') +
-    cut('// units progress with a deadline', "/day`:''}</span>`}") + 'return paceTag;')(...Object.values(env));
+  const tag = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('function pd(s)', '}\n') + dates +
+    cut('// units progress with a deadline', "</span>`:''}</span>`}") + 'return paceTag;')(...Object.values(env));
   const short = x => tag(x).replace(/<[^>]+>/g, '');
   check('pace: short text in the tree', [[n(4500, 10000, day(27)), '5,500 words left · 197 words/day'], [n(100, 200, day(-2)), '100 words left'], [n(10000, 10000, day(5)), '']]
     .map(([x, want]) => short(x) === want ? '' : `got "${short(x)}", want "${want}"`).filter(Boolean));
+  // forecast at the speed so far: created 4 days ago, so 5 days with today
+  const created = new Date(t0).setDate(t0.getDate() - 4), since = new Date(created);
+  const sinceTxt = `${since.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][since.getMonth()]}`;
+  const fc = (done, total, deadline) => n(done, total, deadline, {created});
+  check('pace: forecast at the speed so far', [
+    [fc(1000, 10000, day(27)), `200 words per day since ${sinceTxt}: done on DUE, 17 days after the deadline`, true],
+    [fc(1000, 2000, ''), `At your speed so far, 200 words per day since ${sinceTxt}: done on DUE`, false],
+    [fc(5000, 6000, day(27)), 'done on DUE, 27 days early', false],
+    [fc(0, 100, ''), null, false],
+  ].map(([x, want, late]) => { const h = pace(x), t = h.replace(/<[^>]+>/g, '');
+    return want === null ? (t ? `got "${t}", want nothing` : '') : !t.endsWith(want) ? `got "${t}", want "…${want}"` : h.includes('pace late') !== late ? `late should be ${late}: ${t}` : ''; }).filter(Boolean));
+  check('pace: forecast in the tree', [[fc(1000, 10000, day(27)), '9,000 words left · 322 words/day · done ~DUE', true], [fc(1000, 2000, ''), '1,000 words left · done ~DUE', false]]
+    .map(([x, want, late]) => short(x) !== want ? `got "${short(x)}", want "${want}"` : tag(x).includes('class="late"') !== late ? 'late class wrong: ' + short(x) : '').filter(Boolean));
 }
 
 // Today → Next 7 days: every occurrence of a repeat, after-done repeats and closed todos only as they are

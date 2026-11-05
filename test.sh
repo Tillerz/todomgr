@@ -2,6 +2,8 @@
 # Runs all tests and prints one line per check:
 #   1. Go tests (store, reminders, export, HTTP API, MCP), in memory, no network.
 #   2. Notes preview (needs node): markdown renders, HTML and script links in notes stay harmless.
+#      Page smoke test (node): the whole page script draws the tree, Today, Next 7 days, Stats and every
+#      detail panel with the demo data, without a script error.
 #   3. End-to-end: builds the program, starts it on a free port with an empty temp
 #      data folder, and checks the CLI, the API, the MCP stdio bridge, the lock and a restart.
 # Only 127.0.0.1 is contacted; Discord is never called. Exit code 1 if anything failed.
@@ -38,6 +40,11 @@ if command -v node > /dev/null; then
     [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
   done < <(grep -E '^(PASS|FAIL) ' "$tmp/notes.log")
   grep -q -E '^(PASS|FAIL) ' "$tmp/notes.log" || bad "notes_test.js" "$(tail -1 "$tmp/notes.log")"
+  node app/page_check.js > "$tmp/page.log" 2>&1
+  while read -r status rest; do
+    [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
+  done < <(grep -E '^(PASS|FAIL) ' "$tmp/page.log")
+  grep -q -E '^(PASS|FAIL) ' "$tmp/page.log" || bad "page_check.js" "$(tail -1 "$tmp/page.log")"
 else
   bad "notes preview" "node not found in PATH"
 fi
