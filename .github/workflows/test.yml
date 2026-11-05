@@ -1,0 +1,30 @@
+# Tests on every push and pull request: format and vet checks, the builds for Linux, Windows and macOS
+# (build.sh), then all tests (test.sh: Go tests, page tests in Node, end-to-end run on 127.0.0.1).
+# Nothing is published; releases are made by hand with release.sh.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod # the oldest Go version the program supports
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: QR code reader for the QR tests
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zbar-tools
+      - name: Format, vet and build all platforms
+        run: ./build.sh
+      - name: All tests
+        run: ./test.sh

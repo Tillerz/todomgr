@@ -1,5 +1,7 @@
 # Tillerz Todo Mgr
 
+[![tests](https://github.com/Tillerz/todomgr/actions/workflows/test.yml/badge.svg)](https://github.com/Tillerz/todomgr/actions/workflows/test.yml)
+
 A small, portable todo, idea and project manager. One program, no installation: the UI, the API, the
 command line and the (optional) MCP server for AI assistants are all in one executable. The UI runs in
 your web browser: start the program and it opens `http://localhost:7437/`. The page comes from your own
@@ -552,6 +554,9 @@ go test ./...
 ```
 
 All program code is in `app/`: the Go files and the web page (`app/web/`), which is built into the program.
+GitHub runs `./build.sh` and `./test.sh` on every push (`.github/workflows/test.yml`, the *tests* badge at
+the top), with the Go version from `go.mod`.
+
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes
 preview tests (`node app/notes_test.js`) and the page smoke test (`node app/page_check.js`), which draws the
 main views of the page with the demo data. Give it a data file to check your own data, read only:
