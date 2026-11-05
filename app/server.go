@@ -28,6 +28,9 @@ type Server struct {
 	st      *Store
 	cfg     *Config
 	port    int
+	lan     bool // LAN access is on for this run (the listener was opened on all interfaces)
+	logins  loginLimit
+	pairs   pairCodes
 	ui      fs.FS
 	started time.Time
 	http    *http.Server
@@ -55,6 +58,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.serveIndex)
 	mux.Handle("GET /", http.FileServerFS(s.ui))
 
+	mux.HandleFunc("POST /api/login", s.hLogin)
+	mux.HandleFunc("POST /api/lan/pair", s.auth(s.hPair))
 	api := func(pattern string, h http.HandlerFunc) { mux.HandleFunc(pattern, s.auth(h)) }
 	api("GET /api/info", s.hInfo)
 	api("GET /api/state", s.hState)
@@ -103,15 +108,15 @@ func (s *Server) hostOK(h string) bool {
 	if err != nil {
 		host, port = strings.Trim(h, "[]"), ""
 	}
-	if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+	if host != "localhost" && host != "127.0.0.1" && host != "::1" && !(s.lan && lanHostOK(host)) {
 		return false
 	}
 	return port == "" || port == strconv.Itoa(s.port)
 }
 
-// guard rejects every request that is not addressed to the local machine. The
-// server only listens on 127.0.0.1, and additionally validates the Host and
-// Origin headers so that a web page cannot reach it via DNS rebinding.
+// guard rejects every request that is not addressed to the local machine (or, with LAN
+// access on, to an IP address or the name of this computer). It validates the Host and
+// Origin headers so that a web page cannot reach the server via DNS rebinding.
 func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.hostOK(r.Host) {
@@ -138,7 +143,6 @@ func (s *Server) guard(next http.Handler) http.Handler {
 }
 
 func (s *Server) tokenOK(r *http.Request) bool {
-	want := []byte(s.cfg.Get().Token)
 	var got string
 	if c, err := r.Cookie(cookieName); err == nil {
 		got = c.Value
@@ -149,7 +153,11 @@ func (s *Server) tokenOK(r *http.Request) bool {
 	if t := r.Header.Get("X-Todo-Token"); t != "" {
 		got = t
 	}
-	return got != "" && subtle.ConstantTimeCompare([]byte(got), want) == 1
+	return s.tokenEq(got)
+}
+
+func (s *Server) tokenEq(got string) bool {
+	return got != "" && subtle.ConstantTimeCompare([]byte(got), []byte(s.cfg.Get().Token)) == 1
 }
 
 func (s *Server) auth(h http.HandlerFunc) http.HandlerFunc {
@@ -222,8 +230,13 @@ func (s *Server) serveIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "index.html missing", http.StatusInternalServerError)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: s.cfg.Get().Token, Path: "/", HttpOnly: true,
-		SameSite: http.SameSiteStrictMode, MaxAge: 10 * 365 * 24 * 3600})
+	// only this computer gets the token with the page; other devices log in first (LAN access)
+	if fromLoopback(r) {
+		s.setTokenCookie(w)
+	} else if !s.tokenOK(r) {
+		s.serveLogin(w)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(b)
@@ -310,6 +323,8 @@ func (s *Server) settings() map[string]any {
 	return map[string]any{
 		"version": Version, "schema": schemaVersion, "dataDir": s.st.dir, "port": s.port, "timezone": s.st.tzName(),
 		"backupIntervalMin": c.BackupIntervalMin,
+		// enabled: the setting; active: this run listens on the network (a change needs a restart)
+		"lan": map[string]any{"enabled": c.LANEnabled, "active": s.lan, "urls": lanURLs(s.port), "token": c.Token},
 		"mcp": map[string]any{
 			"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly,
 			"url": fmt.Sprintf("http://127.0.0.1:%d/mcp", s.port), "token": c.Token,
@@ -326,6 +341,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 			ReadOnly *bool `json:"readOnly"`
 		} `json:"mcp"`
 		BackupIntervalMin *int `json:"backupIntervalMin"`
+		LAN               *struct {
+			Enabled *bool `json:"enabled"`
+		} `json:"lan"`
 	}
 	if err := readBody(r, &req, 1<<16); err != nil {
 		fail(w, err)
@@ -346,6 +364,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.BackupIntervalMin != nil {
 			d.BackupIntervalMin = *req.BackupIntervalMin
+		}
+		if req.LAN != nil && req.LAN.Enabled != nil {
+			d.LANEnabled = *req.LAN.Enabled
 		}
 	})
 	if err != nil {

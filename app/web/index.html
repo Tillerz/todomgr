@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tillerz Todo Mgr v0.1</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f6bed">
 <style>
 :root{
   --bg:#f5f6f9;--panel:#fff;--ink:#1c2230;--muted:#6b7385;--line:#e2e5ec;--hover:#eef1f6;--sel:#e6ecff;
@@ -272,7 +276,7 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
-.pace{margin-top:6px}.pace.late,.pace-t .late{color:var(--danger)}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
+.qrbox{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:8px 12px 0 0}.qrbox svg{width:180px;height:180px;border-radius:6px}.pace{margin-top:6px}.pace.late,.pace-t .late{color:var(--danger)}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
 .planlist{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .pli{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:6px}.pli:hover{background:var(--hover)}
 .pli i{width:10px;height:10px;border-radius:3px;flex:none}.pli i.ev{background:#8a63d2}.pli i.tk{background:var(--accent)}
@@ -1408,7 +1412,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   try{cfg=await Store.api('GET','/api/settings');bk=(await Store.api('GET','/api/backups')).backups}
   catch(e){if($('#setBody'))$('#setBody').innerHTML='<div class="empty">Could not load settings: '+esc(e.message)+'</div>';return}
   if(modalKind!=='settings')return;
-  const m=cfg.mcp,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
+  const m=cfg.mcp,L=cfg.lan,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
   <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style||'')===k?'selected':''}>${l}</option>`).join('')}</select></label>
@@ -1421,6 +1425,11 @@ async function showSettings(){const v=S.prefs.rowH||36;
   <div class="row-between"><span>${!('Notification'in window)?'This browser does not support notifications.':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked. To allow them, click the icon left of the address bar and set Notifications to Allow.':'Not allowed yet'}</span>${'Notification'in window&&Notification.permission==='default'?'<button class="btn" id="notifOn">Enable notifications</button>':''}</div>
   <div class="sh">Tag icons <span class="bd" data-tip="Entries with one of these tags show its icon before the name">?</span></div>
   <div id="tagIcs"></div>
+  <div class="sh">LAN access <span class="bd" data-tip="Open the app on your phone, tablet or another computer in the same network">?</span></div>
+  <label class="chk-row"><input type="checkbox" id="lanOn" ${L.enabled?'checked':''}> Allow other devices in my network <small style="color:var(--muted)">(off by default)</small></label>
+  ${L.enabled!==L.active?`<div class="note" style="color:var(--warn)">Restart the program to switch LAN access ${L.enabled?'on':'off'}.</div>`:''}
+  ${L.active?`<div class="codebox"><b>Address</b> ${L.urls.map(esc).join(' · ')||'no network address found'}<br><b>Token</b> <span id="lanTok">••••••••</span> <button class="chip" id="lanTokShow">show</button> <button class="chip" id="lanTokCopy">copy</button><br><button class="btn" id="lanQr" style="margin-top:6px" data-tip="A QR code for the phone camera: opens the app and logs in. Valid for 5 minutes, works once.">Show QR code</button></div><div id="lanQrBox"></div>`:''}
+  <div class="note">Only on networks you trust, such as your home Wi-Fi: the connection is not encrypted, so someone in the same network could read the token. Other devices log in once with the token. AI tools (MCP) stay on this computer only.</div>
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
   <label class="chk-row"><input type="checkbox" id="mcpOn" ${m.enabled?'checked':''}> Enable the MCP server <small style="color:var(--muted)">(off by default)</small></label>
   <label class="chk-row"><input type="checkbox" id="mcpRo" ${m.readOnly?'checked':''}> Read-only — AI tools can look but not change anything</label>
@@ -1448,6 +1457,12 @@ async function showSettings(){const v=S.prefs.rowH||36;
   if($('#notifOn'))$('#notifOn').onclick=()=>Notification.requestPermission().then(()=>showSettings());
   $('#wdFrom').onchange=$('#wdTo').onchange=()=>{const from=$('#wdFrom').value,to=$('#wdTo').value;
     if(!from||!to||from>=to)return toast('The work day must end after it starts');S.prefs.workDay={from,to};persist()};
+  $('#lanOn').onchange=e=>put({lan:{enabled:e.target.checked}});
+  if($('#lanTokShow')){$('#lanTokShow').onclick=()=>{const t=$('#lanTok');t.textContent=t.textContent.startsWith('•')?L.token:'••••••••'};$('#lanTokCopy').onclick=()=>copyText(L.token)
+    // one-time login codes: each click makes a new one; the QR codes disappear when they expire
+    $('#lanQr').onclick=async()=>{try{const r=await Store.api('POST','/api/lan/pair',{}),box=$('#lanQrBox');
+      box.innerHTML=r.links.map(l=>`<div class="qrbox">${l.svg}<small>${esc(l.url)}</small></div>`).join('')+`<div class="note">Scan it with the camera of the phone or tablet and open the link. Valid for ${Math.round(r.validSeconds/60)} minutes, and only once.</div>`;
+      clearTimeout(box.tm);box.tm=setTimeout(()=>{if(box.isConnected)box.innerHTML='<div class="note">The QR code has expired. Click “Show QR code” for a new one.</div>'},r.validSeconds*1000)}catch(e){toast(e.message)}}}
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
   $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
@@ -1775,6 +1790,9 @@ $('#tree').addEventListener('touchstart',e=>{const row=e.target.closest('.row');
   catch(e){document.body.innerHTML=`<div style="padding:40px;font:16px system-ui;max-width:560px"><h2>Cannot reach the Todo server</h2><p>${esc(e.message)}</p><p>Start it with <code>todo serve</code> and reload this page.</p><button onclick="location.reload()" style="padding:8px 16px;font:inherit">Retry</button></div>`;return}
   document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();
   Store.connect();setInterval(tick,1000);setTimeout(syncAlerts,800);
+  if(/[#&]pair=/.test(location.hash))history.replaceState(null,'',location.pathname);// a QR login link on a device that is logged in already
+  // installable as an app; browsers only allow this on localhost or https, not on a LAN address
+  if('serviceWorker'in navigator&&isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   if(S.timer&&S.timer.alarmed)showAlarm();
   if(Object.keys(S.nodes).length<=1&&!S.prefs.welcomed){S.prefs.welcomed=true;persist();setTimeout(()=>toast('Welcome! Type in the quick-add field above, or open ⋯ → Settings → Load demo data for an example.',{ms:14000}),700)}
 })();

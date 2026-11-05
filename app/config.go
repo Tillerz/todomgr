@@ -19,7 +19,8 @@ type ConfigData struct {
 	MCPEnabled        bool   `json:"mcpEnabled"`  // OFF by default
 	MCPReadOnly       bool   `json:"mcpReadOnly"` // when on, MCP can read but not change anything
 	BackupIntervalMin int    `json:"backupIntervalMin"`
-	Timezone          string `json:"timezone"` // IANA name; empty = system time zone
+	Timezone          string `json:"timezone"`   // IANA name; empty = system time zone
+	LANEnabled        bool   `json:"lanEnabled"` // OFF by default: other devices may connect (with the token); needs a restart
 }
 
 type Config struct {

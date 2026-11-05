@@ -111,10 +111,15 @@ func runServe(args []string) error {
 	if *port > 0 {
 		p = *port
 	}
-	// loopback only: nothing outside this computer can ever connect
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
+	// loopback only, so nothing outside this computer can connect; all interfaces when LAN access is on
+	lan := cfg.Get().LANEnabled
+	addr := fmt.Sprintf("127.0.0.1:%d", p)
+	if lan {
+		addr = fmt.Sprintf(":%d", p)
+	}
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("cannot listen on 127.0.0.1:%d (already running?): %w", p, err)
+		return fmt.Errorf("cannot listen on %s (already running?): %w", addr, err)
 	}
 	st, err := OpenStore(dir, cfg)
 	if err != nil {
@@ -127,6 +132,7 @@ func runServe(args []string) error {
 		st.Close()
 		return err
 	}
+	srv.lan = lan
 	url := fmt.Sprintf("http://localhost:%d/", p)
 	sj, _ := json.Marshal(map[string]any{"port": p, "pid": os.Getpid(), "url": url, "startedAt": time.Now().Format(time.RFC3339)})
 	_ = os.WriteFile(filepath.Join(dir, "server.json"), sj, 0o644)
@@ -134,6 +140,11 @@ func runServe(args []string) error {
 	log.SetFlags(log.Ltime)
 	fmt.Printf("%s v%s\n  data:  %s\n  open:  %s\n  MCP:   %s\n  stop:  Ctrl+C\n", AppName, Version, dir, url,
 		map[bool]string{true: "ON (127.0.0.1 only)", false: "off (enable in Settings)"}[cfg.Get().MCPEnabled])
+	if lan {
+		for _, u := range lanURLs(p) {
+			fmt.Printf("  LAN:   %s  (log in with the token: Settings → LAN access, or %s)\n", u, filepath.Join(dir, "config.json"))
+		}
+	}
 	if st.Recovered != "" {
 		fmt.Println("  NOTE:  " + st.Recovered)
 	}

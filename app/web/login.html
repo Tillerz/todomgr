@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in · Tillerz Todo Mgr</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+  :root{--bg:#f5f6f9;--panel:#fff;--ink:#1c2230;--muted:#6b7385;--line:#e2e5ec;--accent:#4f6bed;--danger:#d64545}
+  @media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1a1e28;--ink:#e6e9f0;--muted:#8d95a9;--line:#2a3040;--accent:#7b93ff;--danger:#ef6b6b}}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+  form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:min(380px,100%)}
+  h1{font-size:18px;margin:0 0 6px}
+  p{color:var(--muted);margin:0 0 14px;font-size:14px}
+  input{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+  input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  button{margin-top:12px;width:100%;font:inherit;font-weight:600;color:#fff;background:var(--accent);border:0;border-radius:8px;padding:9px;cursor:pointer}
+  button:disabled{opacity:.6}
+  #msg{color:var(--danger);font-size:14px;min-height:1.4em;margin:8px 0 0}
+</style>
+</head>
+<body>
+<form id="f">
+  <h1>Tillerz Todo Mgr</h1>
+  <p>This device is not logged in yet. Type the token: on the computer that runs the program, open Settings → LAN access.</p>
+  <input id="t" type="password" autocomplete="current-password" placeholder="Token" required autofocus>
+  <button id="b">Log in</button>
+  <div id="msg" role="alert"></div>
+</form>
+<script>
+async function login(body){const b=document.getElementById('b'),msg=document.getElementById('msg');b.disabled=true;msg.textContent='';
+  try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){location.replace('/');return}
+    msg.textContent=(await r.json().catch(()=>({}))).error||'Login failed ('+r.status+')'}
+  catch(err){msg.textContent='The program cannot be reached: '+err.message}
+  b.disabled=false}
+document.getElementById('f').onsubmit=e=>{e.preventDefault();login({token:document.getElementById('t').value})};
+// opened from the QR code in Settings: log in with its one-time code, and take the code out of the address
+const pair=/[#&]pair=([\w-]+)/.exec(location.hash);
+if(pair){history.replaceState(null,'',location.pathname);login({pair:pair[1]})}
+</script>
+</body>
+</html>

@@ -17,6 +17,7 @@ type apiT struct {
 	t     *testing.T
 	h     http.Handler
 	token string
+	s     *Server
 }
 
 func testServer(t *testing.T) *apiT {
@@ -41,7 +42,7 @@ func testServer(t *testing.T) *apiT {
 		return errors.New("no Discord in tests")
 	}
 	t.Cleanup(func() { discordSend = old })
-	return &apiT{t: t, h: s.Handler(), token: cfg.Get().Token}
+	return &apiT{t: t, h: s.Handler(), token: cfg.Get().Token, s: s}
 }
 
 // do sends a request with the token. body is JSON-encoded unless it is a string.
@@ -63,9 +64,12 @@ func (a *apiT) do(method, path string, body any, hdr ...string) *httptest.Respon
 	if raw != "" {
 		r.Header.Set("Content-Type", "application/json")
 	}
+	r.RemoteAddr = "127.0.0.1:50000" // this computer; without LAN access nothing else can connect
 	for i := 0; i+1 < len(hdr); i += 2 {
 		if hdr[i] == "Host" {
 			r.Host = hdr[i+1]
+		} else if hdr[i] == "RemoteAddr" { // another device, for the LAN access tests
+			r.RemoteAddr = hdr[i+1]
 		} else {
 			r.Header.Set(hdr[i], hdr[i+1])
 		}

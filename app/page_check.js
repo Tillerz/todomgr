@@ -47,4 +47,14 @@ check('page: detail panel of every entry',()=>{const bad=[];ui.panel=true;
   for(const n of live){ui.sel=n.id;ui.prevFor=null;try{renderDetail();if(!el('#detail').innerHTML.includes(esc(n.name)))bad.push(n.id+' (name missing)')}catch(e){bad.push(n.id+': '+e.message)}}
   ui.sel=null;return bad.slice(0,5).join('; ')});`);
 page(...Object.values(env), db, check, el, text);
+
+// installable app: the manifest, its icons and the service worker
+check('app: manifest and icons', () => {
+  const m = JSON.parse(fs.readFileSync(path.join(web, 'manifest.json'), 'utf8'));
+  const missing = (m.icons || []).map(i => i.src).filter(src => !fs.existsSync(path.join(web, src)));
+  for (const f of ['/manifest.json', '/icon.svg', '/apple-touch-icon.png']) if (!html.includes(f)) missing.push('not linked: ' + f);
+  if (!script.includes("'/sw.js'")) missing.push('service worker not registered');
+  return !m.name || !m.start_url || !m.icons?.some(i => i.sizes === '512x512') ? 'manifest lacks name, start_url or a 512 icon' : missing.join('; ');
+});
+check('app: service worker script', () => { new (require('vm').Script)(fs.readFileSync(path.join(web, 'sw.js'), 'utf8')); });
 process.exit(failed ? 1 : 0);

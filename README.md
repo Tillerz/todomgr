@@ -52,6 +52,8 @@ More in [Screenshots](#screenshots).
 - One program for Windows, macOS and Linux. No install, no account, no cloud.
 - Copy the folder to a USB stick and take everything with you.
 - Every change is saved at once, and automatic backups restore with one click.
+- Install it as an app window, and open it from your phone or tablet at home (LAN access, off by default,
+  with a login).
 
 ### Works with your other tools
 
@@ -93,7 +95,50 @@ Every feature in detail: [Features](#features).
 ```
 
 Stop it with Ctrl+C. Every change is saved immediately; nothing is lost if the program is killed.
-The program listens on `127.0.0.1` only, so it can only be reached from the same computer.
+The program listens on `127.0.0.1` only, so it can only be reached from the same computer, unless you switch
+on [LAN access](#lan-access-phone-tablet-other-computers).
+
+### Install as an app
+
+In Chrome or Edge, open `http://localhost:7437/` and click the **Install** icon in the address bar (or
+look for "Install" in the browser menu). The app then opens in its own window, without the
+address bar, and gets a start menu / dock icon. The program must still be running; if it is not, the window
+says so. Nothing is stored in the browser: all data stays in the `data/` folder.
+
+### LAN access (phone, tablet, other computers)
+
+**Off by default.** Switch it on in Settings → LAN access and restart the program. It then also listens on
+your network (Windows asks once if the firewall may allow it) and prints the addresses to use, for example
+`http://192.168.1.20:7437/`. Settings shows them too, with the token.
+
+- This computer works as before. Every other device first sees a login page and types the token once;
+  after that it stays logged in.
+- **QR code:** or click *Show QR code* in Settings → LAN access and scan it with the camera of the phone or
+  tablet: the link opens the app and logs in. The QR code holds a one-time code, not the token: it works once
+  and only for 5 minutes, so a photo or screenshot of it is useless afterwards.
+- After 5 wrong tokens, a device has to wait a minute before it can try again.
+- Only IP addresses and this computer's own name (`mypc`, `mypc.local`) are accepted as the address, so
+  web pages cannot reach the program through their own domain names.
+- AI tools (MCP) can still only connect from this computer.
+- **Use it only on networks you trust**, such as your home Wi-Fi: the connection is not encrypted (plain
+  `http`), so someone in the same network could read the token. For access from outside your home, a
+  private network such as Tailscale encrypts the connection; use the computer's Tailscale IP address.
+- A phone cannot install it as an app over a LAN address: browsers only allow that on `localhost` or
+  `https`. It works as a normal page (and "Add to Home screen" adds a bookmark icon).
+- Without a screen (a server): set `"lanEnabled": true` in `data/config.json`; the token is in the same file.
+
+**Another device cannot connect?**
+
+- Use the address of your Wi-Fi or network cable (usually `192.168.…` or `10.…`). Addresses like `172.…` belong
+  to virtual networks (WSL, Hyper-V, Docker) and cannot be reached from other devices.
+- Both devices must be in the same network, not in a guest Wi-Fi: routers often keep guest devices apart.
+- **Windows:** the network must be *Private* (Settings → Network & internet → your network → Network profile
+  type). If the firewall question did not appear or was answered with *Cancel*, allow the port once in an
+  administrator PowerShell:
+  `New-NetFirewallRule -DisplayName "Tillerz Todo Mgr" -Direction Inbound -Protocol TCP -LocalPort 7437 -Action Allow -Profile Private`
+- **WSL:** a program running inside WSL2 is not reachable from other devices; run the Windows version
+  (`todo.exe`) for LAN access.
+- First test on the computer itself: `http://<its address>:7437/` must show the login page.
 
 **macOS:** the program is not signed by Apple, so macOS blocks it on the first start. Right-click `todo` in
 Finder and choose **Open**, or run `xattr -d com.apple.quarantine todo` once in the program folder.
@@ -417,6 +462,7 @@ updated file again and only get the new entries. Entries without any date are al
   on the computer that opens the page.
 - **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
 - **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
+- **LAN access** on/off (off by default; needs a restart), with the addresses, the token and a QR code for other devices.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
 - **Backups:** the snapshot interval, *Back up now* and one-click restore from the list.
@@ -550,8 +596,8 @@ main views of the page with the demo data. Give it a data file to check your own
 
 ## MCP server for AI assistants
 
-**Off by default.** Switch it on in the app: ⋯ → Settings → MCP server. It listens only on `127.0.0.1`
-(this computer), checks the `Host` and `Origin` headers (which defeats attacks from web pages) and needs the
+**Off by default.** Switch it on in the app: ⋯ → Settings → MCP server. It only accepts connections from
+this computer (also when LAN access is on), checks the `Host` and `Origin` headers (which defeats attacks from web pages) and needs the
 access token shown in Settings. A **read-only** switch lets AI tools look but not change anything. There is
 no hard delete: AI tools can only move entries to the trash, and a Discord webhook URL is hidden from them
 (they see `(set)`); they cannot post to Discord.
@@ -567,7 +613,8 @@ text), `update_entry`, `set_status`, `move_entry`, `trash_entry`, `restore_entry
 The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every call needs the token
 (`Authorization: Bearer <token>`, or `X-Todo-Token`; the page itself uses a cookie). The token is in
 `data/config.json` and in Settings. `POST`, `PUT` and `PATCH` bodies must be `application/json`.
-Requests whose `Host` or `Origin` is not local are refused.
+Requests whose `Host` or `Origin` is not local are refused. With LAN access on, IP addresses and this
+computer's own name are accepted too, and other devices get the cookie from `POST /api/login {token}`.
 
 | Method and path | Purpose |
 |---|---|
@@ -588,7 +635,9 @@ Requests whose `Host` or `Origin` is not local are refused.
 | `GET /api/tree`, `/api/today`, `/api/stats` | the tree (`root`, `depth`), the Today lists, statistics (`days`) |
 | `POST /api/alerts/ack` | `{id, action: "ok" \| "snooze"}` – dismiss or snooze a reminder pop-up |
 | `POST /api/discord` | `{id, title, url}` – post to the Discord channel of the entry's project |
-| `GET`/`PUT /api/settings` | MCP switches, backup interval |
+| `GET`/`PUT /api/settings` | MCP and LAN switches, backup interval |
+| `POST /api/login` | `{token}` or `{pair}` – sets the cookie for another device (LAN access); no token needed, 5 tries a minute |
+| `POST /api/lan/pair` | a new one-time login code (5 minutes, once) with a link and its QR code (SVG) per LAN address |
 | `GET`/`POST /api/backups`, `POST /api/backups/restore` | list, create, restore |
 | `GET /api/export`, `POST /api/import` | whole data as JSON / replace everything |
 | `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project |

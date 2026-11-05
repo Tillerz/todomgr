@@ -259,6 +259,10 @@ func (s *Server) hMCP(w http.ResponseWriter, r *http.Request) {
 		jerr(w, http.StatusServiceUnavailable, errors.New("the MCP server is switched off — enable it in Settings"))
 		return
 	}
+	if !fromLoopback(r) { // also with LAN access on: AI tools connect from this computer only
+		jerr(w, http.StatusForbidden, errors.New("MCP is only available from this computer"))
+		return
+	}
 	// header token only (never the UI cookie)
 	if r.Header.Get("Authorization") == "" && r.Header.Get("X-Todo-Token") == "" || !s.tokenOK(r) {
 		w.Header().Set("WWW-Authenticate", "Bearer")

@@ -120,12 +120,17 @@ colour = stripe, priority = flag, status = checkbox; tooltips via one `data-tip`
   webhook URLs are hidden from MCP), Settings → "Start with empty data" (`POST /api/reset`), GitHub link in About.
 * Done since: CSV and ICS export (`export.go`; `GET /api/export.csv|.ics`, `todo export FILE.csv|.ics`, Settings → Data).
   ICS: reminders → VEVENT with RRULE + VALARMs, entries with a deadline/reminder → VTODO; floating local times.
-* Not yet: Neutralino/window shell (phase 3), LAN access, CSV/ICS import.
+* Not yet: Neutralino/window shell (phase 3).
 
 ## Open items
 
 * Native file-drop paths (Neutralino) to be verified in phase 3; in a browser only file names are available.
-* LAN access needs a real login. Today `serveIndex` (server.go) hands the token cookie to anyone who loads the page,
-  which is fine on 127.0.0.1 only. With LAN on: give the cookie only to loopback clients; LAN clients get a small
-  login page and type the token once. The token is already in `data/config.json` and shown in Settings; also print
-  it (or the full URL with it) on daemon start so a headless server can be used.
+* LAN access (done in lan.go): opt-in, needs a restart. Only loopback clients get the token cookie with the page;
+  LAN clients get login.html and `POST /api/login` (5 wrong tries per address, then 1 minute blocked). Host may be
+  an IP literal or this computer's name, never another domain (DNS rebinding). MCP stays loopback only. The start
+  message prints the LAN addresses and where the token is, not the token itself. Still plain http.
+  QR login: Settings → Show QR code makes a one-time code (5 minutes, once; `POST /api/lan/pair`) and a link
+  `http://<ip>:<port>/#pair=<code>`; login.html sends it to `/api/login`. QR encoder in qr.go (byte mode, level M,
+  versions 1–10, no library); qr_test.go reads the codes back with zbarimg when it is installed.
+* PWA: manifest.json, icons and sw.js (no caching, only an offline notice) make the page installable on localhost.
+  Not on a LAN address: browsers need https there. Offline editing with sync between devices is not planned yet.
