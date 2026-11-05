@@ -26,6 +26,7 @@ More in [Screenshots](#screenshots).
   day by day.
 - A day plan bar warns you when your estimates and meetings do not fit into the work day.
 - A countdown timer or stopwatch logs the time to the task you worked on.
+- Word or page goals show how much per day you need, and when you will be done at your speed so far.
 
 ### Never miss a date
 
@@ -52,13 +53,15 @@ More in [Screenshots](#screenshots).
 - One program for Windows, macOS and Linux. No install, no account, no cloud.
 - Copy the folder to a USB stick and take everything with you.
 - Every change is saved at once, and automatic backups restore with one click.
-- Install it as an app window, and open it from your phone or tablet at home (LAN access, off by default,
-  with a login).
+- Install it as an app window, and open it from your phone or tablet at home (LAN access, off by default).
+  Log in by scanning a QR code: it works once and only for 5 minutes.
 
 ### Works with your other tools
 
 - Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel. Import an
   updated file again and you only get the new entries.
+- Subscribe to your dates in Apple Calendar, Outlook or Thunderbird: they update by themselves, without
+  copies.
 - Export to CSV, a calendar file, Markdown, or a printed list.
 - A command line (`todo add "…"`), and an MCP server, so AI assistants such as Claude can read and
   update your list.
@@ -429,7 +432,26 @@ boxes. The browser's print dialog can also save it as a PDF.
 **Import CSV / calendar** (⋯ → *Import CSV / calendar…*, or `todo import FILE.csv`) only **adds** entries.
 They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is
 already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an
-updated file again and only get the new entries. Entries without any date are always added.
+updated file again and only get the new entries. Entries without any date are always added. Events that
+this app exported carry the entry id (`UID:<id>@todomgr`) and are recognised by it, even after the entry
+was renamed or moved, so a round trip never adds a copy.
+
+**Calendar subscription** (Settings → Calendar subscription, off by default): a link such as
+`http://localhost:7437/cal/<key>.ics` with your open entries that have a date – the same content as the
+calendar export. Apple Calendar, Outlook or Thunderbird subscribe to it once and then refresh it by
+themselves, so changes show up there without copies (each event keeps the entry id).
+
+- Click the link in Settings to open your calendar app (it is also offered as `webcal://`), or copy it.
+- **Apple Calendar:** File → New Calendar Subscription, and choose **On My Mac** as the location, not
+  iCloud: iCloud fetches the calendar from the internet and cannot reach your computer. The same goes for
+  Google Calendar, which cannot use it at all.
+- Phone or tablet: switch on LAN access; Settings then also shows the network link, and *Show QR code*
+  shows it as a QR code, labelled with its address (pick the `192.168.…` or `10.…` one). On an iPad or
+  iPhone, if the camera does not offer to subscribe: Settings → Calendar → Accounts → Add Account → Other →
+  Add Subscribed Calendar, and paste the network link.
+- The key in the link is the only protection: anyone with the link can **read** these entries (never change
+  them). *New link* makes a new key, and the old link stops working.
+- Reading a calendar back into the app is what the import above is for; a web page cannot read your calendar.
 
 - **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos**
   (title, description, due date, status, priority, categories as tags, location, link, repeat, progress,
@@ -463,6 +485,7 @@ updated file again and only get the new entries. Entries without any date are al
 - **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
 - **Tag icons:** which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **LAN access** on/off (off by default; needs a restart), with the addresses, the token and a QR code for other devices.
+- **Calendar subscription** on/off (off by default), with the links, a QR code and *New link*.
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
 - **Backups:** the snapshot interval, *Back up now* and one-click restore from the list.
@@ -641,6 +664,7 @@ computer's own name are accepted too, and other devices get the cookie from `POS
 | `GET`/`POST /api/backups`, `POST /api/backups/restore` | list, create, restore |
 | `GET /api/export`, `POST /api/import` | whole data as JSON / replace everything |
 | `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project |
+| `GET /cal/<key>.ics` | calendar subscription; no token, the calendar key is the access check (Settings) |
 | `GET /api/export.csv`, `GET /api/export.ics` | spreadsheet / calendar export (`closed=1` or `closed=0` to include or leave out finished entries; default: CSV with, calendar without) |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |

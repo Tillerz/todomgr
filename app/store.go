@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -437,7 +438,7 @@ func acquireLock(dir string) (*fileLock, error) {
 	for attempt := 0; attempt < 2; attempt++ {
 		f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 		if err == nil {
-			fmt.Fprintf(f, "%d\n%s\n", os.Getpid(), host)
+			fmt.Fprintf(f, "%d\n%s\n%s\n", os.Getpid(), host, runtime.GOOS)
 			f.Close()
 			return &fileLock{p}, nil
 		}
@@ -450,16 +451,24 @@ func acquireLock(dir string) (*fileLock, error) {
 		if len(parts) > 0 {
 			fmt.Sscanf(parts[0], "%d", &pid)
 		}
-		lockHost := ""
+		lockHost, lockOS := "", runtime.GOOS // a lock of an older version has no OS line
 		if len(parts) > 1 {
 			lockHost = parts[1]
 		}
-		if lockHost == host && pid > 0 && pid != os.Getpid() && !processAlive(pid) {
+		if len(parts) > 2 {
+			lockOS = parts[2]
+		}
+		// only a lock of this host and this OS can be checked: Windows cannot see the processes of WSL
+		// (same host name), and the other way round, so such a lock must never count as stale
+		if lockHost == host && lockOS == runtime.GOOS && pid > 0 && pid != os.Getpid() && !processAlive(pid) {
 			_ = os.Remove(p) // stale lock of a crashed instance
 			continue
 		}
 		if lockHost != "" && lockHost != host {
 			return nil, fmt.Errorf("the data folder is locked by another computer (%s). If you are sure nobody is using it, delete %s", lockHost, p)
+		}
+		if lockOS != runtime.GOOS {
+			return nil, fmt.Errorf("the data folder is in use by the %s version of the program (process %d). Stop it first; if it is not running, delete %s", lockOS, pid, p)
 		}
 		return nil, fmt.Errorf("the data folder is already in use by process %d (lock file %s)", pid, p)
 	}

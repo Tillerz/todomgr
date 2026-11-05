@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -220,4 +221,43 @@ func (s *Server) serveLogin(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(b)
+}
+
+// ---------------------------------------------------------------- calendar subscription
+
+// hCalFeed: GET /cal/<key>.ics, the open entries as a calendar that calendar apps subscribe to.
+// Calendar apps cannot log in, so the secret key in the address is the access check; it only
+// gives read access to the calendar, never to the app. A new key (Settings) ends old links.
+func (s *Server) hCalFeed(w http.ResponseWriter, r *http.Request) {
+	key, want := strings.TrimSuffix(r.PathValue("file"), ".ics"), s.cfg.Get().CalKey
+	if want == "" || subtle.ConstantTimeCompare([]byte(key), []byte(want)) != 1 {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/calendar; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write(s.st.ExportICSFeed())
+}
+
+// calInfo: the subscription links for Settings, for this computer and (with LAN access) the network,
+// each also as webcal:// (opens the calendar app) and, for the network ones, as a QR code.
+func (s *Server) calInfo(key string) map[string]any {
+	if key == "" {
+		return map[string]any{"enabled": false}
+	}
+	path := "/cal/" + key + ".ics"
+	links := []map[string]any{{"where": "this computer", "url": fmt.Sprintf("http://localhost:%d%s", s.port, path)}}
+	if s.lan {
+		for _, u := range lanURLs(s.port) {
+			l := map[string]any{"where": "network", "url": strings.TrimSuffix(u, "/") + path}
+			if q, err := NewQR("webcal" + strings.TrimPrefix(str(l["url"]), "http")); err == nil {
+				l["svg"] = q.SVG()
+			}
+			links = append(links, l)
+		}
+	}
+	for _, l := range links {
+		l["webcal"] = "webcal" + strings.TrimPrefix(str(l["url"]), "http")
+	}
+	return map[string]any{"enabled": true, "links": links}
 }

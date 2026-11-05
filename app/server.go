@@ -59,6 +59,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /", http.FileServerFS(s.ui))
 
 	mux.HandleFunc("POST /api/login", s.hLogin)
+	mux.HandleFunc("GET /cal/{file}", s.hCalFeed)
 	mux.HandleFunc("POST /api/lan/pair", s.auth(s.hPair))
 	api := func(pattern string, h http.HandlerFunc) { mux.HandleFunc(pattern, s.auth(h)) }
 	api("GET /api/info", s.hInfo)
@@ -325,6 +326,7 @@ func (s *Server) settings() map[string]any {
 		"backupIntervalMin": c.BackupIntervalMin,
 		// enabled: the setting; active: this run listens on the network (a change needs a restart)
 		"lan": map[string]any{"enabled": c.LANEnabled, "active": s.lan, "urls": lanURLs(s.port), "token": c.Token},
+		"cal": s.calInfo(c.CalKey),
 		"mcp": map[string]any{
 			"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly,
 			"url": fmt.Sprintf("http://127.0.0.1:%d/mcp", s.port), "token": c.Token,
@@ -344,6 +346,10 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 		LAN               *struct {
 			Enabled *bool `json:"enabled"`
 		} `json:"lan"`
+		Cal *struct {
+			Enabled *bool `json:"enabled"`
+			Renew   bool  `json:"renew"` // a new key: the old links stop working
+		} `json:"cal"`
 	}
 	if err := readBody(r, &req, 1<<16); err != nil {
 		fail(w, err)
@@ -367,6 +373,13 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.LAN != nil && req.LAN.Enabled != nil {
 			d.LANEnabled = *req.LAN.Enabled
+		}
+		if req.Cal != nil {
+			if req.Cal.Enabled != nil && !*req.Cal.Enabled {
+				d.CalKey = ""
+			} else if req.Cal.Renew || req.Cal.Enabled != nil && d.CalKey == "" {
+				d.CalKey = newToken()
+			}
 		}
 	})
 	if err != nil {

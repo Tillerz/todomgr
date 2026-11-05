@@ -132,5 +132,9 @@ colour = stripe, priority = flag, status = checkbox; tooltips via one `data-tip`
   QR login: Settings → Show QR code makes a one-time code (5 minutes, once; `POST /api/lan/pair`) and a link
   `http://<ip>:<port>/#pair=<code>`; login.html sends it to `/api/login`. QR encoder in qr.go (byte mode, level M,
   versions 1–10, no library); qr_test.go reads the codes back with zbarimg when it is installed.
+* Calendar subscription: `GET /cal/<calKey>.ics` (config `calKey`, empty = off), same content as the ICS export
+  plus REFRESH-INTERVAL. Read-only; a new key ends old links. Import matches `UID:<id>@todomgr` to the entry id.
+* Lock file: pid, host and OS. A lock of the same host but another OS (Windows vs WSL) is never taken over as
+  stale, because its process cannot be checked.
 * PWA: manifest.json, icons and sw.js (no caching, only an offline notice) make the page installable on localhost.
   Not on a LAN address: browsers need https there. Offline editing with sync between devices is not planned yet.

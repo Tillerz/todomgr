@@ -163,12 +163,22 @@ func icsStatus(n Node) string {
 	return "NEEDS-ACTION"
 }
 
-func (s *Store) ExportICS(includeClosed bool) []byte {
+func (s *Store) ExportICS(includeClosed bool) []byte { return s.exportICS(includeClosed, nil) }
+
+// ExportICSFeed is the calendar subscription: open entries, with a hint to calendar apps how often to refresh.
+func (s *Store) ExportICSFeed() []byte {
+	return s.exportICS(false, []string{"REFRESH-INTERVAL;VALUE=DURATION:PT15M", "X-PUBLISHED-TTL:PT15M"})
+}
+
+func (s *Store) exportICS(includeClosed bool, extra []string) []byte {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var b bytes.Buffer
 	stamp := icsUTC(time.Now())
 	for _, l := range []string{"BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Tillerz//Todo Mgr " + Version + "//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:" + AppName} {
+		icsLine(&b, l)
+	}
+	for _, l := range extra {
 		icsLine(&b, l)
 	}
 	for _, n := range s.db.exportOrder(includeClosed) {

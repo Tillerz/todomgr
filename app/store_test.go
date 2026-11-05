@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -166,6 +167,38 @@ func TestStaleLockIsTakenOver(t *testing.T) {
 	st, err := OpenStore(dir, cfg)
 	if err != nil {
 		t.Fatalf("stale lock should be replaced: %v", err)
+	}
+	st.Close()
+}
+
+// a lock of the same host but another OS (Windows and WSL share the host name) cannot be checked, so it stays
+func TestLockOfOtherOSIsKept(t *testing.T) {
+	dir := t.TempDir()
+	host, _ := os.Hostname()
+	other := "windows"
+	if runtime.GOOS == "windows" {
+		other = "linux"
+	}
+	p := filepath.Join(dir, "todomgr.lock")
+	os.WriteFile(p, []byte("999999\n"+host+"\n"+other+"\n"), 0o644)
+	cfg, _ := LoadConfig(dir)
+	if st, err := OpenStore(dir, cfg); err == nil {
+		st.Close()
+		t.Fatal("the lock of another OS must not be taken over")
+	} else if !strings.Contains(err.Error(), other+" version") {
+		t.Errorf("message: %v", err)
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Error("the lock file must stay")
+	}
+	// the same OS: stale, taken over, and the new lock names this OS
+	os.WriteFile(p, []byte("999999\n"+host+"\n"+runtime.GOOS+"\n"), 0o644)
+	st, err := OpenStore(dir, cfg)
+	if err != nil {
+		t.Fatalf("stale lock of this OS: %v", err)
+	}
+	if b, _ := os.ReadFile(p); !strings.HasSuffix(string(b), host+"\n"+runtime.GOOS+"\n") {
+		t.Errorf("lock file %q", b)
 	}
 	st.Close()
 }

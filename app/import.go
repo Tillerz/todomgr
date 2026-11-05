@@ -14,7 +14,7 @@ import (
 
 // CSV and calendar (ICS) import. Both only add entries: everything goes below a new
 // top-level project "Import: <file>, <date>", so nothing that exists is changed.
-// An entry that is already there (see sameEntry) is skipped, so a file can be imported again.
+// An entry that is already there (see knownEntry) is skipped, so a file can be imported again.
 // Past one-time events are skipped, and values that have no field here go into the
 // notes, so nothing is dropped silently. The JSON import (Store.Import) replaces all.
 
@@ -82,7 +82,7 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 	_, err = s.Mutate(actor, "", func(tx *Tx) error {
 		known := 0
 		for _, it := range r.items {
-			if tx.db.sameEntry(it.name, it.f) != "" {
+			if tx.db.knownEntry(it) != "" {
 				known++
 			}
 		}
@@ -107,7 +107,7 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 			if _, ok := made[it]; ok {
 				return nil
 			}
-			if id := tx.db.sameEntry(it.name, it.f); id != "" { // its sub-entries from the file go below the one that is there
+			if id := tx.db.knownEntry(it); id != "" { // its sub-entries from the file go below the one that is there
 				made[it] = id
 				dups++
 				return nil
@@ -148,6 +148,18 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 		return nil, err
 	}
 	return res, nil
+}
+
+// knownEntry returns the id of the entry an item to import is already there as, or "". An event
+// exported by this app carries the entry id in its UID (<id>@todomgr), which is matched first,
+// so a renamed or moved entry is still recognised; everything else is matched by sameEntry.
+func (db *DB) knownEntry(it *impItem) string {
+	if id, ok := strings.CutSuffix(it.key, "@todomgr"); ok {
+		if n, ok := db.Nodes[id]; ok && id != "root" && !db.inTrash(n) {
+			return id
+		}
+	}
+	return db.sameEntry(it.name, it.f)
 }
 
 // sameEntry returns the id of a live entry with the same kind, name and dates as an entry

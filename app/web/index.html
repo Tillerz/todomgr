@@ -1412,7 +1412,7 @@ async function showSettings(){const v=S.prefs.rowH||36;
   try{cfg=await Store.api('GET','/api/settings');bk=(await Store.api('GET','/api/backups')).backups}
   catch(e){if($('#setBody'))$('#setBody').innerHTML='<div class="empty">Could not load settings: '+esc(e.message)+'</div>';return}
   if(modalKind!=='settings')return;
-  const m=cfg.mcp,L=cfg.lan,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
+  const m=cfg.mcp,L=cfg.lan,C=cfg.cal,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
   <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style||'')===k?'selected':''}>${l}</option>`).join('')}</select></label>
@@ -1430,6 +1430,12 @@ async function showSettings(){const v=S.prefs.rowH||36;
   ${L.enabled!==L.active?`<div class="note" style="color:var(--warn)">Restart the program to switch LAN access ${L.enabled?'on':'off'}.</div>`:''}
   ${L.active?`<div class="codebox"><b>Address</b> ${L.urls.map(esc).join(' · ')||'no network address found'}<br><b>Token</b> <span id="lanTok">••••••••</span> <button class="chip" id="lanTokShow">show</button> <button class="chip" id="lanTokCopy">copy</button><br><button class="btn" id="lanQr" style="margin-top:6px" data-tip="A QR code for the phone camera: opens the app and logs in. Valid for 5 minutes, works once.">Show QR code</button></div><div id="lanQrBox"></div>`:''}
   <div class="note">Only on networks you trust, such as your home Wi-Fi: the connection is not encrypted, so someone in the same network could read the token. Other devices log in once with the token. AI tools (MCP) stay on this computer only.</div>
+  <div class="sh">Calendar subscription <span class="bd" data-tip="Your open entries with a date, as a calendar that Apple Calendar, Outlook or Thunderbird subscribe to and refresh by themselves">?</span></div>
+  <label class="chk-row"><input type="checkbox" id="calOn" ${C.enabled?'checked':''}> Offer a calendar to subscribe to <small style="color:var(--muted)">(off by default)</small></label>
+  ${C.enabled?`<div class="codebox">${C.links.map(l=>`<b>${esc(l.where)}</b> <a href="${esc(l.webcal)}" data-tip="Opens your calendar app to subscribe">${esc(l.url)}</a> <button class="chip" data-calcopy="${esc(l.url)}">copy</button>`).join('<br>')}</div>
+  ${C.links.some(l=>l.svg)?`<button class="btn" id="calQr" style="margin-top:6px" data-tip="QR codes of the network links, for the camera of a phone or tablet">Show QR code</button><div id="calQrBox" hidden><div class="note" style="margin-top:6px">QR codes for a phone or tablet: pick the address of your Wi-Fi or network cable (usually 192.168.… or 10.…), not 172.…</div><div>${C.links.filter(l=>l.svg).map(l=>`<div class="qrbox">${l.svg}<small>${esc(l.url.split('/cal/')[0])}</small></div>`).join('')}</div></div>`:''}
+  <div class="row-between" style="margin-top:6px"><span class="note" style="margin:0">Anyone with this link can read your calendar entries (not change them).</span><button class="btn" id="calNew" data-tip="The old links stop working; subscribe again with the new one">New link</button></div>`:''}
+  <div class="note">In Apple Calendar: File → New Calendar Subscription, and choose <b>On My Mac</b> as the location, not iCloud: iCloud fetches it from the internet and cannot reach this computer. ${L.active?'':'For a phone or tablet, switch on LAN access first.'}</div>
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
   <label class="chk-row"><input type="checkbox" id="mcpOn" ${m.enabled?'checked':''}> Enable the MCP server <small style="color:var(--muted)">(off by default)</small></label>
   <label class="chk-row"><input type="checkbox" id="mcpRo" ${m.readOnly?'checked':''}> Read-only — AI tools can look but not change anything</label>
@@ -1458,6 +1464,9 @@ async function showSettings(){const v=S.prefs.rowH||36;
   $('#wdFrom').onchange=$('#wdTo').onchange=()=>{const from=$('#wdFrom').value,to=$('#wdTo').value;
     if(!from||!to||from>=to)return toast('The work day must end after it starts');S.prefs.workDay={from,to};persist()};
   $('#lanOn').onchange=e=>put({lan:{enabled:e.target.checked}});
+  $('#calOn').onchange=e=>put({cal:{enabled:e.target.checked}});
+  if($('#calQr'))$('#calQr').onclick=e=>{const box=$('#calQrBox');box.hidden=!box.hidden;e.target.textContent=box.hidden?'Show QR code':'Hide QR code'};
+  if($('#calNew'))$('#calNew').onclick=()=>{if(confirm('Make a new calendar link? Calendars that use the old one stop updating until you subscribe again.'))put({cal:{renew:true}})};
   if($('#lanTokShow')){$('#lanTokShow').onclick=()=>{const t=$('#lanTok');t.textContent=t.textContent.startsWith('•')?L.token:'••••••••'};$('#lanTokCopy').onclick=()=>copyText(L.token)
     // one-time login codes: each click makes a new one; the QR codes disappear when they expire
     $('#lanQr').onclick=async()=>{try{const r=await Store.api('POST','/api/lan/pair',{}),box=$('#lanQrBox');
@@ -1470,7 +1479,8 @@ async function showSettings(){const v=S.prefs.rowH||36;
     try{await Store.sync();await Store.api('POST','/api/reset',{});closeModal();await Store.refresh();toast('Started with empty data — the previous data is in data/backups')}catch(err){toast('Reset failed: '+err.message,{ms:9000})}};
   $('#bkNow').onclick=async()=>{try{const r=await Store.api('POST','/api/backups',{});toast('Backup created: '+r.name);showSettings()}catch(e){toast(e.message)}};
   if($('#tokShow')){$('#tokShow').onclick=()=>{const t=$('#tokv');t.textContent=t.textContent.startsWith('•')?m.token:'••••••••'};$('#tokCopy').onclick=()=>copyText(m.token);$('#cfgCopy').onclick=()=>copyText(snippet)}
-  $('#setBody').onclick=async e=>{const b=e.target.closest('[data-restore]');if(!b)return;
+  $('#setBody').onclick=async e=>{const cc=e.target.closest('[data-calcopy]');if(cc){copyText(cc.dataset.calcopy);return}
+    const b=e.target.closest('[data-restore]');if(!b)return;
     if(!confirm('Replace ALL current data with the backup "'+b.dataset.restore+'"? The current data is backed up first.'))return;
     try{await Store.sync();await Store.api('POST','/api/backups/restore',{name:b.dataset.restore});closeModal();await Store.refresh();toast('Backup restored')}catch(err){toast('Restore failed: '+err.message,{ms:9000})}}}
 // Settings → Tag icons: one row per tag, click the icon to pick another one
