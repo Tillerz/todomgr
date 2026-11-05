@@ -557,6 +557,12 @@ All program code is in `app/`: the Go files and the web page (`app/web/`), which
 GitHub runs `./build.sh` and `./test.sh` on every push (`.github/workflows/test.yml`, the *tests* badge at
 the top), with the Go version from `go.mod`.
 
+**Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port,
+backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme,
+light/dark, font, font size, row height, panel width, work day and default tag icons. Change them there and
+run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings.
+The version number stays in `app/main.go`, where the build and release scripts read it.
+
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes
 preview tests (`node app/notes_test.js`) and the page smoke test (`node app/page_check.js`), which draws the
 main views of the page with the demo data. Give it a data file to check your own data, read only:

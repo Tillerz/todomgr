@@ -33,10 +33,12 @@ const check = (name, fn) => {
 };
 const text = h => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
+// the page's default settings, as the program sends them (app/defaults.go)
+const uiDefaults = JSON.parse(/uiDefaultsJSON = `([\s\S]*?)`/.exec(fs.readFileSync(path.join(__dirname, 'defaults.go'), 'utf8'))[1]);
 const file = process.argv[2], db = file ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 // the checks run inside the page script, so they see its functions and its S and ui
-const page = new Function(...Object.keys(env), 'DB', 'check', 'el', 'text', script + `
-;if(DB)S={v:3,rev:1,nodes:DB.nodes,activity:[],timer:null,prefs:DB.prefs||{}};else seed();
+const page = new Function(...Object.keys(env), 'DB', 'check', 'el', 'text', 'UIDEF', script + `
+;Object.assign(DEF,UIDEF);if(DB)S={v:3,rev:1,nodes:DB.nodes,activity:[],timer:null,prefs:DB.prefs||{}};else seed();
 const live=allNodes();
 check('page: data loaded ('+live.length+' entries)',()=>live.length?'':'no entries');
 check('page: tree',()=>{ui.view='tree';renderTree();return el('#tree').innerHTML.includes('class="node')?'':'no rows'});
@@ -46,7 +48,7 @@ check('page: stats',()=>{ui.view='stats';renderStats();return el('#vStats').inne
 check('page: detail panel of every entry',()=>{const bad=[];ui.panel=true;
   for(const n of live){ui.sel=n.id;ui.prevFor=null;try{renderDetail();if(!el('#detail').innerHTML.includes(esc(n.name)))bad.push(n.id+' (name missing)')}catch(e){bad.push(n.id+': '+e.message)}}
   ui.sel=null;return bad.slice(0,5).join('; ')});`);
-page(...Object.values(env), db, check, el, text);
+page(...Object.values(env), db, check, el, text, uiDefaults);
 
 // installable app: the manifest, its icons and the service worker
 check('app: manifest and icons', () => {
@@ -55,6 +57,10 @@ check('app: manifest and icons', () => {
   for (const f of ['/manifest.json', '/icon.svg', '/apple-touch-icon.png']) if (!html.includes(f)) missing.push('not linked: ' + f);
   if (!script.includes("'/sw.js'")) missing.push('service worker not registered');
   return !m.name || !m.start_url || !m.icons?.some(i => i.sizes === '512x512') ? 'manifest lacks name, start_url or a 512 icon' : missing.join('; ');
+});
+check('defaults: every default tag icon exists', () => {
+  const icons = new Set([...script.matchAll(/^\s*([a-z0-9]+):'</gm)].map(m => m[1]));
+  return Object.entries(uiDefaults.tagIcons).filter(([, i]) => !icons.has(i)).map(([t, i]) => `${t}: ${i}`).join('; ');
 });
 check('app: service worker script', () => { new (require('vm').Script)(fs.readFileSync(path.join(web, 'sw.js'), 'utf8')); });
 process.exit(failed ? 1 : 0);

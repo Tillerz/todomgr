@@ -546,13 +546,15 @@ const P={
   paw:'<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/>',
   car:'<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
 };
+// the page's default settings (theme, font, row height, work day, tag icons…) come from the program,
+// see app/defaults.go; S.prefs holds what was changed in the app
+const DEF={};
 // tag → icon shown before the entry name; S.prefs.tagIcons replaces the defaults once edited in Settings
-const TAG_ICONS={meeting:'users',stream:'video',nsfw:'adult',call:'phone',mail:'mail',bug:'bug',research:'search',review:'eye'};
 const TAG_ICON_SET=['users','user','video','camera','image','mic','music','phone','mail','chat','send','bell','calendar','clock','flag','star','heart',
   'alert','adult','bug','code','wrench','shield','lock','eye','search','book','pen','file','idea','trophy','gift','money','cart','home','map','pin',
   'globe','plane','coffee','game','play','link','tag',
   'archive','box','folder','inbox','checks','target','layers','rocket','terminal','git','server','database','bot','flask','hammer','feather','scroll','library','notebook','palette','castle','swords','crown','skull','wand','flame','mountain','trees','compass','dice','drama','party','ticket','cake','megaphone','film','tent','dumbbell','bike','food','school','work','chart','health','leaf','paw','car'];
-const tagIcons=()=>S.prefs.tagIcons||TAG_ICONS;
+const tagIcons=()=>S.prefs.tagIcons||DEF.tagIcons||{};
 // a project's own icon replaces its square; the colour shows the status
 const projIc=n=>n.kind==='project'&&P[n.icon]?ic(n.icon,16):'';
 function tagIc(n,s=14){const m=tagIcons(),seen=new Set();
@@ -1020,7 +1022,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
 function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 // Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
 // the timed events in the rest of the work day (not the "free" ones), against the time left in it (Settings → Work day)
-function dayPlan(){const wd=S.prefs.workDay||{from:'09:00',to:'17:00'},t0=startOfToday();
+function dayPlan(){const wd=S.prefs.workDay||DEF.workDay,t0=startOfToday();
   const at=hm=>{const[h,m]=hm.split(':').map(Number);return new Date(t0.getFullYear(),t0.getMonth(),t0.getDate(),h,m).getTime()};
   const from=Math.max(now(),at(wd.from)),to=at(wd.to),items=[];
   const due=allNodes().filter(n=>n.kind==='todo'&&!isClosed(n)&&n.status!=='later'&&n.est>0&&['over','today'].includes(dueState(n)));
@@ -1397,8 +1399,8 @@ const FONTS=[['system-ui,sans-serif','System sans-serif'],['serif','System serif
 // a font is installed when text in it is not as wide as in the fallback fonts
 const hasFont=css=>{const c=hasFont.c||(hasFont.c=document.createElement('canvas').getContext('2d')),name=css.split(',')[0],w=f=>{c.font='72px '+f;return c.measureText('mmmmmmmmmmlliWwQ@#0').width};
   return['monospace','sans-serif','serif'].some(b=>w(name+','+b)!==w(b))};
-function applyPrefs(){const r=document.documentElement.style;r.setProperty('--rowh',(S.prefs.rowH||36)+'px');r.setProperty('--detailw',(S.prefs.detailW||420)+'px');
-  S.prefs.font?r.setProperty('--font',S.prefs.font):r.removeProperty('--font');S.prefs.fontSize?r.setProperty('--fs',S.prefs.fontSize+'px'):r.removeProperty('--fs');
+function applyPrefs(){const r=document.documentElement.style;r.setProperty('--rowh',(S.prefs.rowH||DEF.rowH)+'px');r.setProperty('--detailw',(S.prefs.detailW||DEF.detailW)+'px');
+  const font=S.prefs.font??DEF.font,fs=S.prefs.fontSize??DEF.fontSize;font?r.setProperty('--font',font):r.removeProperty('--font');fs?r.setProperty('--fs',fs+'px'):r.removeProperty('--fs');
   const ht=!!S.prefs.hideTags,b=$('#hideTags');document.body.classList.toggle('notags',ht);b.classList.toggle('on',ht);b.textContent=ht?'Show tags':'Hide tags'}
 function setDetailW(w){S.prefs.detailW=Math.round(Math.max(300,Math.min(innerWidth*.7,760,w)));applyPrefs()}
 function setAllCollapsed(c){Object.values(S.nodes).forEach(n=>{if(n.id!=='root'&&n.children.length)n.collapsed=c});persist();renderTree()}
@@ -1406,7 +1408,7 @@ function setAllCollapsed(c){Object.values(S.nodes).forEach(n=>{if(n.id!=='root'&
 const LIBS=[['Go standard library','BSD 3-Clause','go.txt','https://go.dev/'],['SortableJS 1.15.2','MIT','sortablejs.txt','https://github.com/SortableJS/Sortable'],
   ['marked 18.1.2','MIT (Markdown: BSD 3-Clause)','marked.txt','https://marked.js.org/'],['Lucide icons 1.66.0','ISC','lucide.txt','https://lucide.dev/'],
   ['Feather icons','MIT','feather.txt','https://feathericons.com/']];
-async function showSettings(){const v=S.prefs.rowH||36;
+async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??DEF.font,fsz=S.prefs.fontSize??DEF.fontSize,wd=S.prefs.workDay||DEF.workDay;
   openModal(`<h3 style="margin-top:0">Settings</h3><div id="setBody"><div class="empty">Loading…</div></div>`,{kind:'settings'});
   let cfg,bk;
   try{cfg=await Store.api('GET','/api/settings');bk=(await Store.api('GET','/api/backups')).backups}
@@ -1415,12 +1417,12 @@ async function showSettings(){const v=S.prefs.rowH||36;
   const m=cfg.mcp,L=cfg.lan,C=cfg.cal,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
-  <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style||'')===k?'selected':''}>${l}</option>`).join('')}</select></label>
-  <label class="field"><span>Font</span><select id="fontSel" data-tip="Only fonts installed on this computer are listed">${[['','Theme default'],...FONTS.filter(f=>!f[2]||f[0]===S.prefs.font||hasFont(f[0]))].map(([k,l])=>`<option value="${esc(k)}" ${(S.prefs.font||'')===k?'selected':''}>${esc(l||k)}</option>`).join('')}</select></label>
-  <label class="field"><span>Font size: <b id="fsv">${S.prefs.fontSize?S.prefs.fontSize+'px':'theme default'}</b> <button class="chip" id="fsReset" ${S.prefs.fontSize?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${S.prefs.fontSize||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
+  <label class="field"><span>Theme</span><select id="styleSel" data-tip="Colours and fonts. Every theme has a light and a dark version (the sun / moon button)">${THEMES.map(([k,l])=>`<option value="${k}" ${(S.prefs.style??DEF.style)===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label class="field"><span>Font</span><select id="fontSel" data-tip="Only fonts installed on this computer are listed">${[['','Theme default'],...FONTS.filter(f=>!f[2]||f[0]===font||hasFont(f[0]))].map(([k,l])=>`<option value="${esc(k)}" ${font===k?'selected':''}>${esc(l||k)}</option>`).join('')}</select></label>
+  <label class="field"><span>Font size: <b id="fsv">${fsz?fsz+'px':'theme default'}</b> <button class="chip" id="fsReset" ${'fontSize' in S.prefs?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${fsz||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
-  <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc((S.prefs.workDay||{}).from||'09:00')}"><span>to</span><input type="time" id="wdTo" value="${esc((S.prefs.workDay||{}).to||'17:00')}"></label>
+  <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc(wd.from)}"><span>to</span><input type="time" id="wdTo" value="${esc(wd.to)}"></label>
   <div class="sh">Notifications <span class="bd" data-tip="Desktop pop-ups for reminders and the timer, also when this tab is in the background">?</span></div>
   <div class="row-between"><span>${!('Notification'in window)?'This browser does not support notifications.':Notification.permission==='granted'?'Allowed':Notification.permission==='denied'?'Blocked. To allow them, click the icon left of the address bar and set Notifications to Allow.':'Not allowed yet'}</span>${'Notification'in window&&Notification.permission==='default'?'<button class="btn" id="notifOn">Enable notifications</button>':''}</div>
   <div class="sh">Tag icons <span class="bd" data-tip="Entries with one of these tags show its icon before the name">?</span></div>
@@ -1498,8 +1500,8 @@ function renderTagIcons(pick){const el=$('#tagIcs');if(!el)return;const m=tagIco
     else if(d.ic)save({...m,[d.t]:d.ic})}}
 const THEMES=[['','Default'],['modern','Modern'],['pastel','Pastel'],['fantasy','Fantasy (parchment)'],['scifi','Sci-fi'],['contrast','High contrast']];
 function setStyle(k){S.prefs.style=k;persist();applyTheme()}
-function applyTheme(){const st=S.prefs.style;if(THEMES.some(t=>t[0]===st)&&st)document.documentElement.dataset.style=st;else delete document.documentElement.dataset.style;
-  const th=S.prefs.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=th;$('#btnTheme').innerHTML=ic(th==='dark'?'sun':'moon')}
+function applyTheme(){const st=S.prefs.style??DEF.style;if(THEMES.some(t=>t[0]===st)&&st)document.documentElement.dataset.style=st;else delete document.documentElement.dataset.style;
+  const th=(S.prefs.theme??DEF.theme)||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=th;$('#btnTheme').innerHTML=ic(th==='dark'?'sun':'moon')}
 function toggleTheme(){S.prefs.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';persist();applyTheme()}
 
 /* ============================ events ============================ */
@@ -1636,7 +1638,7 @@ $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>
   r.addEventListener('pointermove',e=>{if(on)setDetailW(innerWidth-e.clientX)});
   const end=()=>{if(!on)return;on=false;r.classList.remove('drag');document.body.style.userSelect='';persist()};
   r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
-  r.addEventListener('dblclick',()=>{setDetailW(420);persist()})})();
+  r.addEventListener('dblclick',()=>{setDetailW(DEF.detailW);persist()})})();
 $('#file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importJSON);e.target.value=''};
 $('#file2').onchange=e=>{const f=e.target.files[0];if(f)importEntries(f);e.target.value=''};
 window.addEventListener('pagehide',()=>Store.beacon());
@@ -1795,7 +1797,7 @@ $('#tree').addEventListener('touchstart',e=>{const row=e.target.closest('.row');
 
 /* ============================ init ============================ */
 (async function init(){
-  try{const st=await Store.api('GET','/api/state');Store.adopt(st);APP.name=st.info.name;APP.version='v'+st.info.version;
+  try{const st=await Store.api('GET','/api/state');Object.assign(DEF,st.info.defaults);Store.adopt(st);APP.name=st.info.name;APP.version='v'+st.info.version;
     if(st.recovered)setTimeout(()=>toast('Data was recovered: '+st.recovered,{ms:25000}),600)}
   catch(e){document.body.innerHTML=`<div style="padding:40px;font:16px system-ui;max-width:560px"><h2>Cannot reach the Todo server</h2><p>${esc(e.message)}</p><p>Start it with <code>todo serve</code> and reload this page.</p><button onclick="location.reload()" style="padding:8px 16px;font:inherit">Retry</button></div>`;return}
   document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();

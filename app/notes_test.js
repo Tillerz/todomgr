@@ -143,7 +143,8 @@ check('events: end moves with the start', [['2030-12-05T19:00', '2030-12-12T19:0
     f: {id: 'f', kind: 'reminder', reminder: k + 'T16:00', end: k + 'T18:00', parent: 'r'},
     g: {id: 'g', kind: 'reminder', reminder: k, end: k, parent: 'r'},
   };
-  const env = {S: {prefs: {}, nodes: N}, now: () => new Date(t0).setHours(10), startOfToday: () => new Date(t0),
+  const DEF = JSON.parse(/uiDefaultsJSON = `([\s\S]*?)`/.exec(fs.readFileSync(path.join(__dirname, 'defaults.go'), 'utf8'))[1]);
+  const env = {DEF, S: {prefs: {}, nodes: N}, now: () => new Date(t0).setHours(10), startOfToday: () => new Date(t0),
     allNodes: () => Object.values(N), isClosed: n => n.status === 'done', dueState: n => n.deadline ? 'today' : ''};
   const plan = new Function(...Object.keys(env), cut('const esc=', ';\n') + cut('const pad=', ';\n') + cut('function pd(s)', '}\n') + cut('const fmtDur=', ';\n') +
     cut('const inSubtree=', ';\n') + cut('const remAt=', ';\n') + cut('const evEnd=', ';\n') + cut("// Today's plan, in minutes", '</div></div>`}') +

@@ -248,7 +248,8 @@ func (s *Server) info() map[string]any {
 	return map[string]any{
 		"name": AppName, "version": Version, "schema": schemaVersion, "dataDir": s.st.dir, "port": s.port,
 		"timezone": s.st.tzName(), "startedAt": s.started.Format(time.RFC3339),
-		"mcp": map[string]any{"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly},
+		"mcp":      map[string]any{"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly},
+		"defaults": uiDefaults, // the page's settings until changed (defaults.go)
 	}
 }
 

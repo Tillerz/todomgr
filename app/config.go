@@ -40,7 +40,8 @@ func newToken() string {
 
 func LoadConfig(dir string) (*Config, error) {
 	c := &Config{path: filepath.Join(dir, "config.json")}
-	c.d = ConfigData{Port: 7437, BackupIntervalMin: 10}
+	c.d = ConfigData{Port: DefaultPort, BackupIntervalMin: DefaultBackupIntervalMin, // see defaults.go
+		LANEnabled: DefaultLANEnabled, MCPEnabled: DefaultMCPEnabled, MCPReadOnly: DefaultMCPReadOnly}
 	b, err := os.ReadFile(c.path)
 	switch {
 	case err == nil:
@@ -51,14 +52,17 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, err
 	}
 	changed := errors.Is(err, fs.ErrNotExist)
+	if changed && DefaultCalendarFeed {
+		c.d.CalKey = newToken()
+	}
 	if c.d.Token == "" {
 		c.d.Token, changed = newToken(), true
 	}
 	if c.d.Port <= 0 || c.d.Port > 65535 {
-		c.d.Port, changed = 7437, true
+		c.d.Port, changed = DefaultPort, true
 	}
 	if c.d.BackupIntervalMin < 1 {
-		c.d.BackupIntervalMin, changed = 10, true
+		c.d.BackupIntervalMin, changed = DefaultBackupIntervalMin, true
 	}
 	if changed {
 		if err := c.save(); err != nil {

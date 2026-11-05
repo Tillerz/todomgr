@@ -69,7 +69,7 @@ func clientFrom(a cliArgs) (*client, error) {
 	cfg, cerr := LoadConfigReadOnly(dir)
 	c.base = firstNonEmpty(a.opt["url"], os.Getenv("TODOMGR_URL"))
 	if c.base == "" {
-		port := 7437
+		port := DefaultPort
 		if b, err := os.ReadFile(filepath.Join(dir, "server.json")); err == nil {
 			var sj struct{ Port int }
 			if json.Unmarshal(b, &sj) == nil && sj.Port > 0 {

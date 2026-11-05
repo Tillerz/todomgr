@@ -93,7 +93,7 @@ func resolveDataDir(flagVal string) string {
 func runServe(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	dataFlag := fs.String("data", "", "data folder (default: ./data next to the program)")
-	port := fs.Int("port", 0, "port (default: from config.json, 7437)")
+	port := fs.Int("port", 0, fmt.Sprintf("port (default: from config.json, %d)", DefaultPort))
 	ui := fs.String("ui", "", "serve the UI from this folder instead of the embedded copy (for development)")
 	open := fs.Bool("open", false, "open the app in the default browser")
 	if err := fs.Parse(args); err != nil {
