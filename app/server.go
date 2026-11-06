@@ -78,6 +78,9 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/import/entries", s.hImportEntries)
 	api("POST /api/reset", s.hReset)
 	api("POST /api/discord", s.hDiscord)
+	api("POST /api/files", s.hFileUpload)
+	api("GET /api/files/{key}", s.hFileGet)
+	api("GET /api/files/{key}/view", s.hFileView)
 	api("POST /api/alerts/ack", s.hAck)
 
 	api("GET /api/nodes", s.hList)

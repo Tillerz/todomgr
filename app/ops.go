@@ -220,14 +220,22 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		out := []any{}
 		for _, e := range arr {
 			m, ok := e.(map[string]any)
-			if !ok || strings.TrimSpace(str(m["uri"])) == "" {
+			file := str(m["file"])
+			if !ok || strings.TrimSpace(str(m["uri"])) == "" && file == "" {
 				return errors.New("each link needs a uri")
+			}
+			if file != "" && !fileKeyRE.MatchString(file) {
+				return errors.New("invalid file key")
 			}
 			title := strings.TrimSpace(str(m["title"]))
 			if title == "" {
 				title = str(m["uri"])
 			}
-			out = append(out, map[string]any{"title": title, "uri": strings.TrimSpace(str(m["uri"]))})
+			l := map[string]any{"title": title, "uri": strings.TrimSpace(str(m["uri"]))}
+			if file != "" {
+				l["file"] = file // a copy in data/files (see files.go)
+			}
+			out = append(out, l)
 		}
 		n["links"] = out
 	case "url":

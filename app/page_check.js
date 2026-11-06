@@ -57,7 +57,13 @@ check('tree: sort sub-items, then undo',()=>{const p=live.find(n=>kids(n).length
 check('menu: remove person from one and from several entries',()=>{let [a,b]=allNodes().filter(n=>n.kind!=='reminder').slice(0,2);addPerson([a,b],'Zed');addPerson([a],'Ann');
   if(!nodeMenu(a).some(i=>i.label==='Add person'))return 'single menu: no Add person';const sub=nodeMenu(a).find(i=>i.label==='Remove person');if(!sub||sub.sub.map(i=>i.label).join()!=='Ann,Zed')return 'single menu: '+(sub?sub.sub.map(i=>i.label):'missing');
   bulkMenu([a.id,b.id]).find(i=>i.label==='Remove person').sub.find(i=>i.label==='Zed').fn();
-  a=S.nodes[a.id];b=S.nodes[b.id];return a.people.includes('Zed')||b.people.includes('Zed')||!a.people.includes('Ann')?'people now: '+a.people+' / '+b.people:''});`);
+  a=S.nodes[a.id];b=S.nodes[b.id];return a.people.includes('Zed')||b.people.includes('Zed')||!a.people.includes('Ann')?'people now: '+a.people+' / '+b.people:''});
+check('drop: a mail from a mail program gives one link',()=>{const dt=(uris,files)=>({dataTransfer:{getData:t=>t==='text/uri-list'?uris:'',files}});
+  const one=dropLinks(dt('mailbox:///C:/Mail/AI?number=327',[{name:'Hello.eml',size:5}])),two=dropLinks(dt('https://a.org/x',[{name:'a.txt'},{name:'b.txt'}]));
+  if(one.length!==1||one[0].title!=='Hello.eml'||one[0].uri!=='mailbox:///C:/Mail/AI?number=327'||!one[0].f)return 'mail drop: '+JSON.stringify(one);
+  if(two.length!==3)return 'one URL and two files: '+two.length+' links, want 3';
+  const n=allNodes().find(x=>x.kind!=='reminder');n.links.push({title:'Hello.eml',uri:'',file:'0123456789abcdef0123.eml'});ui.sel=n.id;ui.panel=true;renderDetail();
+  const h=el('#detail').innerHTML;n.links.pop();ui.sel=null;return h.includes('Hello.eml')&&!h.includes('(no path)')?'':'detail panel does not show the kept file'});`);
 page(...Object.values(env), db, check, el, text, uiDefaults);
 
 // installable app: the manifest, its icons and the service worker

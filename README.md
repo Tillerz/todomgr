@@ -49,6 +49,8 @@ More in [Screenshots](#screenshots).
 - Markdown or BBCode, with a preview.
 - Link entries with `[[`, and see which entries link back.
 - A large editor for long notes.
+- Drop a mail or a file onto an entry: the app keeps a copy, and a click shows it. Mails show sender,
+  subject, date and text.
 
 ### Your data stays yours
 
@@ -214,6 +216,11 @@ Markdown and BBCode notes.
   status, priority, colour, add or remove a tag, add or remove a person in charge, move to…, trash). Each entry only
   takes a status that its type has.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
+- **Attachments:** drop a file or a mail (from Thunderbird or Outlook) onto an entry or its detail panel.
+  The program keeps a copy in `data/files/` (up to 10 MB per file). Click it under *Links & attachments*
+  to view it: text files as text, mails (`.eml`) with From, To, Date, Subject, the text and the names of
+  attached files. Other files can be downloaded. Note: backups and the JSON export do not include
+  `data/files/`, so copy the whole data folder to keep them.
 - **Tag icons:** entries with certain tags show an icon before the name, for example `#meeting`, `#stream`,
   `#nsfw` (18+), `#call`, `#mail`, `#bug`, `#research` and `#review`. Change the list under Settings.
 - **Project icons:** click **Icon** in a project's detail panel to show an icon instead of its square.
@@ -509,6 +516,7 @@ data/database.prev.json   the state one save ago
 data/activity.jsonl       append-only log of what was done and when (feeds the statistics)
 data/config.json          port, access token, MCP switch, backup interval, time zone
 data/backups/             snapshots (auto every 10 min when changed, manual, and before import/restore/reset/migration)
+data/files/               copies of dropped files (attachments); not part of backups or the JSON export
 ```
 
 - A single process owns the files; a lock file stops a second one from starting on the same folder.
@@ -677,6 +685,8 @@ computer's own name are accepted too, and other devices get the cookie from `POS
 | `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project |
 | `GET /cal/<key>.ics` | calendar subscription; no token, the calendar key is the access check (Settings) |
 | `GET /api/export.csv`, `GET /api/export.ics` | spreadsheet / calendar export (`closed=1` or `closed=0` to include or leave out finished entries; default: CSV with, calendar without) |
+| `POST /api/files` | `{name, data}` (base64, up to 10 MB) – keep a copy of a file; answers `{file}`, the key for a link's `file` field |
+| `GET /api/files/{key}`, `/api/files/{key}/view` | download the file (`name` sets the file name) / what the viewer shows: `kind` text, mail or binary |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |
 

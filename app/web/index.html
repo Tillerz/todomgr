@@ -234,6 +234,8 @@ body.notags .bd.tag,body.notags #tagbar{display:none}
 .sh{margin:18px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;display:flex;gap:6px;align-items:center}
 .chk-row{display:flex;gap:8px;align-items:center;margin:6px 0}
 .note{font-size:12px;color:var(--muted);margin:2px 0 6px}
+#modal.fview .box{width:min(860px,94vw)}.fvhd{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px;margin-bottom:8px}.fvhd b{color:var(--muted);font-weight:500}
+.fvtext{white-space:pre-wrap;word-break:break-word;background:var(--hover);border-radius:8px;padding:10px 12px;font:13px/1.5 ui-monospace,Consolas,monospace;max-height:60vh;overflow:auto;margin:0}
 .codebox{background:var(--hover);border-radius:8px;padding:8px 10px;font:12px/1.7 ui-monospace,Consolas,monospace;word-break:break-all;margin-top:6px}
 /* detail */
 .detail{background:var(--panel);border-left:1px solid var(--line);overflow:auto;min-height:0;padding:14px 16px 40px}
@@ -908,8 +910,8 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
 <div class="list" style="margin-top:6px">${n.time.slice(-4).reverse().map((t,i,a)=>`<div class="li"><span class="t">${fmtFull(t.at)}</span><b>${fmtDur(t.secs)}</b><button data-act="rmtime" data-at="${t.at}" data-tip="Delete this entry">${ic('x',12)}</button></div>`).join('')}</div>
 <div class="stepper" style="margin-top:6px"><input type="number" min="1" data-f="mintime" placeholder="minutes" style="width:100px"><button class="btn" data-act="addtime" data-tip="Add a manual time entry">Log time</button></div>
 <h4>Links & attachments</h4>
-<div class="list">${n.links.map((l,i)=>{const kd=/^mailto:|^mid:|^message:|^outlook:|\.(eml|msg)$/i.test(l.uri)?'mail':/^https?:/i.test(l.uri)?'globe':'file';
-  return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
+<div class="list">${n.links.map((l,i)=>{const kd=/^mailto:|^mid:|^message:|^outlook:|^mailbox:|^imap:|\.(eml|msg)$/i.test(l.file?l.title:l.uri)?'mail':/^https?:/i.test(l.uri)?'globe':'file';
+  return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.file?'Click to view the copy kept in data/files'+(l.uri?'\n'+l.uri:''):l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri||l.file?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
 <div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
@@ -972,7 +974,7 @@ function setDT(n,key){const d=$(`[data-f=${key}-d]`).value,t=$(`[data-f=${key}-t
 // the end typed into the Ends fields, and whether it is before the start
 function endInput(n){const d=$('[data-f=end-d]').value,t=$('[data-f=end-t]').value,end=d?(t?d+'T'+t:d):'';return{end,bad:!!(end&&n.reminder&&evEnd({end})<pd(n.reminder))}}
 function showEnd(n){const[d,t]=(n.end||'').split('T');$('[data-f=end-d]').value=d||'';$('[data-f=end-t]').value=t||'';$$('[data-f^=end-]').forEach(x=>x.classList.remove('bad'))}
-function addLinks(id,links){const n=S.nodes[id];if(!n||!links.length)return;mutate(()=>{links.forEach(l=>n.links.push({title:l.title,uri:l.uri}));touch(n)},{panel:id===ui.sel});toast(`Added ${links.length} link${links.length>1?'s':''} to “${n.name}”`)}
+function addLinks(id,links){const n=S.nodes[id];if(!n||!links.length)return;mutate(()=>{links.forEach(l=>n.links.push(l.file?{title:l.title,uri:l.uri,file:l.file}:{title:l.title,uri:l.uri}));touch(n)},{panel:id===ui.sel});toast(`Added ${links.length} link${links.length>1?'s':''} to “${n.name}”`)}
 function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!f||!n)return;const v=t.value;
   if(/-d$/.test(f)&&v&&+v.slice(0,4)<1000)return;// a year that is still being typed (0002, 0020, 0202…)
   const m=(fn,panel)=>mutate(()=>{fn();touch(n)},{panel});
@@ -1013,7 +1015,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'pstep':mutate(()=>setProgress(n,n.prog.done+(+v)),{panel:true});break;
     case'rmtag':m(()=>n.tags.splice(i,1));break;case'rmperson':m(()=>n.people.splice(i,1));break;case'rmdep':m(()=>n.deps.splice(i,1));break;case'rmlink':m(()=>n.links.splice(i,1));break;
     case'goto':reveal(b.dataset.id);break;
-    case'openlink':{const l=n.links[i];if(/^(https?:|mailto:|file:)/i.test(l.uri))window.open(l.uri,'_blank','noopener');else if(l.uri){navigator.clipboard?.writeText(l.uri);toast('Path copied to clipboard (browsers cannot open local paths)')}else toast('No path stored for this file');break}
+    case'openlink':{const l=n.links[i];if(l.file)showFile(l);else if(/^(https?:|mailto:|file:)/i.test(l.uri))window.open(l.uri,'_blank','noopener');else if(l.uri){navigator.clipboard?.writeText(l.uri);toast('Path copied to clipboard (browsers cannot open local paths)')}else toast('No path stored for this file');break}
     case'whtest':{if(!n.webhook)break;b.disabled=true;sendDiscord(n.id,'Webhook test from '+APP.name,'').then(()=>toast('Test message sent')).catch(err=>toast('Failed: '+err.message)).finally(()=>b.disabled=false);break}
     case'timer':openTimer(n.id);break;
     case'addtime':{const mi=+$('[data-f=mintime]').value;if(mi>0)m(()=>{n.time.push({at:now(),secs:mi*60});log('time',n.id,{secs:mi*60})});break}
@@ -1661,13 +1663,32 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)Store.sync(
 function dropLinks(e){const dt=e.dataTransfer,out=[];const uri=dt.getData('text/uri-list');
   if(uri)uri.split(/\r?\n/).filter(l=>l&&l[0]!=='#').forEach(u=>out.push({title:u.replace(/^https?:\/\/(www\.)?/,'').slice(0,60),uri:u}));
   else{const t=(dt.getData('text/plain')||'').trim();if(t&&!t.includes('\n')&&/^(https?:|mailto:|file:|mid:|[a-z]:\\|\/|\\\\)/i.test(t))out.push({title:t.split(/[\\/]/).filter(Boolean).pop().slice(0,60),uri:t})}
-  [...dt.files].forEach(f=>out.push({title:f.name,uri:f.path||''}));return out}
+  const files=[...dt.files].map(f=>({title:f.name,uri:f.path||'',f}));
+  // a mail dragged from Thunderbird or Outlook comes as its mail address (mailbox:…) plus the mail file: one link
+  if(files.length===1&&out.length===1){files[0].uri=files[0].uri||out[0].uri;return files}
+  return[...out,...files]}
+// dropped files: the program keeps a copy (data/files, up to 10 MB each), so they can be viewed later
+async function uploadDropped(links){for(const l of links){const f=l.f;delete l.f;if(!f)continue;
+  if(f.size>10<<20){toast(`“${f.name}” is larger than 10 MB: only its name is kept`);continue}
+  try{const data=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>no(r.error);r.readAsDataURL(f)});
+    l.file=(await Store.api('POST','/api/files',{name:f.name,data})).file}
+  catch(e){toast(`Could not keep a copy of “${f.name}”: ${e.message}`)}}
+  return links}
+async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
+  openModal(`<h3 style="margin-top:0;word-break:break-word">${esc(l.title)}</h3><div id="fv"><div class="empty">Loading…</div></div>
+    <div class="row-between" style="margin-top:10px"><small style="color:var(--muted)">${l.uri?esc(l.uri):'A copy kept in data/files'}</small><a class="btn" href="${u}?name=${encodeURIComponent(l.title)}" download>Download</a></div>`,{cls:'fview',kind:'file'});
+  let v;try{v=await Store.api('GET',u+'/view')}catch(e){if($('#fv'))$('#fv').innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+  if(modalKind!=='file'||!$('#fv'))return;
+  const H=v.headers||{},hd=['From','To','Cc','Date','Subject'].filter(k=>H[k]).map(k=>`<b>${k}</b><span>${esc(H[k])}</span>`).join('');
+  $('#fv').innerHTML=v.kind==='binary'?`<div class="empty">This file type cannot be shown here (${Math.max(1,Math.round(v.size/1024))} KB). Use Download.</div>`
+    :(hd?`<div class="fvhd">${hd}${v.attachments?.length?`<b>Attached</b><span>${v.attachments.map(esc).join(', ')}</span>`:''}</div>`:'')+`<pre class="fvtext">${esc(v.text||'(no text)')}</pre>`}
 const extDrag=e=>!ui.dragging&&e.dataTransfer&&[...e.dataTransfer.types].some(t=>t==='Files'||t==='text/uri-list'||t==='text/plain');
 let hot;const unhot=()=>{hot?.classList.remove('drop-hot');hot=null};
 document.addEventListener('dragover',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)unhot()});
 document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail');unhot();if(!tgt)return;
-  const id=tgt.id==='detail'?ui.sel:tgt.closest('.node').dataset.id;const links=dropLinks(e);if(!id)return toast('Select an item first');links.length?addLinks(id,links):toast('Nothing linkable in that drop')});
+  const id=tgt.id==='detail'?ui.sel:tgt.closest('.node').dataset.id;const links=dropLinks(e);if(!id)return toast('Select an item first');if(!links.length)return toast('Nothing linkable in that drop');
+  if(links.some(l=>l.f))toast('Keeping a copy…');uploadDropped(links).then(ls=>addLinks(id,ls))});
 
 /* keyboard */
 document.addEventListener('keydown',e=>{
