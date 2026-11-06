@@ -404,7 +404,7 @@ data/files/               copies of dropped files (attachments); not part of bac
 
 - A single process owns the files; a lock file stops a second one from starting on the same folder.
 - Every save is written to a temporary file, fsynced and renamed, so a crash cannot leave half a file.
-- **Notes you are typing are kept in the browser** until the program has them. If the program stops or you close the tab, the next page load puts them back. If someone changed the same notes in the meantime, the page shows both texts and asks which one to keep.
+- **Notes you are typing are kept in the browser** until the program has them. If the program stops or you close the tab, the next page load puts them back. This also works when a phone closes the tab in the background. If someone changed the same notes in the meantime, the page shows both texts and asks which one to keep.
 - Every change is validated before it is kept; an invalid one is rolled back.
 - A damaged data file is replaced automatically from the newest good copy (the damaged one is kept as `database.corrupt-….json`).
 - Backups: everything from the last 2 hours, then hourly (24 h), daily (30 d), weekly (26 w). Safety copies taken before an import, restore, reset or upgrade are kept for at least 7 days.
