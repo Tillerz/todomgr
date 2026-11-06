@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +25,9 @@ import (
 //go:embed web
 var embeddedWeb embed.FS
 
-const cookieName = "todomgr_token"
+// legacyCookie is the cookie name of version 0.7 and older. It is still read, so devices that logged
+// in before stay logged in; the page then gets the cookie under the new name.
+const legacyCookie = "todomgr_token"
 
 type Server struct {
 	st      *Store
@@ -34,7 +39,21 @@ type Server struct {
 	ui      fs.FS
 	started time.Time
 	http    *http.Server
+	inst    string // the id of this data folder (see instanceID)
 }
+
+// instanceID: a short fingerprint of the data folder's full path. Two programs with different data
+// folders at the same address (localhost:7437) get different cookies, and the page notices when the
+// program at its address is now another one.
+func instanceID(dir string) string {
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	h := sha256.Sum256([]byte(dir))
+	return hex.EncodeToString(h[:4])
+}
+
+func (s *Server) cookieName() string { return "todomgr_" + s.inst }
 
 func NewServer(st *Store, cfg *Config, port int, uiDir string) (*Server, error) {
 	var ui fs.FS
@@ -50,7 +69,7 @@ func NewServer(st *Store, cfg *Config, port int, uiDir string) (*Server, error) 
 		}
 		ui = sub
 	}
-	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now()}, nil
+	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir)}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -148,7 +167,9 @@ func (s *Server) guard(next http.Handler) http.Handler {
 
 func (s *Server) tokenOK(r *http.Request) bool {
 	var got string
-	if c, err := r.Cookie(cookieName); err == nil {
+	if c, err := r.Cookie(s.cookieName()); err == nil {
+		got = c.Value
+	} else if c, err := r.Cookie(legacyCookie); err == nil {
 		got = c.Value
 	}
 	if a := r.Header.Get("Authorization"); strings.HasPrefix(a, "Bearer ") {
@@ -240,6 +261,8 @@ func (s *Server) serveIndex(w http.ResponseWriter, r *http.Request) {
 	} else if !s.tokenOK(r) {
 		s.serveLogin(w)
 		return
+	} else {
+		s.setTokenCookie(w) // a device logged in with the old cookie name gets the new one
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -249,7 +272,7 @@ func (s *Server) serveIndex(w http.ResponseWriter, r *http.Request) {
 func (s *Server) info() map[string]any {
 	c := s.cfg.Get()
 	return map[string]any{
-		"name": AppName, "version": Version, "schema": schemaVersion, "dataDir": s.st.dir, "port": s.port,
+		"name": AppName, "version": Version, "schema": schemaVersion, "dataDir": s.st.dir, "port": s.port, "instance": s.inst,
 		"timezone": s.st.tzName(), "startedAt": s.started.Format(time.RFC3339),
 		"mcp":      map[string]any{"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly},
 		"defaults": uiDefaults, // the page's settings until changed (defaults.go)

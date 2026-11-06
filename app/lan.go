@@ -123,7 +123,7 @@ func (l *loginLimit) result(ip string, ok bool, now time.Time) {
 }
 
 func (s *Server) setTokenCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{Name: cookieName, Value: s.cfg.Get().Token, Path: "/", HttpOnly: true,
+	http.SetCookie(w, &http.Cookie{Name: s.cookieName(), Value: s.cfg.Get().Token, Path: "/", HttpOnly: true,
 		SameSite: http.SameSiteStrictMode, MaxAge: 10 * 365 * 24 * 3600})
 }
 

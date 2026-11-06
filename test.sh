@@ -83,7 +83,7 @@ check "todo version shows v$version" grep -q "v$version" <<< "$("$bin" version)"
 check "API without token is refused (401)" test "$(code "$api/api/info")" = 401
 check "API with token works (200)" test "$(code -H "Authorization: Bearer $token" "$api/api/info")" = 200
 check "foreign Host header is refused (403)" test "$(code -H "Host: evil.example" "$api/")" = 403
-check "web page loads and sets the cookie" grep -q "todomgr_token" <<< "$(curl -s -D - -o /dev/null "$api/")"
+check "web page loads and sets the cookie" grep -qi "^set-cookie: todomgr_[0-9a-f]\{8\}=" <<< "$(curl -s -D - -o /dev/null "$api/")"
 
 added=$(todo add "Test entry #e2e")
 id=$(awk '{print $2}' <<< "$added")

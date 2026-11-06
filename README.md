@@ -664,7 +664,8 @@ text), `update_entry`, `set_status`, `move_entry`, `trash_entry`, `restore_entry
 ## HTTP API
 
 The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every call needs the token
-(`Authorization: Bearer <token>`, or `X-Todo-Token`; the page itself uses a cookie). The token is in
+(`Authorization: Bearer <token>`, or `X-Todo-Token`; the page itself uses a cookie, named after the
+data folder, so two copies of the program at the same address never mix up their logins). The token is in
 `data/config.json` and in Settings. `POST`, `PUT` and `PATCH` bodies must be `application/json`.
 Requests whose `Host` or `Origin` is not local are refused. With LAN access on, IP addresses and this
 computer's own name are accepted too, and other devices get the cookie from `POST /api/login {token}`.

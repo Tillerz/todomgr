@@ -102,7 +102,7 @@ func TestAPIAuthAndGuard(t *testing.T) {
 		{"wrong token", []string{"Authorization", "Bearer nope"}, 401},
 		{"bearer token", nil, 200},
 		{"X-Todo-Token", []string{"Authorization", "", "X-Todo-Token", a.token}, 200},
-		{"cookie", []string{"Authorization", "", "Cookie", cookieName + "=" + a.token}, 200},
+		{"cookie", []string{"Authorization", "", "Cookie", a.s.cookieName() + "=" + a.token}, 200},
 		{"foreign host", []string{"Host", "evil.example:7437"}, 403},
 		{"other port", []string{"Host", "localhost:9999"}, 403},
 		{"localhost host", []string{"Host", "localhost:7437"}, 200},
@@ -118,7 +118,7 @@ func TestAPIAuthAndGuard(t *testing.T) {
 		t.Errorf("non-JSON POST: status %d, want 415", w.Code)
 	}
 	w := a.do("GET", "/", nil, "Authorization", "")
-	if w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), cookieName+"="+a.token) {
+	if w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), a.s.cookieName()+"="+a.token) {
 		t.Errorf("index page: status %d, cookie %q", w.Code, w.Header().Get("Set-Cookie"))
 	}
 	if w := a.do("GET", "/sortable.min.js", nil); w.Code != 200 {
@@ -278,7 +278,7 @@ func TestMCP(t *testing.T) {
 	a.call(200, "PUT", "/api/settings", map[string]any{"mcp": map[string]any{"enabled": true}})
 
 	a.call(401, "POST", "/mcp", map[string]any{"jsonrpc": "2.0", "id": 1, "method": "ping"},
-		"Authorization", "", "Cookie", cookieName+"="+a.token)
+		"Authorization", "", "Cookie", a.s.cookieName()+"="+a.token)
 	a.call(405, "GET", "/mcp", nil)
 
 	init := a.rpc("initialize", map[string]any{"protocolVersion": "2025-03-26"})

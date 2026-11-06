@@ -98,8 +98,26 @@ check('after an event: moving the event moves the todo; a todo that becomes an e
   if(t.after.start!==day(6)+'T19:00'||t.deadline!==day(15))bad.push('moved: '+JSON.stringify(t.after)+' '+t.deadline);
   const x=mk('Stream',{deadline:day(3)+'T20:00'});attach(x,'root');setKind(x,'reminder');
   if(x.reminder!==day(3)+'T20:00'||x.deadline)bad.push('todo → event: reminder '+x.reminder+', deadline '+x.deadline);
-  [t,ev,x].forEach(n=>{detach(n);delete S.nodes[n.id]});return bad.join('; ')});`);
-page(...Object.values(env), db, check, el, text, uiDefaults);
+  [t,ev,x].forEach(n=>{detach(n);delete S.nodes[n.id]});return bad.join('; ')});
+// login repair (Store.heal) with fake server answers: [status, body] per path, in order
+const fakeNet=routes=>{const log=[];fetch=async p=>{log.push(p);const q=routes[p]||[];const [st,b]=q.length>1?q.shift():q[0]||[404,{}];return{status:st,ok:st<300,json:async()=>b}};return log};
+const asyncCheck=async(name,fn)=>{let why;try{why=await fn()}catch(e){why='error: '+e.message}check(name,()=>why)};
+return (async()=>{const realFetch=fetch,realLoc=location;APP.instance='aaaa1111';
+  await asyncCheck('login repair: wrong cookie on this computer, same data folder: repaired, the save goes through',async()=>{
+    const log=fakeNet({'/api/x':[[401,{error:'wrong token'}],[200,{ok:1}]],'/':[[200,{}]],'/api/info':[[200,{instance:'aaaa1111'}]]});
+    const r=await Store.api('POST','/api/x',{});return r&&r.ok===1&&!Store.foreign&&log.join()==='/api/x,/,/api/info,/api/x'?'':'result '+JSON.stringify(r)+', requests '+log.join()});
+  await asyncCheck('login repair: another data folder at this address: nothing is saved, a notice shows',async()=>{
+    fakeNet({'/api/x':[[401,{}]],'/':[[200,{}]],'/api/info':[[200,{instance:'bbbb2222'}]]});let err='';
+    try{await Store.api('POST','/api/x',{})}catch(e){err=e.message}
+    const blocked=await Store.api('POST','/api/y',{}).then(()=>false,()=>true);
+    const r=Store.foreign&&err&&blocked&&modalKind==='foreign'?'':'foreign '+Store.foreign+', error "'+err+'", next save blocked '+blocked+', modal '+modalKind;
+    Store.foreign=false;closeModal();return r});
+  await asyncCheck('login repair: another device without a valid login: the page reloads (login page)',async()=>{
+    let reloaded=false;location={reload(){reloaded=true}};fakeNet({'/api/x':[[401,{}]],'/':[[200,{}]],'/api/info':[[401,{}]]});
+    const r=await Store.api('POST','/api/x',{}).then(()=>'saved',()=>'refused');return reloaded&&r==='refused'?'':'reloaded '+reloaded+', '+r});
+  fetch=realFetch;location=realLoc})();
+`);
+const pageAsync = page(...Object.values(env), db, check, el, text, uiDefaults);
 
 // installable app: the manifest, its icons and the service worker
 check('app: manifest and icons', () => {
@@ -114,4 +132,4 @@ check('defaults: every default tag icon exists', () => {
   return Object.entries(uiDefaults.tagIcons).filter(([, i]) => !icons.has(i)).map(([t, i]) => `${t}: ${i}`).join('; ');
 });
 check('app: service worker script', () => { new (require('vm').Script)(fs.readFileSync(path.join(web, 'sw.js'), 'utf8')); });
-process.exit(failed ? 1 : 0);
+Promise.resolve(pageAsync).then(() => process.exit(failed ? 1 : 0));

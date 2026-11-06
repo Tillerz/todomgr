@@ -24,7 +24,7 @@ func TestLANAccess(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "not logged in") || w.Header().Get("Set-Cookie") != "" {
 		t.Errorf("another device must get the login page and no cookie: status %d, cookie %q", w.Code, w.Header().Get("Set-Cookie"))
 	}
-	if w := a.do("GET", "/", nil, "Authorization", ""); !strings.Contains(w.Header().Get("Set-Cookie"), cookieName+"="+a.token) {
+	if w := a.do("GET", "/", nil, "Authorization", ""); !strings.Contains(w.Header().Get("Set-Cookie"), a.s.cookieName()+"="+a.token) {
 		t.Error("this computer must still get the cookie with the page")
 	}
 	if w := a.do("GET", "/api/info", nil, dev("192.168.1.50")...); w.Code != 401 {
@@ -36,10 +36,10 @@ func TestLANAccess(t *testing.T) {
 		t.Errorf("wrong token: status %d, want 401", w.Code)
 	}
 	w = a.do("POST", "/api/login", map[string]any{"token": a.token}, dev("192.168.1.50", "Origin", "http://192.168.1.20:7437")...)
-	if w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), cookieName+"="+a.token) {
+	if w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), a.s.cookieName()+"="+a.token) {
 		t.Fatalf("right token: status %d, cookie %q", w.Code, w.Header().Get("Set-Cookie"))
 	}
-	cookie := []string{"Cookie", cookieName + "=" + a.token}
+	cookie := []string{"Cookie", a.s.cookieName() + "=" + a.token}
 	if w := a.do("GET", "/", nil, dev("192.168.1.50", cookie...)...); w.Code != 200 || !strings.Contains(w.Body.String(), `id="quick"`) {
 		t.Errorf("logged in: status %d, want the app page", w.Code)
 	}
@@ -97,7 +97,7 @@ func TestLANPairCodes(t *testing.T) {
 	}
 	dev := []string{"RemoteAddr", "192.168.1.50:40000", "Host", "192.168.1.20:7437", "Authorization", ""}
 	code := a.s.pairs.add(time.Now())
-	if w := a.do("POST", "/api/login", map[string]any{"pair": code}, dev...); w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), cookieName+"="+a.token) {
+	if w := a.do("POST", "/api/login", map[string]any{"pair": code}, dev...); w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), a.s.cookieName()+"="+a.token) {
 		t.Fatalf("pair code: status %d", w.Code)
 	}
 	if w := a.do("POST", "/api/login", map[string]any{"pair": code}, dev...); w.Code != 401 {
@@ -106,5 +106,33 @@ func TestLANPairCodes(t *testing.T) {
 	old := a.s.pairs.add(time.Now().Add(-pairFor - time.Second))
 	if w := a.do("POST", "/api/login", map[string]any{"pair": old}, dev...); w.Code != 401 {
 		t.Errorf("an expired pair code must fail: status %d", w.Code)
+	}
+}
+
+// two programs at the same address (test and live at localhost:7437) must not overwrite each other's
+// login cookie; devices logged in with the cookie name of 0.7 stay logged in and get the new name
+func TestCookiePerDataFolder(t *testing.T) {
+	a, b := testServer(t), testServer(t)
+	if a.s.cookieName() == b.s.cookieName() || !strings.HasPrefix(a.s.cookieName(), "todomgr_") {
+		t.Fatalf("cookie names: %q and %q", a.s.cookieName(), b.s.cookieName())
+	}
+	if a.s.cookieName() != a.s.cookieName() || instanceID(a.s.st.dir) != a.s.inst {
+		t.Error("the cookie name must stay the same for one data folder")
+	}
+	if i := a.call(200, "GET", "/api/info", nil); i["instance"] != a.s.inst {
+		t.Errorf("info.instance %v, want %s", i["instance"], a.s.inst)
+	}
+	// b's cookie does not open a
+	if w := a.do("GET", "/api/info", nil, "Authorization", "", "Cookie", b.s.cookieName()+"="+b.token); w.Code != 401 {
+		t.Errorf("the other program's cookie: status %d, want 401", w.Code)
+	}
+	legacy := []string{"Authorization", "", "Cookie", legacyCookie + "=" + a.token}
+	if w := a.do("GET", "/api/info", nil, legacy...); w.Code != 200 {
+		t.Errorf("old cookie name: status %d, want 200", w.Code)
+	}
+	a.s.lan = true
+	w := a.do("GET", "/", nil, append(legacy, "Host", "192.168.1.20:7437", "RemoteAddr", "192.168.1.50:40000")...)
+	if w.Code != 200 || !strings.Contains(w.Header().Get("Set-Cookie"), a.s.cookieName()+"="+a.token) {
+		t.Errorf("device with the old cookie: status %d, cookie %q", w.Code, w.Header().Get("Set-Cookie"))
 	}
 }
