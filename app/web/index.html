@@ -629,7 +629,7 @@ const Store={
   async flush(){const b=this.build();if(!b)return;
     try{const r=await this.api('POST','/api/sync',b.body);
       for(const id in b.pend){if(b.pend[id]===null)delete this.synced[id];else this.synced[id]=b.pend[id]}
-      this.sentAct+=b.acts.length;if(b.timerSet)this.meta.timer=b.tj;if(b.prefsSet)this.meta.prefs=b.pj;
+      Drafts.sent(Object.keys(b.pend));this.sentAct+=b.acts.length;if(b.timerSet)this.meta.timer=b.tj;if(b.prefsSet)this.meta.prefs=b.pj;
       this.setOnline(true);
       if(r.rev===this.base+1)this.base=r.rev;else await this.refresh()}
     catch(e){
@@ -655,6 +655,41 @@ const Store={
 };
 // the program at this address now uses another data folder (Store.heal)
 function showForeign(){if(modalKind==='foreign')return;openModal(`<h3 style="margin-top:0">Another Todo Mgr runs here now</h3><p>The program at this address now uses another data folder, for example a test copy. This window does not save anything into it, so changes made here since then are not saved.</p><div style="text-align:right"><button class="btn pri" onclick="location.reload()">Reload</button></div>`,{kind:'foreign'})}
+// Note drafts: what you type into a note is also kept in this browser (localStorage) until the program
+// has it, so a closed tab or a stopped program loses nothing. The next page load puts it back, or asks
+// when the note was changed somewhere else in the meantime. It compares texts, not clocks.
+// A draft: {base: the notes the program had, text, t: last sign of life of its window, tab: that window}.
+const Drafts={q:[],last:0,
+  key(){return 'todomgr.drafts.'+APP.instance},// per data folder, like the login cookie
+  all(){try{return JSON.parse(localStorage.getItem(this.key()))||{}}catch{return{}}},
+  save(d){try{Object.keys(d).length?localStorage.setItem(this.key(),JSON.stringify(d)):localStorage.removeItem(this.key())}catch{}},
+  saved(id){const j=Store.synced[id];return j?JSON.parse(j).notes||'':''},
+  keep(id,text){const d=this.all(),o=d[id];
+    d[id]={base:o&&o.tab===Store.clientId?o.base:this.saved(id),text,t:now(),tab:Store.clientId};this.save(d)},
+  // the program confirmed a save: a draft it now has is gone, the others build on what it has
+  sent(ids){const d=this.all();let ch=false;
+    for(const id of ids){const x=d[id];if(!x||x.tab!==Store.clientId)continue;ch=true;
+      const s=this.saved(id);if(!S.nodes[id]||s===x.text)delete d[id];else x.base=s}
+    if(ch)this.save(d)},
+  beat(){if(now()-this.last<5000)return;this.last=now();const d=this.all();let ch=false;
+    for(const id in d)if(d[id].tab===Store.clientId){d[id].t=now();ch=true}if(ch)this.save(d)},
+  orphan(){const d=this.all();let ch=false;for(const id in d)if(d[id].tab===Store.clientId){d[id].tab='';ch=true}if(ch)this.save(d)},
+  // on page load: drafts of closed windows go back into their notes; a note changed elsewhere asks first
+  restore(){const d=this.all(),got=[];this.q=[];
+    for(const id in d){const x=d[id],n=S.nodes[id];
+      if(x.tab&&now()-x.t<120000)continue;// another open window is still typing it
+      if(!n||n.notes===x.text){delete d[id];continue}
+      x.tab=Store.clientId;
+      if(n.notes===x.base){mutate(()=>{n.notes=x.text;touch(n)});got.push(n.name)}else this.q.push(id)}
+    this.save(d);if(got.length)toast('Restored notes that were not saved: '+got.join(', '),{ms:9000});this.ask()},
+  ask(){const id=this.q[0];if(!id)return;const x=this.all()[id],n=S.nodes[id];if(!x||!n){this.q.shift();return this.ask()}
+    const box=t=>`<textarea readonly style="width:100%;height:28vh;box-sizing:border-box">${esc(t)}</textarea>`;
+    openModal(`<h3 style="margin-top:0">Notes of “${esc(n.name)}” were not saved</h3><p>You typed these notes when the program could not save them. Since then, the notes were changed somewhere else. Which text do you want to keep?</p><b>Your text</b>${box(x.text)}<b>The saved text</b>${box(n.notes)}<div style="text-align:right;margin-top:8px"><button class="btn" data-draft="0">Keep the saved text</button> <button class="btn pri" data-draft="1">Keep your text</button></div>`,{kind:'draft'});
+    $$('#modal [data-draft]').forEach(b=>b.onclick=()=>this.pick(b.dataset.draft==='1'))},
+  pick(mine){const id=this.q.shift(),d=this.all(),x=d[id],n=S.nodes[id];
+    if(mine&&x&&n)mutate(()=>{n.notes=x.text;touch(n)},{panel:id===ui.sel});else delete d[id];
+    this.save(d);closeModal();this.ask()}
+};
 
 /* ============================ model ============================ */
 const STAT={open:'To do',progress:'In progress',waiting:'Waiting',later:'Later',done:'Done',cancelled:'Cancelled',raw:'Raw idea',exploring:'Exploring',parked:'Parked',rejected:'Rejected',planning:'Planning',active:'Active',paused:'On hold',archived:'Archived',set:'Reminder'};
@@ -1043,7 +1078,7 @@ function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!
   switch(f){
     case'name':if(!v.trim()){t.value=n.name;return toast('A name is required')}m(()=>n.name=v.trim());break;
     case'status':mutate(()=>setStatus(n,v),{panel:true});break;
-    case'notes':m(()=>n.notes=v);break;case'location':m(()=>n.location=v.trim(),true);break;
+    case'notes':Drafts.keep(n.id,v);m(()=>n.notes=v);break;case'location':m(()=>n.location=v.trim(),true);break;
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
     case'reminder-d':case'reminder-t':{const old=n.reminder;m(()=>{setDT(n,'reminder');if(n.kind==='reminder')afterFollow(n,old)})}if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
     case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>{n.end=x.end;if(n.kind==='reminder')afterFollow(n,n.reminder)});break}
@@ -1304,7 +1339,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;if(remQ.length&&!['alarm','ann','remind'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1706,7 +1741,7 @@ function linkAc(ta){const c=ta.selectionStart,m=ta.value.slice(0,c).match(/\[\[(
 $('#quick').addEventListener('input',e=>tagAc(e.target));
 $('#quick').addEventListener('blur',qacClose);
 $('#quick').addEventListener('keydown',qacKey);
-$('#detail').addEventListener('input',e=>{if(e.target.matches('textarea[data-f=notes]'))linkAc(e.target)});
+$('#detail').addEventListener('input',e=>{if(e.target.matches('textarea[data-f=notes]')){if(S.nodes[ui.sel])Drafts.keep(ui.sel,e.target.value);linkAc(e.target)}});
 $('#detail').addEventListener('keydown',qacKey);
 $('#detail').addEventListener('focusout',e=>{if(e.target===qac.inp)qacClose()});
 document.addEventListener('mousedown',e=>{const it=e.target.closest?.('[data-qac]');if(it){e.preventDefault();qacPick(+it.dataset.qac)}},true);
@@ -1766,7 +1801,7 @@ $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>
   r.addEventListener('dblclick',()=>{setDetailW(DEF.detailW);persist()})})();
 $('#file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importJSON);e.target.value=''};
 $('#file2').onchange=e=>{const f=e.target.files[0];if(f)importEntries(f);e.target.value=''};
-window.addEventListener('pagehide',()=>Store.beacon());
+window.addEventListener('pagehide',()=>{Drafts.orphan();Store.beacon()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)Store.sync()});
 
 /* external drops: urls, mails, files */
@@ -1949,7 +1984,7 @@ $('#tree').addEventListener('touchstart',e=>{const row=e.target.closest('.row');
   try{const st=await Store.api('GET','/api/state');Object.assign(DEF,st.info.defaults);Store.adopt(st);APP.name=st.info.name;APP.instance=st.info.instance;APP.version='v'+st.info.version;
     if(st.recovered)setTimeout(()=>toast('Data was recovered: '+st.recovered,{ms:25000}),600)}
   catch(e){document.body.innerHTML=`<div style="padding:40px;font:16px system-ui;max-width:560px"><h2>Cannot reach the Todo server</h2><p>${esc(e.message)}</p><p>Start it with <code>todo serve</code> and reload this page.</p><button onclick="location.reload()" style="padding:8px 16px;font:inherit">Retry</button></div>`;return}
-  document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();
+  document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();Drafts.restore();
   Store.connect();setInterval(tick,1000);setTimeout(syncAlerts,800);
   if(/[#&]pair=/.test(location.hash))history.replaceState(null,'',location.pathname);// a QR login link on a device that is logged in already
   // installable as an app; browsers only allow this on localhost or https, not on a LAN address

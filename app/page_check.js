@@ -100,6 +100,24 @@ check('after an event: moving the event moves the todo; a todo that becomes an e
   const x=mk('Stream',{deadline:day(3)+'T20:00'});attach(x,'root');setKind(x,'reminder');
   if(x.reminder!==day(3)+'T20:00'||x.deadline)bad.push('todo → event: reminder '+x.reminder+', deadline '+x.deadline);
   [t,ev,x].forEach(n=>{detach(n);delete S.nodes[n.id]});return bad.join('; ')});
+// note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
+check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
+  const mem={},realLS=localStorage,me=Store.clientId,bad=[];
+  localStorage={getItem:k=>k in mem?mem[k]:null,setItem:(k,v)=>{mem[k]=String(v)},removeItem:k=>{delete mem[k]}};
+  const n=allNodes().find(x=>x.kind==='todo'),id=n.id,old=n.notes,notes=()=>S.nodes[id].notes,saved=()=>{Store.synced[id]=JSON.stringify(S.nodes[id])};
+  try{saved();Drafts.keep(id,'typed text');const d=Drafts.all()[id];
+    if(!d||d.base!==old||d.text!=='typed text')bad.push('keep: '+JSON.stringify(d));
+    Drafts.restore();if(notes()!==old)bad.push('the draft of a window that is still open was put back');
+    Drafts.orphan();Store.clientId='page2';Drafts.restore();if(notes()!=='typed text')bad.push('not put back: '+notes());
+    saved();Drafts.sent([id]);if(Drafts.all()[id])bad.push('draft not removed after the save');
+    Drafts.keep(id,'my text');Drafts.orphan();Store.clientId='page3';S.nodes[id].notes='their text';Drafts.restore();
+    if(modalKind!=='draft'||notes()!=='their text')bad.push('changed elsewhere: modal '+modalKind+', notes '+notes());
+    Drafts.pick(true);if(notes()!=='my text'||modalKind)bad.push('keep your text: notes '+notes()+', modal '+modalKind);
+    saved();Drafts.sent([id]);if(Drafts.all()[id])bad.push('draft not removed after keep your text');
+    Drafts.keep(id,'draft 2');Drafts.orphan();Store.clientId='page4';S.nodes[id].notes='saved 2';Drafts.restore();Drafts.pick(false);
+    if(notes()!=='saved 2'||Object.keys(Drafts.all()).length)bad.push('keep the saved text: notes '+notes()+', drafts '+JSON.stringify(Drafts.all()))}
+  finally{S.nodes[id].notes=old;saved();localStorage=realLS;Store.clientId=me;closeModal()}
+  return bad.join('; ')});
 // login repair (Store.heal) with fake server answers: [status, body] per path, in order
 const fakeNet=routes=>{const log=[];fetch=async p=>{log.push(p);const q=routes[p]||[];const [st,b]=q.length>1?q.shift():q[0]||[404,{}];return{status:st,ok:st<300,json:async()=>b}};return log};
 const asyncCheck=async(name,fn)=>{let why;try{why=await fn()}catch(e){why='error: '+e.message}check(name,()=>why)};
