@@ -343,8 +343,11 @@ svg text{fill:var(--muted);font-size:10px;font-family:inherit}
 kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:12px monospace}
 .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.keys .kg{grid-column:1/-1;margin-top:8px}
 #toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;align-items:center;width:max-content;max-width:94vw}
-.toast{background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:9px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
-.toast button{color:var(--accent);font-weight:700;filter:brightness(1.4)}
+.toast{background:var(--panel);color:var(--ink);border:2px solid var(--accent);padding:12px 18px;border-radius:14px;box-shadow:var(--shadow);display:flex;gap:14px;align-items:center;font-size:15px;line-height:1.4}
+.toast button{color:var(--accent);font-weight:700}
+.toast.cheer{cursor:pointer;max-width:520px}
+.toast.cheer img{width:64px;height:64px;flex:none}
+.toast.cheer b{display:block}
 #tip{position:fixed;z-index:70;background:#222a3c;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;pointer-events:none;max-width:320px;white-space:pre-line;opacity:0;transition:opacity .1s}
 #tip.show{opacity:.96}
 
@@ -775,15 +778,42 @@ const U={undo:[],redo:[]};
 const snap=()=>JSON.stringify(S.nodes);
 function push(){U.undo.push(snap());if(U.undo.length>80)U.undo.shift();U.redo.length=0}
 function restore(s){S.nodes=JSON.parse(s);if(!S.nodes[ui.sel])ui.sel=null;persist();renderAll()}
-function undo(){if(!U.undo.length)return toast('Nothing to undo');U.redo.push(snap());restore(U.undo.pop())}
+function undo(){if(!U.undo.length)return toast('Nothing to undo');$$('#toasts .cheer').forEach(t=>t.remove());U.redo.push(snap());restore(U.undo.pop())}
 function redo(){if(!U.redo.length)return;U.undo.push(snap());restore(U.redo.pop())}
 let pt;function persist(){S.rev++;clearTimeout(pt);pt=setTimeout(()=>Store.sync(),150)}
 function mutate(fn,o={}){push();fn();persist();renderTree();if(o.panel)renderDetail();chrome();flushAnn()}
-function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClosed=isClosed(n);n.status=s;n.hist.push({s,at:now()});n.updated=now();log(s==='done'?'close':'status',n.id,{s});if(s==='done'&&n.kind==='todo')ANN.push(n.id);
+function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClosed=isClosed(n);
+  if(s==='done'){cheerNote('done');if(n.kind==='todo'&&['over','today'].includes(dueState(n)))cheerNote('due')}else if(s==='progress'&&n.status==='open')cheerNote('progress');n.status=s;n.hist.push({s,at:now()});n.updated=now();log(s==='done'?'close':'status',n.id,{s});if(s==='done'&&n.kind==='todo')ANN.push(n.id);
   if(s==='done'){if(n.prog.mode==='percent')n.prog.done=100;else n.prog.done=n.prog.total;if(n.after&&!kids(n).length&&afterNext(n))return;if(n.recur&&!kids(n).length)recurNext(n);else parentHint(n)}
   else if(wasClosed&&n.status!=='cancelled')parentHint(n)}
 function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p))return;const k=kids(p);
-  if(k.length&&k.every(c=>c.status==='done'))toast(`All sub-items of “${p.name}” are done`,{action:{label:'Mark parent done',fn:()=>mutate(()=>setStatus(p,'done'),{panel:true})},ms:7000})}
+  if(k.length&&k.every(c=>c.status==='done'))cheerNote('parent',p)}
+/* Cheer me on (Settings → Appearance): a friendly toast when you start or finish something in this window.
+   setStatus and setProgress note the moments; one toast per change, also for many entries at once.
+   Changes from the CLI, MCP or another window come in through Store.refresh and give none. */
+const CHEERS={
+  done:["Done! One less thing on your mind.","Nice work. That one is off the list.","Checked off. Well done!","Another one done. You are on a roll.",
+    "Great job! Take a breath and enjoy it.","Done and dusted.","That felt good, didn't it?","Finished! Small steps add up.",
+    "Look at you, getting things done.","One more win for today.","Crossed off. Your future self says thanks.","Well done! Progress is progress.",
+    "Boom. Done.","Ticked off. Keep the momentum going.","Nicely handled.","That's a wrap!","Mission accomplished.",
+    "Good job. You earned a short break.","Another step forward. Well done!","Done! You make this look easy."],
+  progress:["Let's go! You've got this.","Great start. The first step is the hardest.","Off you go. One step at a time.","Started is half done.",
+    "You've got this. Focus and flow.","Good choice. Let's make it happen.","Here we go! Enjoy the work.","Rolling up your sleeves? Nice.",
+    "Starting is the bravest part.","Go get it!","Small steps, steady pace. You can do it.","Time to shine.","Off to a good start.",
+    "Deep breath, and go!","Let's do this!"],
+  parent:["Brilliant! Every piece is in place.","What a finish!","Great work, all of it!","You did every single one!"],
+  today:["Everything due today is done. Enjoy the rest of your day!","Today's list is clear. Fantastic!","Nothing left for today. You did it!"],
+  goal:["Goal reached. Amazing!","You hit your goal. Brilliant work!","Goal reached! Time to celebrate."]};
+let cheerQ=null;const cheerLast={};
+function cheerPick(k){const a=CHEERS[k];let i;do i=Math.floor(Math.random()*a.length);while(a.length>1&&i===cheerLast[k]);cheerLast[k]=i;return a[i]}// never the same twice in a row
+function cheerNote(k,v){if(!cheerQ){cheerQ={parents:new Map()};setTimeout(flushCheer)}if(k==='parent')cheerQ.parents.set(v.id,v);else if(!(k in cheerQ))cheerQ[k]=v||true}
+function flushCheer(){const q=cheerQ;cheerQ=null;if(!q)return;const on=S.prefs.cheer??DEF.cheer;
+  // all sub-items done: kept with cheer off too, for its button
+  for(const id of q.parents.keys()){const p=S.nodes[id];if(p&&!isClosed(p))toast(`All sub-items of “${p.name}” are done`,{action:{label:'Mark parent done',fn:()=>mutate(()=>setStatus(S.nodes[id],'done'),{panel:true})},ms:7000,cheer:on&&cheerPick('parent')})}
+  if(!on||q.parents.size)return;
+  const g=q.goal&&S.nodes[q.goal.id];if(g)return toast(`${g.prog.total}${g.prog.unit?' '+g.prog.unit:''} on “${g.name}”`,{cheer:cheerPick('goal'),ms:7000});
+  if(q.due&&!allNodes().some(x=>x.kind==='todo'&&!isClosed(x)&&x.status!=='later'&&!waits(x)&&['over','today'].includes(dueState(x))))return toast('',{cheer:cheerPick('today'),ms:7000});
+  const k=['done','progress'].find(k=>q[k]);if(k)toast('',{cheer:cheerPick(k),ms:6000})}
 /* After an event (the same rules as after.go): n.after={id: event, days, start: the event occurrence it belongs to}.
    It waits until that occurrence has ended, is due its last day + days, and reopens for the next one when done. */
 const wallMs=s=>{const[a,t]=s.split('T'),[y,mo,d]=a.split('-').map(Number),[h,mi]=(t||'0:0').split(':').map(Number);return Date.UTC(y,mo-1,d,h,mi)};
@@ -810,7 +840,7 @@ function recurNext(n){const step=s=>nextOcc(s,n.recur);
   if(n.recur.endsWith('+'))[n.deadline,n.reminder]=afterDone(n.deadline,n.reminder,n.recur,dayKey(now()));
   else{if(n.deadline)n.deadline=step(n.deadline);if(n.reminder)n.reminder=step(n.reminder)}
   toast(`Repeats ${recurText(n.recur)} — next: ${n.deadline?fmtWhen(n.deadline):'reopened'}`)}
-function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));n.prog.done=v;log('progress',n.id);n.updated=now();
+function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));if(n.prog.mode==='units'&&n.prog.done<c&&v>=c)cheerNote('goal',n);n.prog.done=v;log('progress',n.id);n.updated=now();
   if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
   else if(v>0&&v<c&&n.status==='open')setStatus(n,'progress');
   else if(v<c&&n.status==='done')setStatus(n,'progress')}
@@ -1350,7 +1380,10 @@ function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alar
 let modalKind=null;
 function openModal(html,{cls='',kind=''}={}){const m=$('#modal');m.className='show '+cls;m.innerHTML=`<div class="box">${html}</div>`;modalKind=kind}
 function closeModal(){if(modalKind==='ann')annQueue=[];if(modalKind==='remind')remQ.shift();const m=$('#modal');m.className='';m.innerHTML='';modalKind=null}
-function toast(msg,{action,ms=4500}={}){const t=document.createElement('div');t.className='toast';t.innerHTML=`<span>${esc(msg)}</span>`;
+// cheer: a friendly line shown in bold above msg, with the picture; a click closes it
+function toast(msg,{action,ms=4500,cheer}={}){const t=document.createElement('div');t.className='toast'+(cheer?' cheer':'');
+  t.innerHTML=cheer?`<img src="/cheer.webp" alt=""><span><b>${esc(cheer)}</b>${esc(msg)}</span>`:`<span>${esc(msg)}</span>`;
+  if(cheer)t.onclick=e=>{if(!e.target.closest('button'))t.remove()};
   if(action){const b=document.createElement('button');b.textContent=action.label;b.onclick=()=>{action.fn();t.remove()};t.append(b)}$('#toasts').append(t);setTimeout(()=>t.remove(),ms)}
 let tipT;const tip=$('#tip');
 document.addEventListener('mouseover',e=>{const el=e.target.closest?.('[data-tip]');clearTimeout(tipT);tip.classList.remove('show');if(!el||ui.dragging)return;
@@ -1576,6 +1609,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   <label class="field"><span>Font size: <b id="fsv">${fsz?fsz+'px':'theme default'}</b> <button class="chip" id="fsReset" ${'fontSize' in S.prefs?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${fsz||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
   <label class="chk-row"><input type="checkbox" id="wideOn" ${(S.prefs.wide??DEF.wide)?'checked':''}> Full page width <small style="color:var(--muted)">(the tree and the pages use the whole window)</small></label>
+  <label class="chk-row"><input type="checkbox" id="cheerOn" ${(S.prefs.cheer??DEF.cheer)?'checked':''}> Cheer me on <small style="color:var(--muted)">(a friendly message when you start or finish something)</small></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
   <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc(wd.from)}"><span>to</span><input type="time" id="wdTo" value="${esc(wd.to)}"></label>
   <div class="sh">Notifications <span class="bd" data-tip="Desktop pop-ups for reminders and the timer, also when this tab is in the background">?</span></div>
@@ -1618,6 +1652,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   const fold=(btn,box,key,label)=>{$(btn).onclick=e=>{ui[key]=!ui[key];$(box).hidden=!ui[key];e.target.textContent=(ui[key]?'Hide ':'Show ')+label}};
   fold('#tiShow','#tagIcs','showTi','tag icons');fold('#bkShow','#bkBox','showBk','backups');
   $('#wideOn').onchange=e=>{S.prefs.wide=e.target.checked;applyPrefs();persist()};
+  $('#cheerOn').onchange=e=>{S.prefs.cheer=e.target.checked;persist()};
   $('#styleSel').onchange=e=>setStyle(e.target.value);
   $('#fontSel').onchange=e=>{S.prefs.font=e.target.value;applyPrefs();persist()};
   $('#fs').oninput=e=>{S.prefs.fontSize=+e.target.value;$('#fsv').textContent=e.target.value+'px';$('#fsReset').hidden=false;applyPrefs()};$('#fs').onchange=()=>persist();

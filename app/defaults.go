@@ -43,6 +43,7 @@ const uiDefaultsJSON = `{
   "rowH": 36,
   "detailW": 420,
   "wide": false,
+  "cheer": true,
   "workDay": {"from": "09:00", "to": "17:00"},
   "tagIcons": {"meeting": "users", "stream": "video", "nsfw": "adult", "call": "phone", "mail": "mail",
     "bug": "bug", "research": "search", "review": "eye"}

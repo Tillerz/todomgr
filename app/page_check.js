@@ -100,6 +100,27 @@ check('after an event: moving the event moves the todo; a todo that becomes an e
   const x=mk('Stream',{deadline:day(3)+'T20:00'});attach(x,'root');setKind(x,'reminder');
   if(x.reminder!==day(3)+'T20:00'||x.deadline)bad.push('todo → event: reminder '+x.reminder+', deadline '+x.deadline);
   [t,ev,x].forEach(n=>{detach(n);delete S.nodes[n.id]});return bad.join('; ')});
+// cheer toasts: the toast function is replaced to record what would show
+check('cheer: start, done, all sub-items, many at once, goal, all of today, off',()=>{const shown=[],realToast=toast,bad=[],made=[];
+  toast=(msg,o={})=>shown.push({msg,cheer:o.cheer||'',button:!!o.action});
+  const T=(name,props,parent='root')=>{const n=mk(name,props);attach(n,parent);made.push(n);return n};
+  const run=fn=>{cheerQ=null;shown.length=0;fn();flushCheer();return shown.slice()};
+  const is=(t,k)=>t&&CHEERS[k].includes(t.cheer);
+  const prefs=S.prefs.cheer,parked=allNodes().filter(x=>x.kind==='todo'&&!isClosed(x)&&['over','today'].includes(dueState(x)));
+  try{const P=T('Cheer parent'),a=T('Cheer a',{},P.id),b=T('Cheer b',{},P.id);
+    let r=run(()=>setStatus(a,'progress'));if(r.length!==1||!is(r[0],'progress'))bad.push('start: '+JSON.stringify(r));
+    r=run(()=>setStatus(a,'done'));if(r.length!==1||!is(r[0],'done'))bad.push('done: '+JSON.stringify(r));
+    r=run(()=>setStatus(b,'done'));if(r.length!==1||!is(r[0],'parent')||!r[0].button||!r[0].msg.includes('Cheer parent'))bad.push('all sub-items: '+JSON.stringify(r));
+    const many=[1,2,3].map(i=>T('Cheer many '+i));r=run(()=>many.forEach(n=>setStatus(n,'done')));if(r.length!==1)bad.push('many at once: '+r.length+' toasts');
+    const g=T('Cheer goal',{prog:{mode:'units',done:0,total:10,unit:'words'}});r=run(()=>setProgress(g,10));
+    if(r.length!==1||!is(r[0],'goal')||!r[0].msg.includes('10 words'))bad.push('goal: '+JSON.stringify(r));
+    parked.forEach(x=>x.status='later');const d=T('Cheer due',{deadline:addDays(0)});r=run(()=>setStatus(d,'done'));
+    if(r.length!==1||!is(r[0],'today'))bad.push('all of today: '+JSON.stringify(r));
+    S.prefs.cheer=false;const c=T('Cheer off'),e=T('Cheer off a',{},c.id);r=run(()=>setStatus(T('Cheer off 2'),'done'));if(r.length)bad.push('off, done: '+JSON.stringify(r));
+    r=run(()=>setStatus(e,'done'));if(r.length!==1||r[0].cheer||!r[0].button)bad.push('off, all sub-items keeps its button: '+JSON.stringify(r));
+    let last='';for(let i=0;i<50;i++){const x=cheerPick('done');if(x===last){bad.push('the same message twice in a row');break}last=x}}
+  finally{toast=realToast;S.prefs.cheer=prefs;parked.forEach(x=>x.status='open');made.reverse().forEach(n=>{detach(n);delete S.nodes[n.id]})}
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

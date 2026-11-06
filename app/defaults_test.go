@@ -15,7 +15,7 @@ func TestDefaults(t *testing.T) {
 	}
 	a := testServer(t)
 	d, _ := a.call(200, "GET", "/api/info", nil)["defaults"].(map[string]any)
-	for _, k := range []string{"style", "theme", "font", "fontSize", "rowH", "detailW", "wide", "workDay", "tagIcons"} {
+	for _, k := range []string{"style", "theme", "font", "fontSize", "rowH", "detailW", "wide", "cheer", "workDay", "tagIcons"} {
 		if _, ok := d[k]; !ok {
 			t.Errorf("/api/info defaults lack %q: %v", k, d)
 		}
