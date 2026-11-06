@@ -78,6 +78,7 @@ check('tags: Project tags shows only the tags of the top-level entry of the sele
   ui.q='#onlyb';renderTags();if(!bar().includes('#onlyb'))bad.push('the active filter #onlyb is not shown');ui.q='';
   S.prefs.projTags=false;renderTags();if(!/#(?!onlya)/.test(text(bar())))bad.push('off: only the tags of Area A');
   ui.sel=null;[a,b,A,B].forEach(n=>{detach(n);delete S.nodes[n.id]});renderTags();return bad.join('; ')});
+check('demo: word goals forecast a real date, not today',()=>DB?'':seed()||allNodes().filter(n=>speedOf(n)).filter(n=>dayKey(speedOf(n).fin)<=addDays(1)).map(n=>n.name+': done ~'+dayKey(speedOf(n).fin)).join('; '));
 check('icons: Settings → Tag icons picker has the filter, every icon and its name',()=>{const t=Object.keys(tagIcons())[0];renderTagIcons(t);const h=el('#tagIcs').innerHTML,bad=[];
   if(!h.includes('class="icq"'))bad.push('no filter field');const miss=TAG_ICON_SET.filter(k=>!h.includes('data-v="'+k+'" data-t="'+esc(t)+'" data-tip="'+k+'"'));
   if(miss.length)bad.push('icons without name or missing: '+miss.slice(0,5).join(', '));return bad.join('; ')});

@@ -1380,7 +1380,8 @@ async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current da
 // Demo data (⋯ → Settings → Load demo data): three areas that show every feature — kinds and statuses,
 // priorities, colours and icons, tags with icons, people, deadlines and reminders, events with an end and a
 // place, repeats of every kind, "after an event", dependencies, word goals with a pace, time tracking,
-// Markdown / BBCode notes with [[links]], links, and a history for the statistics.
+// Markdown / BBCode notes with [[links]], links, and a history for the statistics. Entries with counted
+// progress start in the past (created), because the pace forecast counts the speed from that day.
 function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   const T=(pid,name,p={})=>{const n=mk(name,p);attach(n,pid);return n};const t=now(),D=864e5,WA='https://www.worldanvil.com/w/aldermere';
   const done=(n,a,b)=>{n.status='done';n.prog.done=n.prog.mode==='percent'?100:n.prog.total;n.hist=[{s:'open',at:t-a*D},{s:'progress',at:t-(a-1)*D},{s:'done',at:t-b*D}];return n};
@@ -1428,13 +1429,13 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   const world=P(wb.id,'World of Aldermere',{icon:'castle',color:'#4a7de0',url:WA,tags:['worldbuilding'],notes:'Main **World Anvil** world for the Ashen Crown saga.\n\nThe manuscript lives in [[MANU|Writing]].'});
   const geo=T(world.id,'Geography & maps',{color:'#2aa6a0'});
   const map=T(geo.id,'Draw the continent map',{status:'progress',prog:{mode:'percent',done:70,total:100,unit:''},tags:['maps'],people:['Sam'],deadline:addDays(9),est:300,time:[{at:t-2*D,secs:7200},{at:t-5*D,secs:3600}]});
-  const cities=T(geo.id,'Name the 12 major cities',{status:'progress',prog:{mode:'units',done:7,total:12,unit:'cities'},tags:['worldbuilding']});
+  const cities=T(geo.id,'Name the 12 major cities',{created:t-20*D,status:'progress',prog:{mode:'units',done:7,total:12,unit:'cities'},tags:['worldbuilding']});
   T(geo.id,'Climate zones & trade routes',{tags:['maps','worldbuilding'],deps:[map.id]});
   T(geo.id,'Publish the interactive map on World Anvil',{tags:['maps','wa'],url:WA+'/map',deps:[map.id,cities.id],prio:2});
   const cult=T(world.id,'Cultures & peoples',{color:'#d9a520'});
-  T(cult.id,'Article: Dwarven Clans of Karak-Dun',{status:'progress',prog:words(1400,3000),deadline:addDays(12),tags:['writing','wa'],url:WA+'/a/dwarven-clans',est:180});
+  T(cult.id,'Article: Dwarven Clans of Karak-Dun',{created:t-5*D,status:'progress',prog:words(1400,3000),deadline:addDays(12),tags:['writing','wa'],url:WA+'/a/dwarven-clans',est:180});
   T(cult.id,'Article: The Elven Court',{tags:['writing','wa'],prio:2,notesFormat:'bbcode',notes:'[dc]T[/dc]he Elven Court meets only under a [b]new moon[/b].\n\n[i]Notes in BBCode, the format World Anvil uses.[/i] Switch an entry to BBCode next to its notes.'});
-  T(cult.id,'Pantheon — name and describe the 9 gods',{status:'progress',prog:{mode:'units',done:4,total:9,unit:'gods'},tags:['worldbuilding']});
+  T(cult.id,'Pantheon — name and describe the 9 gods',{created:t-15*D,status:'progress',prog:{mode:'units',done:4,total:9,unit:'gods'},tags:['worldbuilding']});
   T(cult.id,'Calendar & festivals',{status:'later',tags:['worldbuilding'],notes:'Not needed until Part III. Revisit then.'});
   const magic=T(world.id,'Magic system',{color:'#8a63d2'});
   const cost=T(magic.id,'Define the cost of magic',{status:'progress',prio:3,tags:['magic','worldbuilding'],notes:'- [x] every spell burns a memory\n- [x] stronger spells burn older memories\n- [ ] **open question:** can memories be restored?'});
@@ -1455,15 +1456,15 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
     notes:`Epic fantasy, ~90,000 words, three acts, set in [[${world.id}]].\n\nEditor: **Anna** (Hartmann Books). Manuscript due to the publisher in 5 months.`});
   const plan=T(novel.id,'Planning',{color:'#7d8596'});
   done(T(plan.id,'Outline the three acts',{tags:['novel']}),45,40);
-  T(plan.id,'Character profiles: Mira, Teren, Vash',{status:'progress',prog:{mode:'units',done:2,total:3,unit:'characters'},tags:['novel','characters'],url:WA+'/c/characters'});
+  T(plan.id,'Character profiles: Mira, Teren, Vash',{created:t-30*D,status:'progress',prog:{mode:'units',done:2,total:3,unit:'characters'},tags:['novel','characters'],url:WA+'/c/characters'});
   T(plan.id,'Research: medieval siege tactics',{tags:['research','novel'],url:'https://en.wikipedia.org/wiki/Siege',est:120});
   const draft=T(novel.id,'First draft',{color:'#3fa56b'});
-  T(draft.id,'Reach 90,000 words',{status:'progress',prog:words(52300,90000),deadline:addDays(75),tags:['novel'],hist:[{s:'open',at:t-60*D},{s:'progress',at:t-50*D}],
+  T(draft.id,'Reach 90,000 words',{created:t-60*D,status:'progress',prog:words(52300,90000),deadline:addDays(75),tags:['novel'],hist:[{s:'open',at:t-60*D},{s:'progress',at:t-50*D}],
     notes:'A word goal with a deadline: the detail panel shows the words per day you need, and when you will be done at your speed so far.'});
   const p1=T(draft.id,'Part I — The Ember Road');
   ['The Ash Gate','Mira Alone','The Road of Embers','Council of Salt'].forEach((c,i)=>done(T(p1.id,`Chapter ${i+1}: ${c}`,{tags:['novel','draft'],prog:words(0,4000)}),40-i*6,36-i*6));
   const p2=T(draft.id,'Part II — The Siege');
-  const c5=T(p2.id,'Chapter 5: Walls of Karak',{status:'progress',prio:3,prog:words(1800,4000),deadline:addDays(3),tags:['novel','draft'],est:240,time:[{at:t-D,secs:5400},{at:t-3*D,secs:3600}]});
+  const c5=T(p2.id,'Chapter 5: Walls of Karak',{created:t-3*D,status:'progress',prio:3,prog:words(1800,4000),deadline:addDays(3),tags:['novel','draft'],est:240,time:[{at:t-D,secs:5400},{at:t-3*D,secs:3600}]});
   const c6=T(p2.id,'Chapter 6: The Sapper',{tags:['novel','draft'],prog:words(0,4000),deps:[c5.id]});
   T(p2.id,'Chapter 7: Fire on the Wall',{tags:['novel','draft'],prog:words(0,4000),deps:[c6.id]});
   const ed=T(novel.id,'Working with the editor',{color:'#e8863a',links:[{title:'Mail Anna',uri:'mailto:anna@example.com'}]});
@@ -1482,7 +1483,7 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   T(pub.id,'Announce the book on Discord and in the newsletter',{status:'later',tags:['discord']});
   T(novel.id,'Open with the villain’s point of view?',{kind:'idea',status:'raw',tags:['novel']});
   const story=P(wr.id,'Short story: The Lantern Keeper',{status:'paused',icon:'pen',notes:'On hold until the first draft of the novel is done.'});
-  T(story.id,'Second draft',{prog:words(2100,6000)});
+  T(story.id,'Second draft',{created:t-30*D,prog:words(2100,6000)});
   T(story.id,'Find a magazine for it',{tags:['research']});
   const hab=P(wr.id,'Writing routine',{icon:'target',color:'#3fa56b'});
   T(hab.id,'Write 500 words',{recur:'d',deadline:addDays(0),est:45,tags:['writing','novel'],prog:words(0,500)});
