@@ -68,6 +68,10 @@ check('icons: the icon list has trash, every listed icon exists, project picker 
   const bad=TAG_ICON_SET.filter(k=>!icons.has(k));if(!TAG_ICON_SET.includes('trash'))bad.push('trash missing');
   const p=allNodes().find(x=>x.kind==='project');ui.sel=p.id;ui.panel=true;ui.icPick=p.id;renderDetail();if(!el('#detail').innerHTML.includes('class="icq"'))bad.push('no filter field');
   ui.icPick=null;ui.sel=null;return bad.join('; ')});
+check('search: a tag filter goes away when the tag is removed from every entry',()=>{const n=allNodes().find(x=>x.kind!=='reminder'),bad=[];
+  n.tags.push('zzgone');ui.q='#zzgone urgent';renderTree();if(ui.q!=='#zzgone urgent')bad.push('removed too early: '+ui.q);
+  n.tags.pop();renderTree();if(ui.q!=='urgent')bad.push('after removing the tag: "'+ui.q+'"');
+  ui.q='#notyet';renderTree();renderTree();if(ui.q!=='#notyet')bad.push('a tag being typed was removed');ui.q='';renderTree();return bad.join('; ')});
 check('icons: Settings → Tag icons picker has the filter, every icon and its name',()=>{const t=Object.keys(tagIcons())[0];renderTagIcons(t);const h=el('#tagIcs').innerHTML,bad=[];
   if(!h.includes('class="icq"'))bad.push('no filter field');const miss=TAG_ICON_SET.filter(k=>!h.includes('data-v="'+k+'" data-t="'+esc(t)+'" data-tip="'+k+'"'));
   if(miss.length)bad.push('icons without name or missing: '+miss.slice(0,5).join(', '));return bad.join('; ')});

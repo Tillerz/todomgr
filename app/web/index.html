@@ -868,7 +868,12 @@ ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to s
 <span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename · Alt+Enter to edit the notes">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}${paceTag(n)}</span>
 <span class="badges">${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
-function renderTree(){
+// a tag filter whose tag was just removed from every entry leaves the search; a tag being typed stays,
+// because only tags that existed at the last redraw are taken out
+function dropGoneTags(){const have=new Set();allNodes().forEach(n=>n.tags.forEach(t=>have.add(t.toLowerCase())));const had=dropGoneTags.had;dropGoneTags.had=have;
+  if(!had||!ui.q.includes('#'))return;const gone=w=>{const t=w.slice(1).toLowerCase();return w[0]==='#'&&had.has(t)&&!have.has(t)};
+  const words=ui.q.split(/\s+/).filter(Boolean);if(!words.some(gone))return;ui.q=words.filter(w=>!gone(w)).join(' ');$('#q').value=ui.q}
+function renderTree(){dropGoneTags();
   // a search opens every branch to show its matches; "Hide done" only hides, so collapsing still works
   const vis=visibleSet(),force=!!ui.q.trim(),root=S.nodes.root;
   const html=root.children.map(i=>S.nodes[i]).filter(c=>c&&(!vis||vis.has(c.id))).map(c=>liHTML(c,vis,force)).join('');
