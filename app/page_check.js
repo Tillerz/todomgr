@@ -63,7 +63,11 @@ check('drop: a mail from a mail program gives one link',()=>{const dt=(uris,file
   if(one.length!==1||one[0].title!=='Hello.eml'||one[0].uri!=='mailbox:///C:/Mail/AI?number=327'||!one[0].f)return 'mail drop: '+JSON.stringify(one);
   if(two.length!==3)return 'one URL and two files: '+two.length+' links, want 3';
   const n=allNodes().find(x=>x.kind!=='reminder');n.links.push({title:'Hello.eml',uri:'',file:'0123456789abcdef0123.eml'});ui.sel=n.id;ui.panel=true;renderDetail();
-  const h=el('#detail').innerHTML;n.links.pop();ui.sel=null;return h.includes('Hello.eml')&&!h.includes('(no path)')?'':'detail panel does not show the kept file'});`);
+  const h=el('#detail').innerHTML;n.links.pop();ui.sel=null;return h.includes('Hello.eml')&&!h.includes('(no path)')?'':'detail panel does not show the kept file'});
+check('icons: the icon list has trash, every listed icon exists, project picker has a filter',()=>{const icons=new Set(Object.keys(P));
+  const bad=TAG_ICON_SET.filter(k=>!icons.has(k));if(!TAG_ICON_SET.includes('trash'))bad.push('trash missing');
+  const p=allNodes().find(x=>x.kind==='project');ui.sel=p.id;ui.panel=true;ui.icPick=p.id;renderDetail();if(!el('#detail').innerHTML.includes('class="icq"'))bad.push('no filter field');
+  ui.icPick=null;ui.sel=null;return bad.join('; ')});`);
 page(...Object.values(env), db, check, el, text, uiDefaults);
 
 // installable app: the manifest, its icons and the service worker

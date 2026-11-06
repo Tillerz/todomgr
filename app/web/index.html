@@ -205,6 +205,7 @@ input.rename{flex:1;padding:3px 6px;font-weight:500}
 .tic{display:inline-flex;color:var(--muted);flex:none;vertical-align:middle;margin-right:2px}
 .tirow{display:flex;align-items:center;gap:8px;margin:4px 0}.tirow .tib{padding:3px 6px;line-height:0}
 .tipick{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;padding:6px;border:1px solid var(--line);border-radius:6px}
+.tipick .icq{flex-basis:100%;margin-bottom:2px}
 .tipick button{padding:5px;border-radius:5px;line-height:0}.tipick button:hover,.tipick button.on{background:var(--sel)}
 .urlbtn{flex:none;display:inline-flex;padding:3px;border-radius:6px;color:var(--accent);text-decoration:none}
 .urlbtn:hover{background:var(--sel)}
@@ -555,7 +556,7 @@ const DEF={};
 // tag → icon shown before the entry name; S.prefs.tagIcons replaces the defaults once edited in Settings
 const TAG_ICON_SET=['users','user','video','camera','image','mic','music','phone','mail','chat','send','bell','calendar','clock','flag','star','heart',
   'alert','adult','bug','code','wrench','shield','lock','eye','search','book','pen','file','idea','trophy','gift','money','cart','home','map','pin',
-  'globe','plane','coffee','game','play','link','tag',
+  'globe','plane','coffee','game','play','link','tag','trash',
   'archive','box','folder','inbox','checks','target','layers','rocket','terminal','git','server','database','bot','flask','hammer','feather','scroll','library','notebook','palette','castle','swords','crown','skull','wand','flame','mountain','trees','compass','dice','drama','party','ticket','cake','megaphone','film','tent','dumbbell','bike','food','school','work','chart','health','leaf','paw','car'];
 const tagIcons=()=>S.prefs.tagIcons||DEF.tagIcons||{};
 // a project's own icon replaces its square; the colour shows the status
@@ -880,7 +881,7 @@ function renderDetail(){
 <input data-f="name" value="${esc(n.name)}" placeholder="Name (required)" data-tip="Name — required">
 ${urlSec(n)}
 ${n.kind==='project'?`<h4>Icon <button class="chip" data-act="icpick" data-tip="Choose the icon shown in the tree instead of the square">${P[n.icon]?ic(n.icon,14):'None'}</button>${n.icon?` <button class="chip" data-act="seticon" data-v="" data-tip="Back to the square">${ic('x',12)}</button>`:''}</h4>
-${ui.icPick===n.id?`<div class="tipick">${TAG_ICON_SET.map(k=>`<button class="${k===n.icon?'on':''}" data-act="seticon" data-v="${k}" data-tip="${k}">${ic(k,18)}</button>`).join('')}</div>`:''}`:''}
+${ui.icPick===n.id?`<div class="tipick"><input class="icq" placeholder="Filter icons by name…" data-tip="Type a part of the name, e.g. book">${TAG_ICON_SET.map(k=>`<button class="${k===n.icon?'on':''}" data-act="seticon" data-v="${k}" data-tip="${k}">${ic(k,18)}</button>`).join('')}</div>`:''}`:''}
 <h4>Status & priority</h4>
 <div class="grid2"><select data-f="status" data-tip="Status — every change is dated in the history below">${KS[n.kind].map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${STAT[s]}${s==='later'?' (postponed)':''}</option>`).join('')}</select>
 ${n.kind==='idea'?`<button class="btn pri" data-act="promote" data-tip="Turn this idea into a todo">Promote to todo →</button>`:`<span></span>`}</div>
@@ -1003,7 +1004,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'closepanel':ui.panel=false;renderDetail();break;
     case'copyid':copyText(n.id);break;
     case'goto':reveal(v);break;
-    case'icpick':ui.icPick=ui.icPick===n.id?null:n.id;renderDetail();break;
+    case'icpick':ui.icPick=ui.icPick===n.id?null:n.id;renderDetail();$('.tipick .icq')?.focus();break;
     case'seticon':ui.icPick=null;m(()=>n.icon=v);break;
     case'end1h':{if(!n.reminder){toast('Set the date & time first');break}const d=pd(n.reminder);d.setHours(d.getHours()+1);
       m(()=>n.end=n.reminder.includes('T')?dayKey(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()):n.reminder);break}
@@ -1539,6 +1540,9 @@ $('#tree').addEventListener('click',e=>{
   ui.multi.clear();ui.sel=id;ui.panel=true;renderTree();renderDetail()});
 $('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
 $('#detail').addEventListener('change',onDetailChange);
+// icon picker: show only the icons whose name contains the typed text
+$('#detail').addEventListener('input',e=>{if(!e.target.matches('.icq'))return;const q=e.target.value.trim().toLowerCase();
+  e.target.parentElement.querySelectorAll('button[data-v]').forEach(b=>b.hidden=!!q&&!b.dataset.v.includes(q))});
 // the pace line depends on fields (deadline, unit…) whose change does not redraw the panel
 $('#detail').addEventListener('change',()=>{const ps=$('.pace-slot'),n=S.nodes[ui.sel];if(ps&&n)ps.innerHTML=pace(n)});
 // leaving the Ends fields with an end before the start brings the saved end back
