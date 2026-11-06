@@ -1750,6 +1750,8 @@ function tagItems(N){const c={};allNodes().forEach(x=>x.tags.forEach(t=>c[t]=(c[
   return[...list,...(list.length?[MSEP]:[]),mi('New tag…',()=>addTag(N,prompt('New tag:')))]}
 function rmTag(N,t){mutate(()=>N.forEach(n=>{const i=n.tags.indexOf(t);if(i>=0){n.tags.splice(i,1);touch(n)}}),{panel:true})}
 function addPerson(N,p){p=(p||'').trim().replace(/^@/,'');if(!p)return;mutate(()=>N.forEach(n=>{if(!n.people.includes(p)){n.people.push(p);touch(n)}}),{panel:true})}
+function rmPerson(N,p){mutate(()=>N.forEach(n=>{const i=n.people.indexOf(p);if(i>=0){n.people.splice(i,1);touch(n)}}),{panel:true})}
+const rmPersonSub=N=>{const ps=[...new Set(N.flatMap(n=>n.people))].sort();return msub('Remove person',ps.map(p=>mi(p,()=>rmPerson(N,p))),{dis:!ps.length})};
 function personItems(N){const c={};allNodes().forEach(x=>x.people.forEach(p=>c[p]=(c[p]||0)+1));
   const list=Object.entries(c).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).filter(p=>!N.every(n=>n.people.includes(p))).slice(0,8).map(p=>mi(p,()=>addPerson(N,p)));
   return[...list,...(list.length?[MSEP]:[]),mi('New person…',()=>addPerson(N,prompt('Person in charge:')))]}
@@ -1768,7 +1770,7 @@ function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexO
   if(!isRem){const setDay=d=>doM(()=>{const t=(n.deadline||'').split('T')[1];n.deadline=d?(t?d+'T'+t:d):'';touch(n)});
     items.push(msub('Deadline',[mi('Today',setDay(addDays(0))),mi('Tomorrow',setDay(addDays(1))),mi('In a week',setDay(addDays(7))),mi('Pick a date…',focusField(id,'deadline-d')),MSEP,mi('Clear deadline',setDay(''),{dis:!n.deadline})]))}
   else items.push(mi('Set date & time…',focusField(id,'reminder-d')));
-  items.push(msub('Add tag',tagItems([n])),MSEP,mi('Move to…',()=>openMoveTo([id])),
+  items.push(msub('Add tag',tagItems([n])),msub('Add person',personItems([n])));if(n.people.length)items.push(rmPersonSub([n]));items.push(MSEP,mi('Move to…',()=>openMoveTo([id])),
     mi('Move up',()=>reorder(id,-1),{key:'Alt+↑',dis:i<=0}),mi('Move down',()=>reorder(id,1),{key:'Alt+↓',dis:i>=sibs.length-1}),
     mi('Indent',()=>indent(id),{key:'Tab',dis:i<1}),mi('Outdent',()=>outdent(id),{key:'Shift+Tab',dis:n.parent==='root'}));
   if(n.children.length)items.push(mi('Collapse all below',()=>setBelow(id,true)),mi('Expand all below',()=>setBelow(id,false)));
@@ -1788,7 +1790,7 @@ function bulkMenu(ids){const N=ids.map(i=>S.nodes[i]).filter(Boolean),doM=fn=>()
     msub('Status',sts.map(s=>mi(STAT[s]+(s==='later'?' (postponed)':''),doM(()=>N.forEach(n=>KS[n.kind].includes(s)&&setStatus(n,s))))),{dis:!sts.length}),
     msub('Priority',PRIO.map((l,k)=>mi(l,doM(()=>N.forEach(n=>{n.prio=k;touch(n)}))))),
     colorSub(N),msub('Add tag',tagItems(N)),msub('Remove tag',tags.map(t=>mi('#'+t,()=>rmTag(N,t))),{dis:!tags.length}),
-    msub('Add person',personItems(N)),mi('Move to…',()=>openMoveTo(ids)),MSEP,
+    msub('Add person',personItems(N)),rmPersonSub(N),mi('Move to…',()=>openMoveTo(ids)),MSEP,
     mi('Move to trash',()=>trash(ids),{danger:true}),mi('Clear selection',()=>{ui.multi.clear();renderTree()})]}
 function openRowMenu(id,x,y){const n=S.nodes[id];if(!n)return;
   if(ui.multi.size>1&&ui.multi.has(id)){showCtx(bulkMenu([...ui.multi]),x,y);return}

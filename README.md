@@ -208,10 +208,10 @@ Markdown and BBCode notes.
 - A coloured stripe shows the colour of an entry, and the stripe also spans its sub-entries.
 - Most actions work from the keyboard: see [Keyboard shortcuts](#keyboard-shortcuts).
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open,
-  rename, add sub-entry, status, priority, colour, change type, deadline, add tag, move to…, reorder and
+  rename, add sub-entry, status, priority, colour, change type, deadline, add tag, add or remove a person, move to…, reorder and
   indent, sort sub-items (by name, priority or date; *Undo* brings the old order back), open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash.
   With several entries selected, right-click one of them: the menu then acts on all of them (mark done,
-  status, priority, colour, add or remove a tag, add a person in charge, move to…, trash). Each entry only
+  status, priority, colour, add or remove a tag, add or remove a person in charge, move to…, trash). Each entry only
   takes a status that its type has.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
 - **Tag icons:** entries with certain tags show an icon before the name, for example `#meeting`, `#stream`,
