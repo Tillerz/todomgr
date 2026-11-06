@@ -97,7 +97,7 @@ check('app: manifest and icons', () => {
   return !m.name || !m.start_url || !m.icons?.some(i => i.sizes === '512x512') ? 'manifest lacks name, start_url or a 512 icon' : missing.join('; ');
 });
 check('defaults: every default tag icon exists', () => {
-  const icons = new Set([...script.matchAll(/^\s*([a-z0-9]+):'</gm)].map(m => m[1]));
+  const icons = new Set([...script.matchAll(/^\s*'?([a-z0-9-]+)'?:'</gm)].map(m => m[1]));
   return Object.entries(uiDefaults.tagIcons).filter(([, i]) => !icons.has(i)).map(([t, i]) => `${t}: ${i}`).join('; ');
 });
 check('app: service worker script', () => { new (require('vm').Script)(fs.readFileSync(path.join(web, 'sw.js'), 'utf8')); });
