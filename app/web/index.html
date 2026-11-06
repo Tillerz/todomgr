@@ -673,7 +673,11 @@ const Drafts={q:[],last:0,
     if(ch)this.save(d)},
   beat(){if(now()-this.last<5000)return;this.last=now();const d=this.all();let ch=false;
     for(const id in d)if(d[id].tab===Store.clientId){d[id].t=now();ch=true}if(ch)this.save(d)},
-  orphan(){const d=this.all();let ch=false;for(const id in d)if(d[id].tab===Store.clientId){d[id].tab='';ch=true}if(ch)this.save(d)},
+  // a window in the background or closing gives its drafts away: a phone may close a background tab
+  // without notice. Back in front, it takes back the ones no other window has taken meanwhile.
+  mine:[],
+  orphan(){const d=this.all();this.mine=[];for(const id in d)if(d[id].tab===Store.clientId){d[id].tab='';this.mine.push(id)}if(this.mine.length)this.save(d)},
+  claim(){const d=this.all();let ch=false;for(const id of this.mine)if(d[id]&&!d[id].tab){d[id].tab=Store.clientId;d[id].t=now();ch=true}this.mine=[];if(ch)this.save(d)},
   // on page load: drafts of closed windows go back into their notes; a note changed elsewhere asks first
   restore(){const d=this.all(),got=[];this.q=[];
     for(const id in d){const x=d[id],n=S.nodes[id];
@@ -1802,7 +1806,7 @@ $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>
 $('#file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importJSON);e.target.value=''};
 $('#file2').onchange=e=>{const f=e.target.files[0];if(f)importEntries(f);e.target.value=''};
 window.addEventListener('pagehide',()=>{Drafts.orphan();Store.beacon()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)Store.sync()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){Drafts.orphan();Store.sync()}else Drafts.claim()});
 
 /* external drops: urls, mails, files */
 function dropLinks(e){const dt=e.dataTransfer,out=[];const uri=dt.getData('text/uri-list');

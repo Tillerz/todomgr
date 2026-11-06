@@ -115,7 +115,11 @@ check('note drafts: kept in the browser, put back on the next page load, asks wh
     Drafts.pick(true);if(notes()!=='my text'||modalKind)bad.push('keep your text: notes '+notes()+', modal '+modalKind);
     saved();Drafts.sent([id]);if(Drafts.all()[id])bad.push('draft not removed after keep your text');
     Drafts.keep(id,'draft 2');Drafts.orphan();Store.clientId='page4';S.nodes[id].notes='saved 2';Drafts.restore();Drafts.pick(false);
-    if(notes()!=='saved 2'||Object.keys(Drafts.all()).length)bad.push('keep the saved text: notes '+notes()+', drafts '+JSON.stringify(Drafts.all()))}
+    if(notes()!=='saved 2'||Object.keys(Drafts.all()).length)bad.push('keep the saved text: notes '+notes()+', drafts '+JSON.stringify(Drafts.all()));
+    saved();Drafts.keep(id,'phone text');Drafts.orphan();Drafts.claim();Store.clientId='page5';Drafts.restore();
+    if(notes()!=='saved 2')bad.push('took the draft of a window that came back to the front');
+    Store.clientId='page4';Drafts.orphan();Store.clientId='page6';Drafts.restore();
+    if(notes()!=='phone text')bad.push('a background tab that the phone closed: not put back at once, notes '+notes())}
   finally{S.nodes[id].notes=old;saved();localStorage=realLS;Store.clientId=me;closeModal()}
   return bad.join('; ')});
 // login repair (Store.heal) with fake server answers: [status, body] per path, in order
