@@ -109,6 +109,9 @@ check('repeat: labels', [['w', 'weekly'], ['2w', 'every 2 weeks'], ['3d', 'every
   .filter(([r, want]) => rc.recurText(r) !== want).map(([r, want]) => `recurText(${r}) = ${rc.recurText(r)}, want ${want}`));
 check('repeat: input', [['weekly', 'w'], [' 2W ', '2w'], ['1w', 'w'], ['m:1FR', 'm:1fr'], ['biweekly', null], ['m:6fr', null], ['0d', null]]
   .filter(([v, want]) => rc.normRecur(v) !== want).map(([v, want]) => `normRecur(${v}) = ${rc.normRecur(v)}, want ${want}`));
+check('repeat: every N months on weekdays', [['2m:1fr', 'every 2 months on the 1st Friday'], ['3m:1mo,-1su', 'every 3 months on the 1st Monday and last Sunday'], ['2m:1fr+', 'every 2 months on the 1st Friday after done']]
+  .filter(([r, want]) => rc.recurText(r) !== want).map(([r, want]) => `recurText(${r}) = ${rc.recurText(r)}, want ${want}`)
+  .concat([['2M:1FR', '2m:1fr'], ['1m:1fr', 'm:1fr'], ['0m:1fr', null]].filter(([v, want]) => rc.normRecur(v) !== want).map(([v, want]) => `normRecur(${v}) = ${rc.normRecur(v)}, want ${want}`)));
 const adCases = JSON.parse(fs.readFileSync(path.join(__dirname, 'testdata', 'recur_cases.json'), 'utf8')).afterDone;
 check(`repeat: after done (${adCases.length} cases shared with Go)`, adCases.filter(([dl, rem, r, today, wd, wr]) => rc.afterDone(dl, rem, r, today).join('|') !== wd + '|' + wr)
   .map(([dl, rem, r, today, wd, wr]) => `afterDone(${dl}, ${rem}, ${r}, ${today}) = ${rc.afterDone(dl, rem, r, today)}, want ${wd},${wr}`));

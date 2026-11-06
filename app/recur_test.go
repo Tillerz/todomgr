@@ -31,23 +31,23 @@ func TestNextOcc(t *testing.T) {
 }
 
 func TestRecurRules(t *testing.T) {
-	for in, want := range map[string]string{"": "", "weekly": "w", "1w": "w", " 2W ": "2w", "m:1FR,3fr": "m:1fr,3fr", "m:-1su": "m:-1su"} {
+	for in, want := range map[string]string{"": "", "weekly": "w", "1w": "w", " 2W ": "2w", "m:1FR,3fr": "m:1fr,3fr", "m:-1su": "m:-1su", "2m:1FR": "2m:1fr", "1m:1fr": "m:1fr", "3m:-1su+": "3m:-1su+"} {
 		if got, ok := normRecur(in); !ok || got != want {
 			t.Errorf("normRecur(%q) = %q, %v; want %q", in, got, ok, want)
 		}
 	}
-	for _, in := range []string{"x", "0d", "1000w", "m:", "m:6fr", "m:0fr", "m:1xx", "2m:1fr", "biweekly"} {
+	for _, in := range []string{"x", "0d", "1000w", "m:", "m:6fr", "m:0fr", "m:1xx", "0m:1fr", "biweekly"} {
 		if _, ok := normRecur(in); ok {
 			t.Errorf("normRecur(%q) must be refused", in)
 		}
 	}
-	for r, want := range map[string]string{"w": "FREQ=WEEKLY", "1w": "FREQ=WEEKLY", "2w": "FREQ=WEEKLY;INTERVAL=2", "m:1fr,-1fr": "FREQ=MONTHLY;BYDAY=1FR,-1FR", "": ""} {
+	for r, want := range map[string]string{"w": "FREQ=WEEKLY", "1w": "FREQ=WEEKLY", "2w": "FREQ=WEEKLY;INTERVAL=2", "m:1fr,-1fr": "FREQ=MONTHLY;BYDAY=1FR,-1FR", "2m:1fr": "FREQ=MONTHLY;INTERVAL=2;BYDAY=1FR", "": ""} {
 		if got := recurRRULE(r); got != want {
 			t.Errorf("recurRRULE(%q) = %q, want %q", r, got, want)
 		}
 	}
 	// the export's rule comes back unchanged through the import
-	for _, r := range []string{"d", "3d", "2w", "6m", "2y", "m:1fr,3fr,5fr", "m:-1su"} {
+	for _, r := range []string{"d", "3d", "2w", "6m", "2y", "m:1fr,3fr,5fr", "m:-1su", "2m:1fr", "3m:1mo,-1fr"} {
 		if got, exact, _ := icsRule(recurRRULE(r), time.UTC); got != r || !exact {
 			t.Errorf("icsRule(recurRRULE(%q)) = %q, exact %v", r, got, exact)
 		}

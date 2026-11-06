@@ -666,16 +666,16 @@ const PRIO=['None','Low','Medium','High','Urgent'];
 const COLORS=['#e5534b','#e8863a','#d9a520','#3fa56b','#2aa6a0','#4a7de0','#8a63d2','#d6578f','#7d8596'];
 const RECUR={'':'Does not repeat',d:'Daily',w:'Weekly','2w':'Every 2 weeks','4w':'Every 4 weeks',m:'Monthly',y:'Yearly'};
 // repeat rules, the same as recur.go: d w m y, every N (2w 3d 6m), monthly on weekdays (m:1fr,3fr,-1fr)
-const RE_RECUR=/^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))(\+)?$/;
+const RE_RECUR=/^(?:([1-9]\d{0,2})?(?:([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*)))(\+)?$/;// 2m:1fr = every 2 months on the 1st Friday (recur.go)
 const WDS=['su','mo','tu','we','th','fr','sa'],WDN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],NTH={1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th','-1':'last'};
 const UNIT={d:['day','days'],w:['week','weeks'],m:['month','months'],y:['year','years']};
-function normRecur(v){v=String(v||'').trim().toLowerCase();const p=v.endsWith('+')?'+':'',w={daily:'d',weekly:'w',monthly:'m',yearly:'y','1d':'d','1w':'w','1m':'m','1y':'y'}[v.slice(0,v.length-p.length)];
+function normRecur(v){v=String(v||'').trim().toLowerCase();if(v.startsWith('1m:'))v=v.slice(1);const p=v.endsWith('+')?'+':'',w={daily:'d',weekly:'w',monthly:'m',yearly:'y','1d':'d','1w':'w','1m':'m','1y':'y'}[v.slice(0,v.length-p.length)];
   if(w)v=w+p;return v===''||RE_RECUR.test(v)?v:null}
 function recurText(r){const m=RE_RECUR.exec(r||'');if(!m)return'';
   if(m[4]&&!m[3]){const n=+(m[1]||1);return`${n} ${UNIT[m[2]][n===1?0:1]} after done`}
   if(m[3]){const by={};m[3].split(',').forEach(x=>{const k=x.slice(-2);(by[k]=by[k]||[]).push(NTH[x.slice(0,-2)])});
     const list=a=>a.length>1?a.slice(0,-1).join(', ')+' and '+a[a.length-1]:a[0];
-    return'monthly on the '+list(Object.entries(by).map(([k,a])=>list(a)+' '+WDN[WDS.indexOf(k)]))+(m[4]?' after done':'')}
+    const every=+(m[1]||1);return(every>1?`every ${every} months on the `:'monthly on the ')+list(Object.entries(by).map(([k,a])=>list(a)+' '+WDN[WDS.indexOf(k)]))+(m[4]?' after done':'')}
   const n=+(m[1]||1);return n===1?{d:'daily',w:'weekly',m:'monthly',y:'yearly'}[m[2]]:`every ${n} ${UNIT[m[2]][1]}`}
 let S,ui={sel:null,multi:new Set(),view:'tree',q:'',hideDone:false,panel:false,metric:'closed',dragging:false};
 const blank=()=>({v:2,rev:0,nodes:{root:{id:'root',name:'root',children:[]}},activity:[],timer:null,prefs:{theme:null,views:[]}});
@@ -1248,10 +1248,10 @@ function recurHTML(n,tip){const r=n.recur||'',m=RE_RECUR.exec(r),custom=ui.rcEdi
   return sel}
 function recurEditor(n){const r=n.recur||'',m=RE_RECUR.exec(r);if(ui.rcEdit!==n.id&&r in RECUR)return'';
   const nth=m&&m[3]?m[3].split(','):[],wd=nth.length?nth[0].slice(-2):WDS[(pd(n.deadline||n.reminder)||new Date()).getDay()];
-  const ev=!nth.length,cnt=m&&!m[3]?+(m[1]||1):2,u=m&&!m[3]?m[2]:'w';
+  const ev=!nth.length,cnt=m&&!m[3]?+(m[1]||1):2,u=m&&!m[3]?m[2]:'w',mcnt=m&&m[3]?+(m[1]||1):1;
   return`<div class="rc">
 <label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="n" ${ev?'checked':''}> Every <input type="number" data-f="rc" data-k="n" min="1" max="999" value="${cnt}" style="width:64px"> <select data-f="rc" data-k="u">${Object.entries(UNIT).map(([k,v])=>`<option value="${k}" ${u===k?'selected':''}>${v[1]}</option>`).join('')}</select></label>
-<label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="nth" ${ev?'':'checked'}> Monthly on the</label>
+<label class="chk-row"><input type="radio" name="rcm" data-f="rc" value="nth" ${ev?'':'checked'}> Every <input type="number" data-f="rc" data-k="mn" min="1" max="999" value="${mcnt}" style="width:64px" data-tip="1: every month, 2: every second month, …"> month(s) on the</label>
 <div class="rcnth">${Object.entries(NTH).sort((a,b)=>(+a[0]<0)-(+b[0]<0)||a[0]-b[0]).map(([k,l])=>`<label class="chk-row"><input type="checkbox" data-f="rc" data-k="nth" value="${k}" ${nth.some(x=>x.slice(0,-2)===k)?'checked':''}> ${l}</label>`).join('')}
 <select data-f="rc" data-k="wd">${WDS.map((k,i)=>[k,i]).slice(1).concat([['su',0]]).map(([k,i])=>`<option value="${k}" ${wd===k?'selected':''}>${WDN[i]}</option>`).join('')}</select></div>
 <label class="chk-row"><input type="checkbox" data-f="rc" data-k="after" ${m&&m[4]?'checked':''}> Count from the day it is done</label>
@@ -1260,7 +1260,8 @@ function recurEditor(n){const r=n.recur||'',m=RE_RECUR.exec(r);if(ui.rcEdit!==n.
 function recurFromEditor(){const box=$('.rc');if(!box)return'';const p=box.querySelector('[data-k=after]').checked?'+':'';
   if(box.querySelector('input[type=radio][value=n]').checked){const k=Math.min(999,Math.max(1,Math.round(+box.querySelector('[data-k=n]').value||1)));return normRecur(k+box.querySelector('[data-k=u]').value+p)}
   const wd=box.querySelector('[data-k=wd]').value,ns=[...box.querySelectorAll('[data-k=nth]:checked')].map(x=>x.value);
-  return'm:'+(ns.length?ns:['1']).map(k=>k+wd).join(',')+p}
+  const mn=Math.min(999,Math.max(1,Math.round(+box.querySelector('[data-k=mn]').value||1)));
+  return(mn>1?mn:'')+'m:'+(ns.length?ns:['1']).map(k=>k+wd).join(',')+p}
 // a "+" rule counts from the day it is done: the new deadline and reminder (same as afterDone in recur.go)
 function afterDone(dl,rem,r,today){const a=dl||rem;if(!a)return[nextOcc(today,r),''];
   const u=s=>{const[y,m,d]=s.slice(0,10).split('-').map(Number);return Date.UTC(y,m-1,d)},days=Math.round((u(nextOcc(today+a.slice(10),r))-u(a))/864e5);
@@ -1268,7 +1269,8 @@ function afterDone(dl,rem,r,today){const a=dl||rem;if(!a)return[nextOcc(today,r)
   return[sh(dl),sh(rem)]}
 function nextOcc(s,r){const d=pd(s),m=RE_RECUR.exec(r||'');if(!d||!m)return s;
   const out=x=>dayKey(x)+(s.includes('T')?`T${pad(x.getHours())}:${pad(x.getMinutes())}`:'');
-  if(m[3]){for(let i=0;i<14;i++){const y=d.getFullYear(),mo=d.getMonth()+i,days=new Date(y,mo+1,0).getDate();let best=0;
+  // every N months: the month of the current date, then every Nth month after it
+  if(m[3]){const every=+(m[1]||1);for(let k=0;k<14;k++){const y=d.getFullYear(),mo=d.getMonth()+k*every,days=new Date(y,mo+1,0).getDate();let best=0;
       m[3].split(',').forEach(x=>{const n=+x.slice(0,-2),wd=WDS.indexOf(x.slice(-2));let day;
         if(n<0)day=days-(new Date(y,mo,days).getDay()-wd+7)%7;else{day=1+(wd-new Date(y,mo,1).getDay()+7)%7+(n-1)*7;if(day>days)day=0}
         if(day&&new Date(y,mo,day,d.getHours(),d.getMinutes())>d&&(!best||day<best))best=day});

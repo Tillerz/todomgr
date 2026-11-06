@@ -430,8 +430,11 @@ func icsRule(v string, loc *time.Location) (recur string, exact bool, until time
 	}
 	if by := strings.ReplaceAll(strings.ToLower(parts["BYDAY"]), "+", ""); by != "" {
 		switch {
-		case freq == "m" && n == 1 && reRecur.MatchString("m:"+by): // 1FR,3FR,-1FR
+		case freq == "m" && reRecur.MatchString("m:"+by): // 1FR,3FR,-1FR, also every N months
 			recur = "m:" + by
+			if n > 1 {
+				recur = strconv.Itoa(n) + recur
+			}
 		case freq == "w" && !strings.Contains(by, ","): // weekly on one day is the day of the start date
 		default:
 			exact = false

@@ -34,7 +34,8 @@ More in [Screenshots](#screenshots).
 
 - Reminders pop up even when no browser window is open, with an early warning if you want one.
 - The computer was off? The reminder waits for you as "missed".
-- Repeats of every kind: every 2 weeks, the 1st and 3rd Friday, or 3 days after you last did it.
+- Repeats of every kind: every 2 weeks, the 1st and 3rd Friday, the last Sunday of every 3rd month, or
+  3 days after you last did it.
 - Todos that follow an event: the session diary waits for game night, is due 8 days after it, and comes
   back for the next one.
 - Events with a start and an end, from a 2-hour stream to a 3-day convention.
@@ -295,7 +296,7 @@ Call Anna #work @anna !high due:fri at:14:00 ~30m
 | `!low` `!med` `!high` `!urgent` | priority |
 | `due:today` `due:tomorrow` `due:fri` `due:+3d` `due:2026-12-24` | deadline |
 | `at:19:00` | time of day |
-| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday), `repeat:3d+` (3 days after it is done) | recurrence |
+| `repeat:daily` `repeat:weekly` `repeat:monthly` `repeat:yearly`, `repeat:2w` (every 2 weeks), `repeat:m:1fr,3fr` (1st and 3rd Friday), `repeat:2m:1fr` (1st Friday of every 2nd month), `repeat:3d+` (3 days after it is done) | recurrence |
 | `~30m` `~2h` (a number alone means minutes) | time estimate |
 | `i:` or `?` at the start | an idea |
 | `p:` at the start | a project, at the top level instead of the Inbox |
@@ -346,7 +347,8 @@ the list.
   refused.
 - **Recurring** todos reopen with the next deadline instead of staying done. Repeat daily, weekly,
   monthly or yearly, **every N** days, weeks, months or years (every 2 weeks, every 4 weeks…), or
-  **monthly on certain weekdays** (the 1st, 3rd and 5th Friday; the last Sunday). Pick *Custom…* in the
+  **monthly on certain weekdays** (the 1st, 3rd and 5th Friday; the last Sunday), also **every N months**
+  on those weekdays (the 1st Friday of every 2nd month). Pick *Custom…* in the
   Repeat field for the last two; a month without a 5th Friday is simply skipped.
 - **After done:** tick *Count from the day it is done* in the custom Repeat field (or write `3d+`). The
   next date then counts from the day you finish the entry, not from its old date: water the plants
@@ -706,7 +708,7 @@ Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` 
 end of an event, not before its start), `deps`, `notes`,
 `notesFormat` (`markdown` or `bbcode`),
 `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog`
-(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last; a `+` at the end counts from the day it is done: `3d+`), `est` (minutes), `lead` (minutes
+(`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last, every N months on weekdays: `2m:1fr`; a `+` at the end counts from the day it is done: `3d+`), `est` (minutes), `lead` (minutes
 of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
 
 ## Licence

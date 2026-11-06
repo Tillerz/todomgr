@@ -14,13 +14,15 @@ import (
 //	m:1fr,3fr,-1fr   monthly on the 1st and 3rd Friday and the last Friday
 //	                 (1–5 or -1 for the last; mo tu we th fr sa su); a month
 //	                 without a 5th Friday has no date for "5fr"
+//	2m:1fr 3m:-1su   every 2 / 3 months on those days, counted from the month of
+//	                 the current date
 //	3d+ 2w+ m:1fr+   "+" at the end: count from the day the entry is done,
 //	                 not from its old date (see afterDone)
 //
 // web/index.html has the same rules in JavaScript (nextOcc, recurText).
 
 var (
-	reRecur   = regexp.MustCompile(`^(?:([1-9]\d{0,2})?([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*))(\+)?$`)
+	reRecur   = regexp.MustCompile(`^(?:([1-9]\d{0,2})?(?:([dwmy])|m:((?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su)(?:,(?:-1|[1-5])(?:mo|tu|we|th|fr|sa|su))*)))(\+)?$`)
 	recurDays = map[string]time.Weekday{"su": time.Sunday, "mo": time.Monday, "tu": time.Tuesday, "we": time.Wednesday, "th": time.Thursday, "fr": time.Friday, "sa": time.Saturday}
 )
 
@@ -29,6 +31,10 @@ var (
 func normRecur(v string) (string, bool) {
 	v = strings.ToLower(strings.TrimSpace(v))
 	base, plus := strings.CutSuffix(v, "+")
+	if strings.HasPrefix(base, "1m:") { // every 1 month on … is monthly on …
+		base = base[1:]
+		v = v[1:]
+	}
 	if w, ok := map[string]string{"daily": "d", "weekly": "w", "monthly": "m", "yearly": "y", "1d": "d", "1w": "w", "1m": "m", "1y": "y"}[base]; ok {
 		v = w
 		if plus {
@@ -65,10 +71,15 @@ func nextOcc(s, r string, loc *time.Location) string {
 		return s
 	}
 	if m[3] != "" {
-		// a match comes within 14 months: every month has a 1st–4th and a last weekday,
-		// and a 5th weekday comes several times a year
-		for i := 0; i < 14; i++ {
-			first := time.Date(d.Year(), d.Month()+time.Month(i), 1, 0, 0, 0, 0, loc)
+		// a match comes within 14 matching months: every month has a 1st–4th and a last
+		// weekday, and a 5th weekday comes several times a year. Every N months: the month of
+		// the current date, then every Nth month after it.
+		every := 1
+		if m[1] != "" {
+			every, _ = strconv.Atoi(m[1])
+		}
+		for k := 0; k < 14; k++ {
+			first := time.Date(d.Year(), d.Month()+time.Month(k*every), 1, 0, 0, 0, 0, loc)
 			best := 0
 			for _, rule := range strings.Split(m[3], ",") {
 				n, _ := strconv.Atoi(rule[:len(rule)-2])
@@ -132,6 +143,8 @@ func recurRRULE(r string) string {
 	switch {
 	case m == nil:
 		return ""
+	case m[3] != "" && m[1] != "" && m[1] != "1":
+		return "FREQ=MONTHLY;INTERVAL=" + m[1] + ";BYDAY=" + strings.ToUpper(m[3])
 	case m[3] != "":
 		return "FREQ=MONTHLY;BYDAY=" + strings.ToUpper(m[3])
 	case m[1] != "" && m[1] != "1":
