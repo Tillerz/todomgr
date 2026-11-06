@@ -1540,14 +1540,14 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
 // Settings → Tag icons: one row per tag, click the icon to pick another one
 function renderTagIcons(pick){const el=$('#tagIcs');if(!el)return;const m=tagIcons();
   el.innerHTML=Object.entries(m).map(([t,i])=>`<div class="tirow"><button class="btn tib" data-pick="${esc(t)}" data-tip="Choose the icon for #${esc(t)}">${ic(i,16)}</button><span style="flex:1">#${esc(t)}</span><button class="chip" data-rm="${esc(t)}" data-tip="Remove #${esc(t)}">${ic('x',12)}</button></div>`
-    +(t===pick?`<div class="tipick">${TAG_ICON_SET.map(k=>`<button class="${k===i?'on':''}" data-ic="${k}" data-t="${esc(t)}">${ic(k,18)}</button>`).join('')}</div>`:'')).join('')
+    +(t===pick?`<div class="tipick"><input class="icq" placeholder="Filter icons by name…" data-tip="Type a part of the name, e.g. book">${TAG_ICON_SET.map(k=>`<button class="${k===i?'on':''}" data-ic="${k}" data-v="${k}" data-t="${esc(t)}" data-tip="${k}">${ic(k,18)}</button>`).join('')}</div>`:'')).join('')
     +`<div class="tirow"><input id="tiNew" placeholder="New tag, e.g. meeting" style="flex:1"><button class="btn" id="tiAdd">Add</button>${S.prefs.tagIcons?'<button class="btn" id="tiReset" data-tip="Back to the default list">Reset</button>':''}</div>`;
   const save=(m,p)=>{S.prefs.tagIcons=m;persist();renderAll();renderTagIcons(p)};
   const add=()=>{const t=$('#tiNew').value.trim().replace(/^#/,'').toLowerCase();if(!t)return;if(Object.hasOwn(m,t))return renderTagIcons(t);save({...m,[t]:'tag'},t)};
   $('#tiAdd').onclick=add;$('#tiNew').onkeydown=e=>{if(e.key==='Enter')add()};
   if($('#tiReset'))$('#tiReset').onclick=()=>{delete S.prefs.tagIcons;persist();renderAll();renderTagIcons()};
   el.onclick=e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
-    if(d.pick)renderTagIcons(d.pick===pick?null:d.pick);
+    if(d.pick){renderTagIcons(d.pick===pick?null:d.pick);$('#tagIcs .icq')?.focus()}
     else if(d.rm){const c={...m};delete c[d.rm];save(c)}
     else if(d.ic)save({...m,[d.t]:d.ic})}}
 const THEMES=[['','Default'],['modern','Modern'],['pastel','Pastel'],['fantasy','Fantasy (parchment)'],['scifi','Sci-fi'],['contrast','High contrast']];
@@ -1576,8 +1576,8 @@ $('#tree').addEventListener('click',e=>{
   ui.multi.clear();ui.sel=id;ui.panel=true;renderTree();renderDetail()});
 $('#tree').addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest('.row'))e.preventDefault()});
 $('#detail').addEventListener('change',onDetailChange);
-// icon picker: show only the icons whose name contains the typed text
-$('#detail').addEventListener('input',e=>{if(!e.target.matches('.icq'))return;const q=e.target.value.trim().toLowerCase();
+// icon pickers (detail panel, Settings → Tag icons): show only the icons whose name contains the typed text
+document.addEventListener('input',e=>{if(!e.target.matches?.('.icq'))return;const q=e.target.value.trim().toLowerCase();
   e.target.parentElement.querySelectorAll('button[data-v]').forEach(b=>b.hidden=!!q&&!b.dataset.v.includes(q))});
 // the pace line depends on fields (deadline, unit…) whose change does not redraw the panel
 $('#detail').addEventListener('change',()=>{const ps=$('.pace-slot'),n=S.nodes[ui.sel];if(ps&&n)ps.innerHTML=pace(n)});
@@ -1674,7 +1674,7 @@ const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Exp
 $('#btnMenu').onclick=()=>openModal(`<div class="list">${MENU.map(([l],i)=>`<button class="btn" data-m="${i}" style="text-align:left">${l}</button>`).join('')}</div><div style="margin-top:10px;color:var(--muted);font-size:12px;text-align:center">${APP.name} ${APP.version}</div>`,{cls:'pop-right',kind:'menu'});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&modalKind==='menu'){const f=MENU[+b.dataset.m][1];closeModal();f()}});
 $('#newProj').onclick=newProject;$('#newRem').onclick=newReminder;
-$('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b)return;const it=remQ[0],a=b.dataset.rm;
+$('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b||modalKind!=='remind')return;const it=remQ[0],a=b.dataset.rm;
   if(it){ackd.add(it.key);
     Store.api('POST','/api/alerts/ack',{id:it.id,action:a==='snooze'?'snooze':'ok'}).then(()=>{if(a==='snooze')toast('Snoozed for 10 minutes')}).catch(err=>toast('Could not dismiss: '+err.message));
     if(a==='show')reveal(it.id)}
