@@ -610,6 +610,10 @@ main views of the page with the demo data. Give it a data file to check your own
 
 <img alt="The Today view with reminders, sci-fi theme" src="docs/today.png" width=65%>
 
+### Next 7 days: the week ahead, day by day
+
+<img alt="Next 7 days: the week ahead, day by day" src="docs/today-next-7-days.png" width=65%>
+
 ### The narrow layout
 
 <img alt="The narrow layout" src="docs/narrow.png" width=350px>
