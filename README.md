@@ -493,6 +493,9 @@ themselves, so changes show up there without copies (each event keeps the entry 
 - Responsive: three columns on a wide screen, a drawer on a medium one, a bottom sheet on a phone.
 - Tooltips on every control, a row-height slider, a resizable and closable detail panel, a *Hide tags*
   button.
+- **Project tags:** the tag list below the search shows only the tags of the selected entry's top-level
+  entry (for example *Writing*) and everything in it. Click it again for all tags. A tag you filter by
+  always stays in the list.
 - Works offline: SortableJS, marked (Markdown) and the Lucide tag icons are bundled, no CDN.
 
 ### Settings (⋯ → Settings)

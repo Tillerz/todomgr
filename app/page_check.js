@@ -72,6 +72,12 @@ check('search: a tag filter goes away when the tag is removed from every entry',
   n.tags.push('zzgone');ui.q='#zzgone urgent';renderTree();if(ui.q!=='#zzgone urgent')bad.push('removed too early: '+ui.q);
   n.tags.pop();renderTree();if(ui.q!=='urgent')bad.push('after removing the tag: "'+ui.q+'"');
   ui.q='#notyet';renderTree();renderTree();if(ui.q!=='#notyet')bad.push('a tag being typed was removed');ui.q='';renderTree();return bad.join('; ')});
+check('tags: Project tags shows only the tags of the top-level entry of the selection',()=>{const bad=[],A=mk('Area A'),B=mk('Area B'),a=mk('a1',{tags:['onlya']}),b=mk('b1',{tags:['onlyb']});
+  attach(A,'root');attach(B,'root');attach(a,A.id);attach(b,B.id);const bar=()=>el('#tagbar').innerHTML;
+  S.prefs.projTags=true;ui.sel=a.id;renderTags();if(!bar().includes('#onlya')||bar().includes('#onlyb'))bad.push('on, a selected: '+text(bar()).slice(0,80));
+  ui.q='#onlyb';renderTags();if(!bar().includes('#onlyb'))bad.push('the active filter #onlyb is not shown');ui.q='';
+  S.prefs.projTags=false;renderTags();if(!/#(?!onlya)/.test(text(bar())))bad.push('off: only the tags of Area A');
+  ui.sel=null;[a,b,A,B].forEach(n=>{detach(n);delete S.nodes[n.id]});renderTags();return bad.join('; ')});
 check('icons: Settings → Tag icons picker has the filter, every icon and its name',()=>{const t=Object.keys(tagIcons())[0];renderTagIcons(t);const h=el('#tagIcs').innerHTML,bad=[];
   if(!h.includes('class="icq"'))bad.push('no filter field');const miss=TAG_ICON_SET.filter(k=>!h.includes('data-v="'+k+'" data-t="'+esc(t)+'" data-tip="'+k+'"'));
   if(miss.length)bad.push('icons without name or missing: '+miss.slice(0,5).join(', '));return bad.join('; ')});

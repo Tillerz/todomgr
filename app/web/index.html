@@ -414,6 +414,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
         <button class="chip" id="expandAll" data-tip="Expand every entry">Expand all</button>
         <button class="chip" id="hideDone" data-tip="Hide completed items">Hide done</button>
         <button class="chip" id="hideTags" data-tip="Hide or show all tags in the list">Hide tags</button>
+        <button class="chip" id="projTags">Project tags</button>
         <button class="chip" id="saveView" data-tip="Save the current search as a quick view">+ Save view</button>
         <div class="scrollx" id="views"></div>
       </div>
@@ -886,9 +887,16 @@ function renderTree(){dropGoneTags();
       if(e.from===e.to&&e.oldIndex===e.newIndex)return;
       const id=e.item.dataset.id,to=e.to.dataset.id;setTimeout(()=>{mutate(()=>{if(moveNode(id,to,e.newIndex)&&S.nodes[to].collapsed)S.nodes[to].collapsed=false});},0)}})));
   renderTags();renderBulk()}
-function renderTags(){const c={};allNodes().forEach(n=>n.tags.forEach(t=>c[t]=(c[t]||0)+1));
-  const act=parseQ(ui.q).tags;
-  $('#tagbar').innerHTML=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([t,k])=>`<button class="chip tagchip ${act.includes(t.toLowerCase())?'on':''}" data-tag="${esc(t)}" data-tip="Filter by #${esc(t)}">#${esc(t)} <small>${k}</small></button>`).join('');
+// the top-level entry an entry is in (Writing, Tools…)
+const topOf=id=>{let x=S.nodes[id];while(x&&x.parent&&x.parent!=='root')x=S.nodes[x.parent];return x};
+function renderTags(){const top=S.prefs.projTags&&ui.sel&&S.nodes[ui.sel]?topOf(ui.sel):null,c={};
+  // "Project tags" on: only the tags used in the top-level entry of the selected entry and below it
+  allNodes().forEach(n=>{if(!top||inSubtree(n.id,top.id))n.tags.forEach(t=>c[t]=(c[t]||0)+1)});
+  const act=parseQ(ui.q).tags,list=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,14);
+  act.forEach(t=>{if(!list.some(([x])=>x.toLowerCase()===t))list.push([t,c[t]||0])});// an active filter always stays visible
+  const pb=$('#projTags');pb.classList.toggle('on',!!S.prefs.projTags);
+  pb.dataset.tip=S.prefs.projTags?(top?`Showing the tags of “${top.name}”. Click to show all tags`:'Select an entry to see only the tags of its top-level project. Click to turn off'):'Show only the tags of the selected entry\'s top-level project';
+  $('#tagbar').innerHTML=list.map(([t,k])=>`<button class="chip tagchip ${act.includes(t.toLowerCase())?'on':''}" data-tag="${esc(t)}" data-tip="Filter by #${esc(t)}">#${esc(t)} <small>${k}</small></button>`).join('');
   $('#views').innerHTML=S.prefs.views.map((v,i)=>`<button class="chip" data-view-q="${i}" data-tip="Saved view: ${esc(v.q)}">${esc(v.name)} <span class="x" data-del-view="${i}" data-tip="Remove view">×</span></button>`).join('');
   $('#hideDone').classList.toggle('on',ui.hideDone)}
 function renderBulk(){const b=$('#bulk'),n=ui.multi.size;b.hidden=!n;if(!n)return;
@@ -1304,7 +1312,7 @@ function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f(
    ...(S.prefs.views||[]).map(v=>['View: '+v.name,tree(()=>setQuery(v.q))]),
    ...(sn?[['Edit notes of'+sn,toggleNotesMax,'Alt+Enter'],['Print list of'+sn,()=>printList(sel.id)],['Copy ID of'+sn,()=>copyText(sel.id)]]:[]),
    ['Start timer…',()=>openTimer(),'T'],['Collapse all',tree(()=>setAllCollapsed(true))],['Expand all',tree(()=>setAllCollapsed(false))],
-   [ui.hideDone?'Show done entries':'Hide done entries',tree(()=>$('#hideDone').click())],[S.prefs.hideTags?'Show tags':'Hide tags',()=>$('#hideTags').click()],
+   [ui.hideDone?'Show done entries':'Hide done entries',tree(()=>$('#hideDone').click())],[S.prefs.hideTags?'Show tags':'Hide tags',()=>$('#hideTags').click()],[S.prefs.projTags?'Show all tags in the tag list':'Show only project tags in the tag list',()=>$('#projTags').click()],
    ['Settings…',showSettings],['Toggle light/dark mode',toggleTheme],...THEMES.map(([k,l])=>['Theme: '+l,()=>setStyle(k)]),['Enable notifications',()=>Notification.requestPermission().then(p=>toast('Notifications: '+p))],
    ['Undo',undo,'Ctrl+Z'],['Redo',redo,'Ctrl+Shift+Z'],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Show trash',showTrash],['Keyboard shortcuts',showHelp,'?'],['Load demo data',loadDemo]];
   openModal(`<input id="pq" placeholder="Jump to an item or run a command…" autocomplete="off"><ul id="pl"></ul>`,{cls:'palette',kind:'palette'});
@@ -1692,6 +1700,7 @@ $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-wh]');i
   sendDiscord(n.id,title,normUrl(url)).then(()=>{toast('Sent to Discord');nextAnn()}).catch(err=>{toast('Could not send: '+err.message);b.disabled=false;b.textContent='Send to Discord'})});
 $('#modal').addEventListener('keydown',e=>{if(e.key==='Enter'&&modalKind==='ann'&&e.target.matches('#whTitle,#whUrl')){e.preventDefault();$('[data-wh=send]').click()}});
 $('#hideTags').onclick=()=>{S.prefs.hideTags=!S.prefs.hideTags;persist();applyPrefs()};
+$('#projTags').onclick=()=>{S.prefs.projTags=!S.prefs.projTags;persist();renderTags()};
 $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>setAllCollapsed(false);
 (function(){const r=$('#resizer');let on=false;
   r.addEventListener('pointerdown',e=>{on=true;r.classList.add('drag');r.setPointerCapture(e.pointerId);document.body.style.userSelect='none';e.preventDefault()});
