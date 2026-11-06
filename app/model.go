@@ -402,7 +402,7 @@ func (db *DB) view(n Node, now time.Time) map[string]any {
 	v := map[string]any{
 		"id": n.S("id"), "name": n.S("name"), "kind": n.S("kind"), "status": n.S("status"),
 		"prio": n["prio"], "parent": n["parent"], "path": db.path(n),
-		"progress": round2(db.frac(n)), "blocked": db.blocked(n), "children": len(n.Kids()),
+		"progress": round2(db.frac(n)), "blocked": db.blocked(n) || db.waits(n, now), "children": len(n.Kids()),
 	}
 	for _, k := range []string{"deadline", "reminder", "end", "url", "location", "color", "icon", "recur"} {
 		if s := n.S(k); s != "" {

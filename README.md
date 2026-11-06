@@ -35,6 +35,8 @@ More in [Screenshots](#screenshots).
 - Reminders pop up even when no browser window is open, with an early warning if you want one.
 - The computer was off? The reminder waits for you as "missed".
 - Repeats of every kind: every 2 weeks, the 1st and 3rd Friday, or 3 days after you last did it.
+- Todos that follow an event: the session diary waits for game night, is due 8 days after it, and comes
+  back for the next one.
 - Events with a start and an end, from a 2-hour stream to a 3-day convention.
 
 ### Keep big projects under control
@@ -349,6 +351,12 @@ the list.
 - **After done:** tick *Count from the day it is done* in the custom Repeat field (or write `3d+`). The
   next date then counts from the day you finish the entry, not from its old date: water the plants
   3 days after you last did it, however late that was. An entry without a date gets one.
+- **After an event:** a todo can follow a reminder or event (detail panel → *After an event*, with a number
+  of days). It waits until that event has ended (a clock icon, not on Today), and is then due on the
+  event's last day plus that many days. When you finish it and the event repeats, it waits for the next
+  time. Example: a session diary that is due 8 days after each game night. This replaces the todo's own
+  Repeat rule. If the event is already over and its days have not passed yet, the todo is due now. When
+  you move the event to another date, its todos move with it.
 
 ### Reminders
 

@@ -371,7 +371,7 @@ func (s *Store) Today() map[string]any {
 		default:
 			continue
 		}
-		if s.db.isClosed(n) || n.S("status") == "later" {
+		if s.db.isClosed(n) || n.S("status") == "later" || s.db.waits(n, now) {
 			continue
 		}
 		switch s.db.dueState(n, now) {

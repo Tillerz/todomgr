@@ -60,9 +60,10 @@ func normURL(v string) string {
 }
 
 var fieldOrder = []string{"kind", "name", "color", "icon", "prio", "tags", "people", "location", "deadline", "reminder", "end",
-	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "est", "lead", "discord", "free", "collapsed", "status"}
+	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "after", "est", "lead", "discord", "free", "collapsed", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
+	oldRem, oldEnd := n.S("reminder"), n.S("end")
 	for k := range f {
 		known := false
 		for _, o := range fieldOrder {
@@ -83,6 +84,9 @@ func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
 		if err := t.setField(n, k, v, creating); err != nil {
 			return fmt.Errorf("%s: %w", k, err)
 		}
+	}
+	if n.S("kind") == "reminder" && (n.S("reminder") != oldRem || n.S("end") != oldEnd) {
+		t.afterFollow(n, oldRem)
 	}
 	n["updated"] = nowMs()
 	return nil
@@ -295,6 +299,11 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be empty, d/w/m/y, every N (2w, 3d, 6m) or monthly on weekdays (m:1fr,3fr,-1fr)")
 		}
 		n["recur"] = r
+		if r != "" {
+			delete(n, "after") // a repeat rule of its own replaces "after an event"
+		}
+	case "after":
+		return t.setAfter(n, v)
 	case "est", "lead":
 		x := num(v)
 		if x < 0 {
@@ -334,9 +343,15 @@ func (t *Tx) setKind(n Node, kind string) {
 		n["hist"] = append(h, map[string]any{"s": s, "at": nowMs()})
 	}
 	if kind == "reminder" {
+		// an event has a start, not a deadline: the deadline becomes the start if there is none
+		if n.S("reminder") == "" {
+			n["reminder"] = n.S("deadline")
+		}
 		if n.S("reminder") == "" {
 			n["reminder"] = defaultRemTime(t.now())
 		}
+		n["deadline"] = ""
+		delete(n, "after")
 		if _, ok := n["lead"]; !ok {
 			n["lead"] = 15.0
 		}
@@ -368,6 +383,9 @@ func (t *Tx) setStatus(n Node, s string) error {
 		p := n.Obj("prog")
 		if p != nil {
 			p["done"] = p["total"]
+		}
+		if n.Obj("after") != nil && len(t.db.progressKids(n)) == 0 && t.afterNext(n) {
+			return nil
 		}
 		if n.S("recur") != "" && len(t.db.progressKids(n)) == 0 {
 			t.recurNext(n)

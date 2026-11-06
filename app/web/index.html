@@ -663,7 +663,7 @@ const inSubtree=(id,anc)=>{for(let x=S.nodes[id];x;x=S.nodes[x.parent])if(x.id==
 function moveNode(id,pid,idx){if(inSubtree(pid,id))return false;const n=S.nodes[id];detach(n);attach(n,pid,idx);log('move',id);touch(n,true);return true}
 function log(type,id,x){S.activity.push({t:now(),id,type,by:'ui',...x})}
 function touch(n,quiet){n.updated=now();if(!quiet){const l=S.activity[S.activity.length-1];if(!(l&&l.id===n.id&&l.type==='edit'&&now()-l.t<60000))log('edit',n.id)}}
-function blocked(n){return n.deps.some(d=>{const x=S.nodes[d];return x&&!inTrash(x)&&x.status!=='done'&&x.status!=='cancelled'})}
+function blocked(n){return waits(n)||n.deps.some(d=>{const x=S.nodes[d];return x&&!inTrash(x)&&x.status!=='done'&&x.status!=='cancelled'})}
 function frac(n){const k=kids(n);if(k.length)return k.reduce((a,c)=>a+frac(c),0)/k.length;if(n.status==='done')return 1;return Math.min(1,n.prog.done/(n.prog.total||1))}
 const complete=n=>n.prog.mode==='percent'?100:n.prog.total;
 function dueState(n){const d=pd(n.deadline);if(!d)return'';const timed=n.deadline.includes('T');
@@ -714,10 +714,31 @@ function redo(){if(!U.redo.length)return;U.undo.push(snap());restore(U.redo.pop(
 let pt;function persist(){S.rev++;clearTimeout(pt);pt=setTimeout(()=>Store.sync(),150)}
 function mutate(fn,o={}){push();fn();persist();renderTree();if(o.panel)renderDetail();chrome();flushAnn()}
 function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClosed=isClosed(n);n.status=s;n.hist.push({s,at:now()});n.updated=now();log(s==='done'?'close':'status',n.id,{s});if(s==='done'&&n.kind==='todo')ANN.push(n.id);
-  if(s==='done'){if(n.prog.mode==='percent')n.prog.done=100;else n.prog.done=n.prog.total;if(n.recur&&!kids(n).length)recurNext(n);else parentHint(n)}
+  if(s==='done'){if(n.prog.mode==='percent')n.prog.done=100;else n.prog.done=n.prog.total;if(n.after&&!kids(n).length&&afterNext(n))return;if(n.recur&&!kids(n).length)recurNext(n);else parentHint(n)}
   else if(wasClosed&&n.status!=='cancelled')parentHint(n)}
 function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p))return;const k=kids(p);
   if(k.length&&k.every(c=>c.status==='done'))toast(`All sub-items of “${p.name}” are done`,{action:{label:'Mark parent done',fn:()=>mutate(()=>setStatus(p,'done'),{panel:true})},ms:7000})}
+/* After an event (the same rules as after.go): n.after={id: event, days, start: the event occurrence it belongs to}.
+   It waits until that occurrence has ended, is due its last day + days, and reopens for the next one when done. */
+const wallMs=s=>{const[a,t]=s.split('T'),[y,mo,d]=a.split('-').map(Number),[h,mi]=(t||'0:0').split(':').map(Number);return Date.UTC(y,mo-1,d,h,mi)};
+function afterEnd(ev,start){if(!ev.end)return remAt({reminder:start});
+  const d=new Date(wallMs(ev.end)+wallMs(start)-wallMs(ev.reminder));// moved as far as the start moved, in clock time
+  return evEnd({end:d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())+(ev.end.includes('T')?'T'+pad(d.getUTCHours())+':'+pad(d.getUTCMinutes()):'')})}
+function afterDeadline(ev,start,days){const e=afterEnd(ev,start);if(!e)return'';const d=new Date(e-6e4);d.setDate(d.getDate()+days);return dayKey(d)}
+const afterFirst=(ev,days)=>ev.atDone&&afterDeadline(ev,ev.atDone,days)>=dayKey(now())?ev.atDone:ev.reminder;
+function afterInfo(n){const ev=n.after&&n.kind==='todo'&&S.nodes[n.after.id];return ev&&ev.kind==='reminder'&&!inTrash(ev)?ev:null}
+function waits(n){const ev=afterInfo(n);return!!ev&&!isClosed(n)&&now()<afterEnd(ev,n.after.start)}
+function setAfter(n,id,days){const ev=S.nodes[id],start=afterFirst(ev,days);n.after={id,days,start};n.deadline=afterDeadline(ev,start,days);n.recur=''}
+function afterNext(n){const ev=afterInfo(n),r=ev&&ev.recur;if(!r||r.endsWith('+'))return false;const next=nextOcc(n.after.start,r);if(next===n.after.start)return false;
+  n.status='open';n.hist.push({s:'open',at:now()});n.prog.done=0;n.remDone=false;n.after={...n.after,start:next};n.deadline=afterDeadline(ev,next,n.after.days);
+  toast(`Comes back after “${ev.name}” ${fmtWhen(next)}, due ${fmtWhen(n.deadline)}`);return true}
+// todos that follow event ev move with it when its date changes (the same as afterFollow in after.go)
+function afterFollow(ev,oldStart){allNodes().forEach(t=>{if(t.after?.id!==ev.id||isClosed(t))return;
+  if(t.after.start===oldStart)t.after={...t.after,start:ev.reminder};t.deadline=afterDeadline(ev,t.after.start,t.after.days);t.updated=now()})}
+function afterHTML(n){const a=n.after,ev=afterInfo(n),evs=allNodes().filter(x=>x.kind==='reminder'&&x.reminder).sort((x,y)=>x.name.localeCompare(y.name));
+  return`<div class="field" style="margin-top:8px"><span>After an event <span class="bd" data-tip="The todo waits until the event has ended, is due some days later, and comes back for the next time of a repeating event">?</span></span>
+<div class="stepper"><select data-f="afterev" style="flex:1"><option value="">—</option>${evs.map(x=>`<option value="${x.id}" ${a&&a.id===x.id?'selected':''}>${esc(x.name)}${x.recur?' ('+esc(recurText(x.recur))+')':''}</option>`).join('')}</select>${a?`<input type="number" min="0" max="365" data-f="afterdays" value="${a.days}" style="width:70px" data-tip="Days after the event"><span>days</span>`:''}</div>
+${ev?`<div class="note" style="margin-top:4px">${waits(n)?'Waits for':'After'} “${esc(ev.name)}” ${esc(fmtWhen(a.start))}, due ${esc(fmtWhen(n.deadline))}${ev.recur?'':' · the event does not repeat'}</div>`:a?'<div class="note" style="color:var(--warn)">The event is gone (in the trash or deleted)</div>':''}</div>`}
 function recurNext(n){const step=s=>nextOcc(s,n.recur);
   n.status='open';n.hist.push({s:'open',at:now()});n.prog.done=0;n.remDone=false;
   if(n.recur.endsWith('+'))[n.deadline,n.reminder]=afterDone(n.deadline,n.reminder,n.recur,dayKey(now()));
@@ -791,7 +812,8 @@ function visibleSet(){if(!filtering())return null;const Q=parseQ(ui.q),set=new S
 /* ============================ rendering: tree ============================ */
 let sortables=[];
 function badge(n){const b=[];  if(n.webhook)b.push(`<span class="bd" data-tip="Discord webhook set — finished todos can be announced">${ic('send',12)}</span>`);
-  if(blocked(n))b.push(`<span class="bd lock" data-tip="Blocked: waiting for another item to be done first">${ic('lock',12)}</span>`);
+  if(waits(n))b.push(`<span class="bd lock" data-tip="Waits for “${esc(afterInfo(n).name)}” ${esc(fmtWhen(n.after.start))}">${ic('clock',12)}</span>`);
+  else if(blocked(n))b.push(`<span class="bd lock" data-tip="Blocked: waiting for another item to be done first">${ic('lock',12)}</span>`);
   if(n.prio)b.push(`<span class="flag p${n.prio}" data-tip="Priority: ${PRIO[n.prio]}">${ic('flag',14)}</span>`);
   const ds=dueState(n);if(n.deadline)b.push(`<span class="bd ${ds==='over'?'over':ds==='today'?'today':''}" data-tip="Deadline: ${esc(fmtFull(pd(n.deadline)))}">${ic('clock',12)}${esc(fmtWhen(n.deadline))}</span>`);
   if(n.kind==='reminder'&&n.reminder)b.push(`<span class="bd rem" data-tip="Reminder: ${esc(fmtFull(remAt(n)))}${+n.lead?' (pop-up '+n.lead+' min before and at the time)':' (pop-up at the time)'}">${ic('bell',12)}${esc(whenRange(n))}</span>`);
@@ -896,7 +918,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
-<label class="field"><span>Estimate (minutes)</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}
+<label class="field"><span>Estimate (minutes)</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?afterHTML(n):''}
 <h4>Tags</h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
 <h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
 <h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
@@ -984,10 +1006,12 @@ function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!
     case'status':mutate(()=>setStatus(n,v),{panel:true});break;
     case'notes':m(()=>n.notes=v);break;case'location':m(()=>n.location=v.trim(),true);break;
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
-    case'reminder-d':case'reminder-t':m(()=>setDT(n,'reminder'));if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
-    case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>n.end=x.end);break}
-    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'busy':m(()=>n.free=!t.checked);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>n.recur=v,true);break;
-    case'rc':{const r=recurFromEditor();if(r!==null)m(()=>n.recur=r,true);break}case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
+    case'reminder-d':case'reminder-t':{const old=n.reminder;m(()=>{setDT(n,'reminder');if(n.kind==='reminder')afterFollow(n,old)})}if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
+    case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>{n.end=x.end;if(n.kind==='reminder')afterFollow(n,n.reminder)});break}
+    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'busy':m(()=>n.free=!t.checked);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>{n.recur=v;if(v)delete n.after},true);break;
+    case'rc':{const r=recurFromEditor();if(r!==null)m(()=>{n.recur=r;if(r)delete n.after},true);break}
+    case'afterev':m(()=>v?setAfter(n,v,n.after?n.after.days:7):delete n.after,true);break;
+    case'afterdays':m(()=>setAfter(n,n.after.id,Math.max(0,Math.min(365,Math.round(+v||0)))),true);break;case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
     case'pct':mutate(()=>setProgress(n,v),{panel:true});break;
     case'pdone':mutate(()=>setProgress(n,v),{panel:true});break;
     case'ptotal':m(()=>{n.prog.total=Math.max(1,+v||1);if(n.prog.done>n.prog.total)n.prog.done=n.prog.total},true);break;
@@ -1079,7 +1103,7 @@ function weekDays(){const t0=startOfToday(),days=[...Array(7)].map((_,i)=>{const
   days.forEach(x=>x.items.sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0));return days}
 function renderWeek(){return weekDays().map(({d,items})=>`<h2>${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}<small>${items.length||'nothing planned'}</small></h2>${items.map(([at,n,daily])=>trow(n,daily?'':at)).join('')}`).join('')}
 function renderToday(){
-  const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'),used=new Set();
+  const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'&&!waits(n)),used=new Set();
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(n=>trow(n)).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
   const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
@@ -1764,7 +1788,8 @@ window.addEventListener('scroll',e=>{if(ctx&&!(e.target.closest&&e.target.closes
 window.addEventListener('resize',closeCtx);window.addEventListener('blur',closeCtx);
 
 function setKind(n,v){if(n.kind===v)return;n.kind=v;if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}
-  if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}touch(n)}
+  // an event has a start, not a deadline: the deadline becomes the start if there is none
+  if(v==='reminder'){if(!n.reminder)n.reminder=n.deadline||defaultRemTime();n.deadline='';delete n.after;if(n.lead==null)n.lead=15}touch(n)}
 function setBelow(id,c){const walk=n=>{if(n.children.length)n.collapsed=c;n.children.forEach(k=>S.nodes[k]&&walk(S.nodes[k]))};walk(S.nodes[id]);persist();renderTree()}
 function setColor(N,c){mutate(()=>N.forEach(n=>{n.color=c;touch(n)}),{panel:true})}
 function addTag(N,t){t=(t||'').trim().replace(/^#/,'');if(!t)return;mutate(()=>N.forEach(n=>{if(!n.tags.includes(t)){n.tags.push(t);touch(n)}}),{panel:true})}

@@ -67,7 +67,25 @@ check('drop: a mail from a mail program gives one link',()=>{const dt=(uris,file
 check('icons: the icon list has trash, every listed icon exists, project picker has a filter',()=>{const icons=new Set(Object.keys(P));
   const bad=TAG_ICON_SET.filter(k=>!icons.has(k));if(!TAG_ICON_SET.includes('trash'))bad.push('trash missing');
   const p=allNodes().find(x=>x.kind==='project');ui.sel=p.id;ui.panel=true;ui.icPick=p.id;renderDetail();if(!el('#detail').innerHTML.includes('class="icq"'))bad.push('no filter field');
-  ui.icPick=null;ui.sel=null;return bad.join('; ')});`);
+  ui.icPick=null;ui.sel=null;return bad.join('; ')});
+check('after an event: waits, is due N days later, comes back for the next one',()=>{const day=d=>addDays(d),bad=[];
+  const ev=mk('Game night',{kind:'reminder',reminder:day(5)+'T18:00',end:day(5)+'T23:00',recur:'w',atDone:day(-2)+'T18:00'});attach(ev,'root');
+  const t=mk('Session diary',{prio:3});attach(t,'root');setAfter(t,ev.id,8);
+  if(t.after.start!==day(-2)+'T18:00'||t.deadline!==day(6)||waits(t))bad.push('set: '+JSON.stringify(t.after)+' '+t.deadline);
+  setStatus(t,'done');if(t.status!=='open'||t.after.start!==day(5)+'T18:00'||t.deadline!==day(13)||!waits(t)||!blocked(t))bad.push('done: '+t.status+' '+JSON.stringify(t.after)+' '+t.deadline);
+  ui.todayWeek=false;renderToday();if(el('#vToday').innerHTML.includes('Session diary'))bad.push('a waiting todo is on Today');
+  ui.sel=t.id;ui.panel=true;renderDetail();if(!el('#detail').innerHTML.includes('Waits for “Game night”'))bad.push('detail panel does not say it waits');
+  setAfter(t,ev.id,1);if(t.after.start!==day(5)+'T18:00'||t.deadline!==day(6))bad.push('1 day: '+JSON.stringify(t.after)+' '+t.deadline);
+  ev.recur='';t.after.start=day(-2)+'T18:00';setStatus(t,'done');if(t.status!=='done')bad.push('single event: status '+t.status);
+  ui.sel=null;detach(t);detach(ev);delete S.nodes[t.id];delete S.nodes[ev.id];return bad.join('; ')});
+check('after an event: moving the event moves the todo; a todo that becomes an event loses its deadline',()=>{const day=d=>addDays(d),bad=[];
+  const ev=mk('Game night',{kind:'reminder',reminder:day(5)+'T18:00',end:day(5)+'T23:00',recur:'w'});attach(ev,'root');
+  const t=mk('Session diary');attach(t,'root');setAfter(t,ev.id,8);
+  const old=ev.reminder;ev.reminder=day(6)+'T19:00';ev.end=day(7)+'T01:00';afterFollow(ev,old);
+  if(t.after.start!==day(6)+'T19:00'||t.deadline!==day(15))bad.push('moved: '+JSON.stringify(t.after)+' '+t.deadline);
+  const x=mk('Stream',{deadline:day(3)+'T20:00'});attach(x,'root');setKind(x,'reminder');
+  if(x.reminder!==day(3)+'T20:00'||x.deadline)bad.push('todo → event: reminder '+x.reminder+', deadline '+x.deadline);
+  [t,ev,x].forEach(n=>{detach(n);delete S.nodes[n.id]});return bad.join('; ')});`);
 page(...Object.values(env), db, check, el, text, uiDefaults);
 
 // installable app: the manifest, its icons and the service worker
