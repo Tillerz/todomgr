@@ -425,6 +425,8 @@ A page with a GitHub-style **heatmap** (closed, created, activity or time), a we
 numbers (open, closed this week, overdue, tracked time, streak), cycle time and a breakdown by tag. It is
 drawn without a chart library, from the activity log.
 
+<img alt="The statistics page with the heatmap" src="docs/stats.png" width=70%>
+
 ### Export and import
 
 Under ⋯ (and in the command palette) and in Settings → Data:
@@ -509,7 +511,8 @@ themselves, so changes show up there without copies (each event keeps the entry 
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made
   client configuration to copy.
 - **Backups:** the snapshot interval, *Back up now*, and *Show backups* for one-click restore from the list.
-- **Data:** export JSON / CSV / calendar, import JSON, load demo data, and **Start with empty data** – clears everything
+- **Data:** export JSON / CSV / calendar, import JSON, load demo data (three example areas, *Personal*,
+  *Worldbuilding* and *Writing*, that use every feature), and **Start with empty data** – clears everything
   (after taking a backup) without restarting the program. Your settings stay.
 - **About:** version (linked to the GitHub project), data schema version, time zone and data folder.
 
@@ -604,10 +607,6 @@ main views of the page with the demo data. Give it a data file to check your own
 ### The Today view with reminders, sci-fi theme
 
 <img alt="The Today view with reminders, sci-fi theme" src="docs/today.png" width=65%>
-
-### The statistics page with the heatmap
-
-<img alt="The statistics page with the heatmap" src="docs/stats.png" width=70%>
 
 ### The narrow layout
 
