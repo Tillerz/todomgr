@@ -243,10 +243,23 @@ return (async()=>{const realFetch=fetch,realLoc=location;APP.instance='aaaa1111'
       if(!n||n.deadline!==addDays(1)+'T15:00'||!last.m.includes('Dentist')||last.o?.action?.label!=='Keep as typed')bad.push('rules: '+JSON.stringify(last));
       last.o.action.fn();const k=allNodes().filter(x=>x.name==='Dentist tomorrow at 3pm');if(k.length!==1||allNodes().some(x=>x.name==='Dentist'&&x.deadline))bad.push('keep as typed: '+k.length);
       k.forEach(x=>{detach(x);delete S.nodes[x.id]});
-      APP.ai=true;fakeNet({'/api/ai/quick':[[200,{quick:'r: Call Anna due:fri @anna !high',notes:'Bring the photos.'}]]});await aiQuick('remind me friday to call anna, important');
-      const h=el('#modal').innerHTML;if(modalKind!=='aiquick'||!h.includes('value="r: Call Anna due:fri @anna !high"')||!h.includes('Bring the photos.'))bad.push('preview: modal '+modalKind);
+      APP.ai=true;const long='remind me friday to call anna, important\\n'+'x'.repeat(9000)+' THE END';
+      fakeNet({'/api/ai/quick':[[200,{quick:'r: Call Anna due:fri @anna !high'}]]});await aiQuick(long);
+      const h=el('#modal').innerHTML;if(modalKind!=='aiquick'||!h.includes('value="r: Call Anna due:fri @anna !high"'))bad.push('preview: modal '+modalKind);
+      if(!h.includes(esc(long)))bad.push('dropped text must be kept whole as notes');
       el('#aqLine').value='r: Call Anna due:fri @anna !high';el('#aqLine').oninput();const pv=el('#aqPrev').innerHTML;if(!pv.includes('Call Anna')||!pv.includes('Reminder')||!pv.includes('anna')||!pv.includes('High'))bad.push('preview rows: '+text(pv).slice(0,80));closeModal()}
     finally{toast=realToast;APP.ai=keep}
+    return bad.join('; ')});
+  await asyncCheck('summarize an attachment: summary, points, dates and to-dos; added to the notes and as sub-tasks',async()=>{const bad=[],keep=APP.ai;APP.ai=true;
+    const n=mk('Contract mail');attach(n,'root');n.links.push({title:'mail.eml',uri:'',file:'0123456789abcdef0001.eml'});
+    try{ui.sel=n.id;ui.panel=true;ui.prevFor=null;renderDetail();if(!el('#detail').innerHTML.includes('data-act="aisum"'))bad.push('robot button on the attachment');
+      fakeNet({'/api/ai/summarize':[[200,{warning:'It asks for a money transfer.',summary:'Lena needs the contract.',points:['Board meeting'],todos:['Sign the contract','Send it'],dates:[{when:'Thursday',what:'due'}]}]]});
+      await aiSummarizeFile(n.links[0],n.id);const h=el('#modal').innerHTML;
+      if(modalKind!=='aisum'||!h.includes('Lena needs the contract.')||!h.includes('Thursday: due')||!h.includes('Check it before you use it')||!h.includes('⚠ It asks for a money transfer.')||!h.includes('data-astodo'))bad.push('result window: '+modalKind);
+      el('#modal [data-asnotes]').onclick({target:{}});const x=S.nodes[n.id];
+      if(!x.notes.includes('## AI summary of “mail.eml”')||!x.notes.includes('- [ ] Sign the contract')||!x.notes.includes('### Dates'))bad.push('notes: '+x.notes.slice(0,80));
+      closeModal()}
+    finally{APP.ai=keep;ui.sel=null;const x=S.nodes[n.id];if(x){x.children.forEach(c=>delete S.nodes[c]);detach(x);delete S.nodes[x.id]}}
     return bad.join('; ')});
   Store.sync=realSync;
   fetch=realFetch;location=realLoc})();

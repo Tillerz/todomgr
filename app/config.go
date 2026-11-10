@@ -24,6 +24,7 @@ type ConfigData struct {
 	LANEnabled        bool   `json:"lanEnabled"` // OFF by default: other devices may connect (with the token); needs a restart
 	AIEnabled         bool   `json:"aiEnabled"`  // OFF by default: the AI buttons (helper and model in the ai folder, see ai.go)
 	AIModel           string `json:"aiModel"`    // the model file in the ai folder; empty: the first one by name
+	AIMaxChars        int    `json:"aiMaxChars"` // the longest attachment the AI reads (1,000–500,000 characters)
 }
 
 type Config struct {
@@ -43,7 +44,8 @@ func newToken() string {
 func LoadConfig(dir string) (*Config, error) {
 	c := &Config{path: filepath.Join(dir, "config.json")}
 	c.d = ConfigData{Port: DefaultPort, BackupIntervalMin: DefaultBackupIntervalMin, // see defaults.go
-		LANEnabled: DefaultLANEnabled, MCPEnabled: DefaultMCPEnabled, MCPReadOnly: DefaultMCPReadOnly, AIEnabled: DefaultAIEnabled}
+		LANEnabled: DefaultLANEnabled, MCPEnabled: DefaultMCPEnabled, MCPReadOnly: DefaultMCPReadOnly, AIEnabled: DefaultAIEnabled,
+		AIMaxChars: DefaultAIMaxChars}
 	b, err := os.ReadFile(c.path)
 	switch {
 	case err == nil:
@@ -62,6 +64,9 @@ func LoadConfig(dir string) (*Config, error) {
 	}
 	if c.d.Port <= 0 || c.d.Port > 65535 {
 		c.d.Port, changed = DefaultPort, true
+	}
+	if c.d.AIMaxChars < 1000 || c.d.AIMaxChars > 500000 {
+		c.d.AIMaxChars, changed = DefaultAIMaxChars, true
 	}
 	if c.d.BackupIntervalMin < 1 {
 		c.d.BackupIntervalMin, changed = DefaultBackupIntervalMin, true

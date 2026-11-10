@@ -20,6 +20,10 @@ const (
 	DefaultMCPReadOnly  = false // when MCP is on: AI assistants can read but not change anything
 	DefaultCalendarFeed = false // offer the calendar subscription link (Settings → Calendar subscription)
 	DefaultAIEnabled    = false // the AI buttons; also needs llama-server and a model in the ai folder (Settings → AI)
+
+	// The longest attachment the AI reads, in characters (20,000 is about 8 pages). More needs more memory
+	// while the AI runs and takes longer to read; "aiMaxChars" in data/config.json changes it per install.
+	DefaultAIMaxChars = 20000
 )
 
 // ---------------------------------------------------------------- page (Settings → Appearance and more)

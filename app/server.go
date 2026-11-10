@@ -71,7 +71,7 @@ func NewServer(st *Store, cfg *Config, port int, uiDir string) (*Server, error) 
 		ui = sub
 	}
 	ai := newAIHelper()
-	ai.pick = cfg.Get().AIModel
+	ai.pick, ai.ctx = cfg.Get().AIModel, aiCtxFor(cfg.Get().AIMaxChars)
 	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir), ai: ai}, nil
 }
 
@@ -108,6 +108,7 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/ai/rewrite", s.hAIRewrite)
 	api("POST /api/ai/tags", s.hAITags)
 	api("POST /api/ai/quick", s.hAIQuick)
+	api("POST /api/ai/summarize", s.hAISummarize)
 	api("POST /api/estimate", s.hEstimate)
 	api("GET /api/files/{key}", s.hFileGet)
 	api("GET /api/files/{key}/view", s.hFileView)
@@ -366,7 +367,7 @@ func (s *Server) settings() map[string]any {
 		// enabled: the setting; active: this run listens on the network (a change needs a restart)
 		"lan": map[string]any{"enabled": c.LANEnabled, "active": s.lan, "urls": lanURLs(s.port), "token": c.Token},
 		"cal": s.calInfo(c.CalKey),
-		"ai":  s.ai.status(c.AIEnabled),
+		"ai":  s.aiStatus(),
 		"mcp": map[string]any{
 			"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly,
 			"url": fmt.Sprintf("http://127.0.0.1:%d/mcp", s.port), "token": c.Token,

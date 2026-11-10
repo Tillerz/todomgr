@@ -111,11 +111,48 @@ func (s *Server) hFileView(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if t, ok := officeText(data, key); ok { // Word and LibreOffice: their text
+		jout(w, 200, map[string]any{"kind": "text", "text": t})
+		return
+	}
 	if t, ok := asText(data); ok {
 		jout(w, 200, map[string]any{"kind": "text", "text": t})
 		return
 	}
 	jout(w, 200, map[string]any{"kind": "binary", "size": len(data)})
+}
+
+// fileText: the readable text of a stored file, as the viewer shows it (a mail with its main headers),
+// for the AI; ok is false for files that are not text (PDF, pictures, …).
+func (s *Server) fileText(key string) (string, bool, error) {
+	if !fileKeyRE.MatchString(key) {
+		return "", false, errors.New("invalid file key")
+	}
+	data, err := os.ReadFile(filepath.Join(s.filesDir(), key))
+	if err != nil {
+		return "", false, errors.New("file not found (it is not in data/files)")
+	}
+	if strings.HasSuffix(key, ".eml") {
+		if v, err := viewMail(data); err == nil {
+			var b strings.Builder
+			if h, ok := v["headers"].(map[string]string); ok {
+				for _, k := range []string{"From", "To", "Date", "Subject"} {
+					if h[k] != "" {
+						b.WriteString(k + ": " + h[k] + "\n")
+					}
+				}
+			}
+			if a := strs(v["attachments"]); len(a) > 0 {
+				b.WriteString("Attached files: " + strings.Join(a, ", ") + "\n")
+			}
+			return b.String() + "\n" + str(v["text"]), true, nil
+		}
+	}
+	if t, ok := officeText(data, key); ok {
+		return t, true, nil
+	}
+	t, ok := asText(data)
+	return t, ok, nil
 }
 
 // asText: the file as text, if it looks like text (no zero bytes). UTF-8, or else Latin-1.

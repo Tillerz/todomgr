@@ -183,7 +183,7 @@ them back to the sidebar.
 - Most actions work from the keyboard: see [Keyboard shortcuts](#keyboard-shortcuts).
 - **Right-click menu** (or long-press on touch screens, Shift+F10, or the ⋯ button on a row) with: open, rename, add sub-entry, status, priority, colour, change type, deadline, add or remove a tag, add or remove a person, move to…, reorder and indent, sort sub-items (by name, priority or date; *Undo* brings the old order back), open link, start a timer, announce on Discord, print list, copy as text / copy ID, duplicate, trash. With several entries selected, right-click one of them: the menu then acts on all of them (mark done,   status, priority, colour, add or remove a tag, add or remove a person in charge, move to…, trash). Each entry only takes a status that its type has.
 - A link icon after the name opens the entry's URL (or its single attached link) directly.
-- **Attachments:** drop a file or a mail (from Thunderbird or Outlook) onto an entry or its detail panel. The program keeps a copy in `data/files/` (up to 10 MB per file). Click it under *Links & attachments* to view it: text files as text, mails (`.eml`) with From, To, Date, Subject, the text and the names of attached files. Other files can be downloaded. Backups do not include them: see [Where the data is](#where-the-data-is-and-how-it-is-kept-safe).
+- **Attachments:** drop a file or a mail (from Thunderbird or Outlook) onto an entry or its detail panel. The program keeps a copy in `data/files/` (up to 10 MB per file). Click it under *Links & attachments* to view it: text files as text, mails (`.eml`) with From, To, Date, Subject, the text and the names of attached files. Word (`.docx`) and LibreOffice (`.odt`) files show their text. Other files can be downloaded. Backups do not include them: see [Where the data is](#where-the-data-is-and-how-it-is-kept-safe).
 - **Suggest tags:** *Suggest* next to *Tags* in the detail panel lists your existing tags (in use, or in Settings → Tag icons) that appear in the name or notes, as whole words; "meetings" counts for `#meeting`. Click one to add it, or *Add all*. It only suggests tags you already have, so no near-duplicates appear. When none appears and [AI](#ai-on-this-computer-optional) is on, the AI picks fitting ones from the same list.
 - **Tag icons:** entries with certain tags show an icon before the name, for example `#meeting`, `#stream`, `#nsfw` (18+), `#call`, `#mail`, `#bug`, `#research` and `#review`. Change the list under Settings.
 - **Project icons:** click **Icon** in a project's detail panel to show an icon instead of its square. The icon's colour shows the status: grey while planning, blue when active, orange when paused, green when done.
@@ -244,7 +244,7 @@ The field above the tree adds to the **Inbox** and understands a small syntax. T
 
 **Normal words work too**, in English and German: `Dentist tomorrow at 3pm`, `remind me on Friday to call Anna`, `Zahnarzt morgen um 15 Uhr`, `Finish the draft in 3 days`. Simple rules read days (today, tomorrow, the day after tomorrow, weekdays, next week, in 3 days, dates such as 20.12.) and times (15:00, 3pm, um 15 Uhr, noon / Mittag = 12:00, midnight / Mitternacht = 23:59, the end of that day), and "remind me" makes a reminder; those words leave the name. A short message shows how it was read, with *Keep as typed*. A weekday only counts after "on", "next", "by", "am"… or at the start or end, so `Watch Friday Night Lights` stays as typed. **Shift+Enter** always adds exactly as typed.
 
-With [AI](#ai-on-this-computer-optional) on, text with time words the rules cannot read (`at the end of the month`, `half past nine`) goes to the AI, and so does **Ctrl+Enter** or text dropped onto the field. The AI writes a Quick add line, and the app reads the dates from it as always; a preview shows the result to check or change, with *Add*, *Add as typed* or *Cancel*. Dropped text with several lines also gives notes.
+With [AI](#ai-on-this-computer-optional) on, text with time words the rules cannot read (`at the end of the month`, `half past nine`) goes to the AI, and so does **Ctrl+Enter** or text dropped onto the field. The AI writes a Quick add line, and the app reads the dates from it as always; a preview shows the result to check or change, with *Add*, *Add as typed* or *Cancel*. Dropped text with several lines is kept **whole and unchanged** as the notes; the AI only reads the start of a very long text, to find the name and the date.
 
 **Drop files on it to import them:** calendar files (`.ics`) and CSV files, one or more at once. A preview lists the entries first, see [Export and import](#export-and-import).
 
@@ -391,15 +391,32 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 A small AI that runs on your own computer, without an account and without the internet. Off by default.
 
 - **Suggest sub-tasks:** in the detail panel (*Actions*) or the right-click menu. An entry without sub-items is split into steps; an entry with sub-items gets the ones that are still missing. A list shows the suggestions first: untick what you do not want, change the names, then *Add*.
-- **Rewrite notes:** the *Rewrite* button above the notes offers two choices. **Tidy up** fixes spelling, turns items into lists and open tasks into tick boxes, and groups what belongs together; it adds nothing and keeps every fact and link. **Expand** adds next steps, things to prepare, open questions and tips below your notes, from the notes and the entry's name, so it also works on an entry without notes. You see the old and the new text side by side and choose.
-- The AI buttons only show when AI is switched on and set up. Every answer is a suggestion: nothing changes until you accept it, and *Undo* works as always.
+- **Rewrite notes:** the *Rewrite* button above the notes offers two choices. **Tidy up** fixes spelling, turns items into lists and open tasks into tick boxes, and groups what belongs together; it adds nothing and keeps every fact and link. **Expand** adds next steps, things to prepare, open questions and tips below your notes, from the notes and the entry's name, so it also works on an entry without notes. You see the old and the new text side by side and choose. Notes of up to 8,000 characters.
+- **Summarize an attachment:** the robot button next to an attached mail, text, Word (`.docx`) or LibreOffice (`.odt`) file, or *Summarize* in its viewer. You get a summary, key points, dates and to-dos, and choose *Add to notes* and/or *Add the ticked to-dos as sub-tasks*. Files of up to 20,000 characters (about 8 pages, see [Memory and speed](#memory-and-speed)).
+- **Where the app has no answer of its own:** [Suggest estimate](#time-tracking-and-the-timer), [Suggest tags](#the-tree) and [Quick add in normal words](#quick-add) ask the AI only when the app's own rules find nothing.
+- The AI buttons only show when AI is switched on and set up.
 
-**Set it up** (once): put two things into a folder `ai` next to the program (`todo` / `todo.exe`):
+#### Set it up
+
+Once: put two things into a folder `ai` next to the program (`todo` / `todo.exe`):
 
 1. **llama-server** from [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases): the archive for your system, for example `llama-…-bin-win-cpu-x64.zip` (Windows), `…-bin-win-vulkan-x64.zip` (Windows with a graphics card), `…-bin-ubuntu-x64.tar.gz` (Linux) or `…-bin-macos-arm64.tar.gz` (Mac). Unpack all of it into `ai/`; a sub-folder is fine.
-2. **A model:** [`Qwen3.5-4B-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) (2.7 GB, Apache 2.0 licence). Bigger models work too, for example `Qwen3.5-9B-Q4_K_M.gguf` (5.7 GB) with a graphics card.
+2. **A model:** [`Qwen3.5-4B-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) (2.7 GB, Apache 2.0 licence). Bigger models give better answers, see [Memory and speed](#memory-and-speed). With several `.gguf` files in `ai/`, pick one in Settings → AI → *Model*.
 
-Then Settings → AI → *Use AI*, and *Test*. The program starts the helper at the first AI click (this takes a few seconds up to a minute) and stops it after 15 minutes without use; *Unload* stops it at once. While it runs, it needs a bit more memory than the model file's size (about 3–4 GB for the 4B model).
+Then Settings → AI → *Use AI*, and *Test*. The helper only listens on `127.0.0.1`, with a new random key at each start. Its output goes to `ai/llama-server.log`.
+
+#### Safety
+
+- **Everything stays on your computer.** Your entries, notes and files never leave it.
+- **The AI only answers.** It has no tools and no internet access; it cannot run commands, open files or change your data. Every answer is a suggestion: nothing changes until you accept it, and *Undo* works as always.
+- **Files and notes are data, not instructions.** The AI is told to ignore commands hidden in them, it can only fill in a fixed answer form, and web addresses in its answer that are not in the file are removed. When an attachment tries to give the AI commands or looks like phishing (urgent requests to log in, to pay, to send passwords), the summary shows a red warning.
+
+> [!IMPORTANT]
+> No AI can be made fully immune to such tricks. Always check an AI answer before you accept it.
+
+#### Memory and speed
+
+The program starts the helper at the first AI click (a few seconds up to a minute) and stops it after 15 minutes without use; Settings → AI → *Unload* stops it at once. While it runs, it needs a bit more memory than the model file's size (about 3–4 GB for the 4B model), plus room for the text it reads.
 
 > [!TIP]
 > **Bigger models give much better answers**, but need more memory. A model needs a bit more memory than its file size: on the graphics card (VRAM) if it fits there, otherwise in the computer's memory, where it is much slower. A rough guide:
@@ -409,8 +426,8 @@ Then Settings → AI → *Use AI*, and *Test*. The program starts the helper at 
 > | about 3 GB (4B) | OK for simple tasks | the processor alone |
 > | about 6 GB (9B) | better | a graphics card with 8 GB |
 > | about 13 GB | much better | a graphics card with 16 GB or more |
->
-> Put several `.gguf` files into `ai/` and pick one in Settings → AI → *Model*. It only listens on `127.0.0.1`, with a new random key at each start. Its output goes to `ai/llama-server.log`.
+
+**Long attachments:** the AI reads attachments of up to 20,000 characters (about 8 pages). To change it, set `"aiMaxChars"` in `data/config.json` (1,000 to 500,000) and restart the program. More needs more memory while the AI runs and takes longer to read, especially without a graphics card; less suits a computer with little memory. The default for new installs is in [`app/defaults.go`](app/defaults.go).
 
 ### Settings (⋯ → Settings)
 
@@ -436,7 +453,7 @@ The browser, the command line and AI assistants can all work at the same time. T
 data/database.json        the entries (always valid JSON; contains "schema" and "app" version)
 data/database.prev.json   the state one save ago
 data/activity.jsonl       append-only log of what was done and when (feeds the statistics)
-data/config.json          port, access token, MCP switch, backup interval, time zone
+data/config.json          port, access token, MCP switch, backup interval, time zone, AI settings
 data/backups/             snapshots (auto every 10 min when changed, manual, and before import/restore/reset/migration)
 data/files/               copies of dropped files (attachments); not part of backups or the JSON export
 ```
@@ -483,15 +500,15 @@ go test ./...
 
 All program code is in `app/`: the Go files and the web page (`app/web/`), which is built into the program. GitHub runs `./build.sh` and `./test.sh` on every push (`.github/workflows/test.yml`, the *tests* badge at the top), with the Go version from `go.mod`.
 
-**Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port, backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme, light/dark, font, font size, row height, panel width, full page width, cheer me on, work day and default tag icons. Change them there and run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings. The version number stays in `app/main.go`, where the build and release scripts read it.
+**Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port, backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme, light/dark, font, font size, row height, panel width, full page width, cheer me on, work day and default tag icons, and the longest attachment the AI reads. Change them there and run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings. The version number stays in `app/main.go`, where the build and release scripts read it.
 
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes preview tests (`node app/notes_test.js`) and the page smoke test (`node app/page_check.js`), which draws the main views of the page with the demo data. Give it a data file to check your own data, read only: `node app/page_check.js test/data/database.json`.
 
 ## Screenshots
 
-### The detail panel of a reminder, with a custom repeat rule
+### The detail panel of a todo
 
-<img alt="The detail panel of a reminder with a custom repeat rule" src="docs/detail-pane.png" width=400px>
+<img alt="The detail panel of a todo" src="docs/detail-pane.png" width=400px>
 
 ### The Today view with reminders, sci-fi theme
 
@@ -595,7 +612,8 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `GET /api/files/{key}`, `/api/files/{key}/view` | download the file (`name` sets the file name) / what the viewer shows: `kind` text, mail or binary |
 | `GET /api/ai`, `POST /api/ai/unload` | AI status (switched on, helper and model found, running) / stop the helper |
 | `POST /api/ai/subtasks`, `/api/ai/rewrite` | `{id}` – suggested sub-tasks `{items}` / rewritten notes `{text}` (`mode`: `tidy` or `expand`); nothing is saved. `POST /api/ai/test` asks one short question |
-| `POST /api/ai/quick` | `{text, tags}` – the AI turns normal words into a Quick add line `{quick, notes}` (notes only for text with several lines); nothing is saved |
+| `POST /api/ai/summarize` | `{file, name}` – a summary of a stored file (mail, text, .docx, .odt; up to 8,000 characters): `{summary, warning, points, todos, dates}`; nothing is saved |
+| `POST /api/ai/quick` | `{text, tags}` – the AI turns normal words into a Quick add line `{quick}`; nothing is saved |
 | `POST /api/ai/tags` | `{id, tags}` – the AI picks up to 5 of these tags for the entry `{tags}`; nothing is saved |
 | `POST /api/estimate` | `{id, ai}` – a suggested estimate `{minutes, reason, used, source}` from finished todos with tracked time; `ai: true` lets the AI guess when there is no such history; `minutes: 0` when there is nothing to go by |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |

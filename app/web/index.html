@@ -1109,7 +1109,7 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
 <div class="stepper" style="margin-top:6px"><input type="number" min="1" data-f="mintime" placeholder="minutes" style="width:100px"><button class="btn" data-act="addtime" data-tip="Add a manual time entry">Log time</button></div>
 <h4>Links & attachments</h4>
 <div class="list">${n.links.map((l,i)=>{const kd=/^mailto:|^mid:|^message:|^outlook:|^mailbox:|^imap:|\.(eml|msg)$/i.test(l.file?l.title:l.uri)?'mail':/^https?:/i.test(l.uri)?'globe':'file';
-  return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.file?'Click to view the copy kept in data/files'+(l.uri?'\n'+l.uri:''):l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri||l.file?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
+  return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.file?'Click to view the copy kept in data/files'+(l.uri?'\n'+l.uri:''):l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${APP.ai&&l.file&&AI_READ.test(l.file)?` <button class="ib" data-act="aisum" data-i="${i}" data-tip="Summarize with the AI: summary, key points, to-dos and dates">${ic('bot',13)}</button>`:''}${l.uri||l.file?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
 <div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> ${APP.ai?'<button class="chip" data-act="airewrite" data-tip="Tidy up or expand the notes with the AI. You see the old and the new text first.">'+ic('bot',12)+' Rewrite</button> ':''}<button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
@@ -1213,7 +1213,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'prio':m(()=>n.prio=+v);break;case'color':m(()=>n.color=v);break;
     case'pmode':if(n.prog.mode!==v)m(()=>{if(v==='units'){n.prog.total=10;n.prog.done=Math.round(n.prog.done/10)}else{n.prog.done=Math.round(n.prog.done/n.prog.total*100);n.prog.total=100}n.prog.mode=v});break;
     case'pstep':mutate(()=>setProgress(n,n.prog.done+(+v)),{panel:true});break;
-    case'rmtag':m(()=>n.tags.splice(i,1));break;case'tagsuggest':tagSuggest(n.id);break;case'addsug':addTag([n],b.dataset.v);break;case'addallsug':{const ts=sugLeft(n);mutate(()=>{ts.forEach(t=>n.tags.push(t));touch(n)},{panel:true});ui.tagSug=null;break}case'rmperson':m(()=>n.people.splice(i,1));break;case'rmdep':m(()=>n.deps.splice(i,1));break;case'rmlink':m(()=>n.links.splice(i,1));break;
+    case'rmtag':m(()=>n.tags.splice(i,1));break;case'tagsuggest':tagSuggest(n.id);break;case'aisum':{const l=n.links[i];if(l&&l.file)aiSummarizeFile(l,n.id);break}case'addsug':addTag([n],b.dataset.v);break;case'addallsug':{const ts=sugLeft(n);mutate(()=>{ts.forEach(t=>n.tags.push(t));touch(n)},{panel:true});ui.tagSug=null;break}case'rmperson':m(()=>n.people.splice(i,1));break;case'rmdep':m(()=>n.deps.splice(i,1));break;case'rmlink':m(()=>n.links.splice(i,1));break;
     case'goto':reveal(b.dataset.id);break;
     case'openlink':{const l=n.links[i];if(l.file)showFile(l);else if(/^(https?:|mailto:|file:)/i.test(l.uri))window.open(l.uri,'_blank','noopener');else if(l.uri){navigator.clipboard?.writeText(l.uri);toast('Path copied to clipboard (browsers cannot open local paths)')}else toast('No path stored for this file');break}
     case'whtest':{if(!n.webhook)break;b.disabled=true;sendDiscord(n.id,'Webhook test from '+APP.name,'').then(()=>toast('Test message sent')).catch(err=>toast('Failed: '+err.message)).finally(()=>b.disabled=false);break}
@@ -1440,7 +1440,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick','aisum'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1616,6 +1616,7 @@ function aiSettings(A){const ok=(v,what)=>v?`✔ ${esc(v)}`:`<span style="color:
   <label class="chk-row"><input type="checkbox" id="aiOn" ${A.enabled?'checked':''}> Use AI <small style="color:var(--muted)">(off by default)</small></label>
   <div class="note">Helper: ${ok(A.helper,'llama-server')} · Model: ${ok(A.model,'a .gguf file')}${A.running?' · <b>loaded</b>':''}</div>
   ${(A.models||[]).length>1?`<label class="field"><span>Model</span><select id="aiModel" data-tip="Changing it unloads the AI; the next AI click loads the new model">${A.models.map(m=>`<option value="${esc(m)}" ${m===A.model?'selected':''}>${esc(m)}</option>`).join('')}</select></label>`:''}
+  ${A.maxChars?`<div class="note">Reads attachments up to ${A.maxChars.toLocaleString()} characters (<code>aiMaxChars</code> in <code>data/config.json</code>; more needs more memory).</div>`:''}
   <div style="display:flex;gap:6px;margin-top:6px"><button class="btn" id="aiTest" ${A.enabled&&A.ready?'':'disabled'} data-tip="Asks the AI one short question">Test</button><button class="btn" id="aiUnload" ${A.running?'':'disabled'} data-tip="Stops the AI now and frees its memory. It also stops by itself after 15 minutes without use.">Unload</button></div>
   ${A.ready?'':`<div class="note">To set it up, put two things into the folder <code>${esc(A.dir)}</code>:<br>1. <b>llama-server</b>: from <a href="https://github.com/ggml-org/llama.cpp/releases" target="_blank" rel="noopener">llama.cpp releases</a>, download the archive for your system (for example <code>…-bin-win-cpu-x64.zip</code>, or <code>…-bin-win-vulkan-x64.zip</code> to use a graphics card) and unpack all of it there.<br>2. <b>A model</b>: from <a href="https://huggingface.co/unsloth/Qwen3.5-4B-GGUF" target="_blank" rel="noopener">Qwen3.5-4B</a>, the file <code>Qwen3.5-4B-Q4_K_M.gguf</code> (2.7 GB).</div>`}`}
 async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current data with the demo data? (A backup of the current data is kept in data/backups.)'))return;
@@ -1991,8 +1992,9 @@ const KL={todo:'Todo',idea:'Idea',project:'Project',reminder:'Reminder'};
 async function aiQuick(text){const typed=text.trim();
   const tags=Object.entries(allNodes().flatMap(x=>x.tags).reduce((a,t)=>(a[t]=(a[t]||0)+1,a),{})).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,100);
   const r=await aiRun('Quick add with AI','/api/ai/quick',{text:typed,tags});if(!r)return;
+  const notes=typed.includes('\n')?typed:'';// dropped text: kept whole as notes by the app, never by the AI
   openModal(`<h3 style="margin-top:0">Add this?</h3><label class="field"><span>Quick add line <small style="color:var(--muted)">(you can change it)</small></span><input id="aqLine" value="${esc(r.quick)}"></label>
-<div id="aqPrev" class="aqprev"></div>${r.notes?`<label class="field" style="margin-top:8px"><span>Notes</span><textarea id="aqNotes" rows="5">${esc(r.notes)}</textarea></label>`:''}
+<div id="aqPrev" class="aqprev"></div>${notes?`<label class="field" style="margin-top:8px"><span>Notes <small style="color:var(--muted)">(the whole text, as dropped)</small></span><textarea id="aqNotes" rows="5">${esc(notes)}</textarea></label>`:''}
 <div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-aqno>Cancel</button><button class="btn" data-aqtyped data-tip="Add it without the AI, as the text was typed">Add as typed</button><button class="btn pri" data-aqadd>Add</button></div>`,{kind:'aiquick'});
   const prev=()=>{const{name,props:o}=parseQuick($('#aqLine').value),w=o.reminder||o.deadline,row=(k,v)=>v?`<b>${k}</b><span>${esc(v)}</span>`:'';
     $('#aqPrev').innerHTML=row('Name',name||'(missing)')+row('Type',KL[o.kind||'todo'])+row('When',w&&whenTxt(w))+row('People',o.people.join(', '))+row('Tags',o.tags.map(t=>'#'+t).join(' '))
@@ -2067,11 +2069,35 @@ async function uploadDropped(links){for(const l of links){const f=l.f;delete l.f
     l.file=(await Store.api('POST','/api/files',{name:f.name,data})).file}
   catch(e){toast(`Could not keep a copy of “${f.name}”: ${e.message}`)}}
   return links}
+// Summarize an attachment (mail, text, Word, LibreOffice; at most 8,000 characters) with the AI (ai.go).
+// The file is data for the AI: it is told to ignore commands in it, can only fill in the answer form,
+// and links it adds are removed. Nothing is saved until "Add to notes" or "Add to-dos" is clicked.
+const AI_READ=/\.(eml|txt|md|markdown|csv|log|json|xml|html?|ics|docx|odt)$/i;
+async function aiSummarizeFile(l,id){const r=await aiRun(`Summarize “${l.title}”`,'/api/ai/summarize',{file:l.file,name:l.title});if(!r)return;
+  const n=S.nodes[id],ul=a=>`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`,dates=r.dates.map(d=>(d.when?d.when+': ':'')+d.what);
+  openModal(`<h3 style="margin-top:0;word-break:break-word">Summary of “${esc(l.title)}”</h3>
+<p class="note">${ic('bot',12)} Written by the AI from the file. Check it before you use it.</p>
+${r.warning?`<p style="color:var(--danger);font-weight:600">⚠ ${esc(r.warning)}</p>`:''}
+<p>${esc(r.summary)}</p>${r.points.length?'<h4>Key points</h4>'+ul(r.points):''}${dates.length?'<h4>Dates</h4>'+ul(dates):''}
+${r.todos.length?`<h4>To do</h4><div class="implist">${r.todos.map((t,i)=>`<label class="improw"><input type="checkbox" data-ast="${i}" checked><span>${esc(t)}</span></label>`).join('')}</div>`:''}
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><span class="sp" style="flex:1"></span>${n?`<button class="btn" data-asnotes>Add to notes</button>${r.todos.length?'<button class="btn" data-astodo>Add the ticked to-dos as sub-tasks</button>':''}`:''}<button class="btn pri" data-asclose>Close</button></div>`,{kind:'aisum',cls:'fview'});
+  $('#modal [data-asclose]').onclick=closeModal;
+  if($('#modal [data-asnotes]'))$('#modal [data-asnotes]').onclick=e=>{const x=S.nodes[id];if(!x)return;const bb=x.notesFormat==='bbcode';
+    const head=t=>bb?`[h3]${t}[/h3]\n`:`### ${t}\n`,list=(a,box)=>bb?`[ul]\n${a.map(t=>'- '+t).join('\n')}\n[/ul]\n`:a.map(t=>(box?'- [ ] ':'- ')+t).join('\n')+'\n';
+    const add=(bb?`[h2]AI summary of “${l.title}”[/h2]\n`:`## AI summary of “${l.title}”\n\n`)+r.summary+'\n\n'+(r.points.length?head('Key points')+list(r.points)+'\n':'')
+      +(dates.length?head('Dates')+list(dates)+'\n':'')+(r.todos.length?head('To do')+list(r.todos,true):'');
+    mutate(()=>{x.notes=(x.notes.trim()?x.notes.trimEnd()+'\n\n':'')+add.trim();touch(x)},{panel:true});e.target.disabled=true;toast('Summary added to the notes',{action:{label:'Undo',fn:undo}})};
+  if($('#modal [data-astodo]'))$('#modal [data-astodo]').onclick=e=>{const x=S.nodes[id];if(!x)return;
+    const names=$$('#modal [data-ast]').filter(b=>b.checked).map(b=>r.todos[+b.dataset.ast]);if(!names.length)return toast('Tick at least one to-do');
+    mutate(()=>{names.forEach(nm=>{const c=mk(nm);attach(c,id);log('create',c.id)});x.collapsed=false},{panel:true});e.target.disabled=true;
+    toast(`Added ${names.length} sub-task${names.length===1?'':'s'} to “${x.name}”`,{action:{label:'Undo',fn:undo}})}}
 async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
   openModal(`<h3 style="margin-top:0;word-break:break-word">${esc(l.title)}</h3><div id="fv"><div class="empty">Loading…</div></div>
-    <div class="row-between" style="margin-top:10px"><small style="color:var(--muted)">${l.uri?esc(l.uri):'A copy kept in data/files'}</small><a class="btn" href="${u}?name=${encodeURIComponent(l.title)}" download>Download</a></div>`,{cls:'fview',kind:'file'});
+    <div class="row-between" style="margin-top:10px"><small style="color:var(--muted)">${l.uri?esc(l.uri):'A copy kept in data/files'}</small><span><span id="fvAi"></span> <a class="btn" href="${u}?name=${encodeURIComponent(l.title)}" download>Download</a></span></div>`,{cls:'fview',kind:'file'});
+  const id=ui.sel;
   let v;try{v=await Store.api('GET',u+'/view')}catch(e){if($('#fv'))$('#fv').innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
   if(modalKind!=='file'||!$('#fv'))return;
+  if(APP.ai&&v.kind!=='binary'&&id){$('#fvAi').innerHTML=`<button class="btn" id="fvSum">${ic('bot',14)} Summarize</button>`;$('#fvSum').onclick=()=>aiSummarizeFile(l,id)}
   const H=v.headers||{},hd=['From','To','Cc','Date','Subject'].filter(k=>H[k]).map(k=>`<b>${k}</b><span>${esc(H[k])}</span>`).join('');
   $('#fv').innerHTML=v.kind==='binary'?`<div class="empty">This file type cannot be shown here (${Math.max(1,Math.round(v.size/1024))} KB). Use Download.</div>`
     :(hd?`<div class="fvhd">${hd}${v.attachments?.length?`<b>Attached</b><span>${v.attachments.map(esc).join(', ')}</span>`:''}</div>`:'')+`<pre class="fvtext">${esc(v.text||'(no text)')}</pre>`}
