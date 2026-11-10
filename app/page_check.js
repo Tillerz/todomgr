@@ -146,6 +146,22 @@ check('tags: suggested from existing tags as whole words, with short endings; sh
     if(!h.includes('data-act="addsug" data-v="call"')||h.includes('data-v="mail"'))bad.push('suggestion row')}
   finally{ui.tagSug=null;ui.sel=null;made.reverse().forEach(x=>{detach(x);delete S.nodes[x.id]})}
   return bad.join('; ')});
+check('quick add in normal words: day and time words become due: and at:, the rest stays as typed',()=>{const bad=[];
+  const cases=[['remind me next Friday to call Anna','r: Call Anna due:fri'],['Dentist tomorrow at 3pm','Dentist due:tomorrow at:15:00'],
+    ['Zahnarzt morgen um 15 Uhr','Zahnarzt due:tomorrow at:15:00'],['Erinnere mich übermorgen an den Müll','r: Den Müll due:+2d'],
+    ['Pay rent on Monday','Pay rent due:mon'],['Friday: team lunch','Team lunch due:fri'],['Submit the report by friday.','Submit the report due:fri'],
+    ['Finish the draft in 3 days','Finish the draft due:+3d'],['Steuer in 2 Wochen','Steuer due:+2w'],['Call the bank next week','Call the bank due:+1w'],
+    ['Meeting 14:30 tomorrow','Meeting due:tomorrow at:14:30'],['Heute Abend Pizza backen','Pizza backen due:today'],
+    ['Abgabe am 20.12.2030','Abgabe due:2030-12-20'],['Release on 2030-01-15','Release due:2030-01-15'],['remind me to stretch','r: Stretch'],
+    ['Submit by midnight on Friday','Submit due:fri at:23:59'],['Heute Mittag Arzt','Arzt due:today at:12:00'],['Call Sara tomorrow at noon','Call Sara due:tomorrow at:12:00'],
+    ['Lunch with Tom at noon','Lunch with Tom due:'+(pd(addDays(0)+'T12:00')>new Date()?'today':'tomorrow')+' at:12:00'],
+    ['Lunch with Tom at 1','Lunch with Tom due:'+(pd(addDays(0)+'T13:00')>new Date()?'today':'tomorrow')+' at:13:00']];
+  for(const [inp,want] of cases){const r=quickWords(inp);if(r.quick!==want)bad.push(inp+' → '+(r.quick||'(nothing)')+', want '+want)}
+  // nothing to read: stays as typed; time words that the rules cannot read are a hint for the AI
+  for(const [inp,hint] of [['Watch Friday Night Lights',true],['Buy milk',false],['Pay the bills at the end of the month',true],['Read chapter 3',false],['Recall the 3 points',false],['Call mum at half past nine',true],['Mittagessen kochen',false],['Um halb zehn Arzt',true]]){
+    const r=quickWords(inp);if(r.quick||r.hint!==hint)bad.push(inp+' → '+JSON.stringify(r))}
+  if(quickWords('Dentist tomorrow, end of the month').hint!==true)bad.push('hint left after the rules');
+  return bad.slice(0,6).join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];
@@ -220,6 +236,17 @@ return (async()=>{const realFetch=fetch,realLoc=location;APP.instance='aaaa1111'
     APP.ai=true;fakeNet({'/api/estimate':[[200,{minutes:0,reason:'',source:'',used:[]}],[200,{minutes:30,reason:'Guess.',source:'ai',used:[]}]]});await estSuggest(n.id);
     if(modalKind!=='est'||!el('#modal').innerHTML.includes('AI guess'))bad.push('AI guess: modal '+modalKind);closeModal();APP.ai=keep;
     if(!nodeMenu(n).some(i=>i.label==='Suggest estimate…'))bad.push('menu entry');
+    return bad.join('; ')});
+  await asyncCheck('quick add: rules add at once with Keep as typed; the AI preview shows what the app reads',async()=>{const bad=[],keep=APP.ai,realToast=toast;let last=null;
+    toast=(m,o)=>{last={m,o}};
+    try{const n=quickAdd('Dentist due:tomorrow at:15:00','','Dentist tomorrow at 3pm');
+      if(!n||n.deadline!==addDays(1)+'T15:00'||!last.m.includes('Dentist')||last.o?.action?.label!=='Keep as typed')bad.push('rules: '+JSON.stringify(last));
+      last.o.action.fn();const k=allNodes().filter(x=>x.name==='Dentist tomorrow at 3pm');if(k.length!==1||allNodes().some(x=>x.name==='Dentist'&&x.deadline))bad.push('keep as typed: '+k.length);
+      k.forEach(x=>{detach(x);delete S.nodes[x.id]});
+      APP.ai=true;fakeNet({'/api/ai/quick':[[200,{quick:'r: Call Anna due:fri @anna !high',notes:'Bring the photos.'}]]});await aiQuick('remind me friday to call anna, important');
+      const h=el('#modal').innerHTML;if(modalKind!=='aiquick'||!h.includes('value="r: Call Anna due:fri @anna !high"')||!h.includes('Bring the photos.'))bad.push('preview: modal '+modalKind);
+      el('#aqLine').value='r: Call Anna due:fri @anna !high';el('#aqLine').oninput();const pv=el('#aqPrev').innerHTML;if(!pv.includes('Call Anna')||!pv.includes('Reminder')||!pv.includes('anna')||!pv.includes('High'))bad.push('preview rows: '+text(pv).slice(0,80));closeModal()}
+    finally{toast=realToast;APP.ai=keep}
     return bad.join('; ')});
   Store.sync=realSync;
   fetch=realFetch;location=realLoc})();

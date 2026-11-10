@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -658,4 +659,111 @@ func (s *Server) hAITags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jout(w, 200, map[string]any{"tags": tags})
+}
+
+// aiQuick turns normal words into a Quick add line, which the page reads with its own parser: the AI
+// never works out dates itself, it writes due:fri, due:+2w and so on. Longer text (dropped onto Quick
+// add) also gives notes: the useful rest of the text.
+func (s *Server) aiQuick(ctx context.Context, text string, tags []string) (string, string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", "", errors.New("the text is empty")
+	}
+	now := s.st.Now()
+	tagHint := "Use #tag only with one of these tags: none."
+	if len(tags) > 0 {
+		tagHint = "Use #tag only with one of these tags, when it clearly fits: " + strings.Join(tags[:min(100, len(tags))], ", ") + "."
+	}
+	// notes only for longer text (dropped onto Quick add); for one line, a small model copies the text into them
+	multi := strings.Contains(text, "\n")
+	props, req := map[string]any{"quick": map[string]any{"type": "string", "minLength": 2, "maxLength": 300}}, []string{"quick"}
+	notesRule := ""
+	if multi {
+		props["notes"] = map[string]any{"type": "string", "maxLength": 8000}
+		req = append(req, "notes")
+		notesRule = "notes: the rest of the text that is useful for the task, unchanged.\n"
+	}
+	last := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, now.Location())
+	var out struct {
+		Quick string `json:"quick"`
+		Notes string `json:"notes"`
+	}
+	err := s.ai.ask(ctx, 0, "You turn text into one quick-add line of a todo app. Write a short name for the entry in the same language "+
+		"as the text (English text: English name, German text: German name), without the date and time words, then add these marks where "+
+		"the text says so:\n"+
+		"- r: at the very start for an appointment, a meeting, an event or anything with \"remind me\"; i: at the start only when the text "+
+		"calls it an idea; else nothing (a todo).\n"+
+		"- due:DAY. DAY is one of: today, tomorrow, +2d (day after tomorrow, übermorgen), +3d (in 3 days), +1w (next week), +2w (in 2 "+
+		"weeks), mon, tue, wed, thu, fri, sat, sun (the next such day), or a date as YYYY-MM-DD.\n"+
+		"- at:HH:MM in 24-hour time.\n"+
+		"- @name for each person to meet, call, ask or work with, in lower case.\n"+
+		"- !low, !medium, !high or !urgent only when the text says how important it is.\n"+
+		"- ~30m or ~2h only when the text says how long it takes.\n"+
+		"- repeat:d, repeat:w, repeat:m or repeat:y for every day, week, month or year; with due: for the first day.\n"+
+		tagHint+"\n"+
+		"Today is "+now.Format("Monday, 2006-01-02")+". The end of this month is "+last.Format("2006-01-02")+".\n"+notesRule+
+		"Examples: \"remind me next friday to call Anna\" → r: Call Anna due:fri @anna\n"+
+		"\"remind me tomorrow at half past nine to water the plants\" → r: Water the plants due:tomorrow at:09:30\n"+
+		"\"finish the tax return in two weeks, takes about 3 hours, important\" → Finish the tax return due:+2w ~3h !high\n"+
+		"\"übermorgen 20 Uhr mit Jan ins Kino\" → r: Ins Kino mit Jan due:+2d at:20:00 @jan\n"+
+		"\"every monday at 10 team call\" → r: Team call due:mon at:10:00 repeat:w\n"+
+		"\"pay the rent at the end of the month\" → Pay the rent due:"+last.Format("2006-01-02"),
+		text, map[string]any{"type": "object", "required": req, "properties": props}, &out)
+	if err != nil {
+		return "", "", err
+	}
+	q := fixQuick(strings.TrimSpace(strings.ReplaceAll(out.Quick, "\n", " ")))
+	if q == "" {
+		return "", "", errors.New("the AI sent no entry")
+	}
+	if reRemind.MatchString(text) && !strings.HasPrefix(q, "r:") { // "remind me" is always a reminder
+		q = "r: " + strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(q, "i:"), "t:"))
+	}
+	if !multi {
+		out.Notes = ""
+	}
+	return q, strings.TrimSpace(out.Notes), nil
+}
+
+// fixQuick repairs mistakes a small model makes in a Quick add line: due:30d → due:+30d, due:tom → due:tomorrow,
+// repeat:mon or repeat:weekly → repeat:w, and so on.
+var (
+	reDueN   = regexp.MustCompile(`(^|\s)due:(\d+)([dw])\b`)
+	reRepDay = regexp.MustCompile(`(?i)(^|\s)repeat:(mon|tue|wed|thu|fri|sat|sun)\w*`)
+	reRepRaw = regexp.MustCompile(`(?i)(^|\s)repeat:(daily|weekly|monthly|yearly|annually)\b`)
+	reRemind = regexp.MustCompile(`(?i)^\s*(remind me|erinnere? mich)\b`)
+)
+
+func fixQuick(q string) string {
+	q = reDueN.ReplaceAllString(q, "${1}due:+${2}${3}")
+	q = strings.ReplaceAll(q, "due:tom ", "due:tomorrow ")
+	if strings.HasSuffix(q, "due:tom") {
+		q += "orrow"
+	}
+	q = reRepRaw.ReplaceAllStringFunc(q, func(m string) string { // first, so "monthly" is not read as a weekday
+		lead := m[:len(m)-len(strings.TrimLeft(m, " \t"))]
+		w := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(m), "repeat:"))
+		return lead + "repeat:" + map[string]string{"daily": "d", "weekly": "w", "monthly": "m", "yearly": "y", "annually": "y"}[w]
+	})
+	return reRepDay.ReplaceAllString(q, "${1}repeat:w")
+}
+
+func (s *Server) hAIQuick(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Text string
+		Tags []string
+	}
+	if err := readBody(r, &req, 1<<20); err != nil {
+		fail(w, err)
+		return
+	}
+	if !s.aiOn(w) {
+		return
+	}
+	q, notes, err := s.aiQuick(r.Context(), clip(req.Text, aiMaxNotes), req.Tags)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	jout(w, 200, map[string]any{"quick": q, "notes": notes})
 }

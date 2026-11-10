@@ -23,7 +23,7 @@ More in [Screenshots](#screenshots).
 
 ### Capture in seconds
 
-- Quick Add: type `Call Anna @anna !high due:fri at:14:00` and it creates a todo with the person, priority, date, and time already set.
+- Quick Add: type `Call Anna @anna !high due:fri at:14:00` and it creates a todo with the person, priority, date, and time already set. Normal words work too: `Dentist tomorrow at 3pm`.
 - Tags and people autocomplete, so `#Work` and `#work` never split into two.
 - Todos, ideas, projects and reminders live together in one tree.
 
@@ -241,6 +241,10 @@ Press **?** in the app to see this list.
 ### Quick add
 
 The field above the tree adds to the **Inbox** and understands a small syntax. The Inbox is a normal top-level entry. The app makes it the first time you add something here.
+
+**Normal words work too**, in English and German: `Dentist tomorrow at 3pm`, `remind me on Friday to call Anna`, `Zahnarzt morgen um 15 Uhr`, `Finish the draft in 3 days`. Simple rules read days (today, tomorrow, the day after tomorrow, weekdays, next week, in 3 days, dates such as 20.12.) and times (15:00, 3pm, um 15 Uhr, noon / Mittag = 12:00, midnight / Mitternacht = 23:59, the end of that day), and "remind me" makes a reminder; those words leave the name. A short message shows how it was read, with *Keep as typed*. A weekday only counts after "on", "next", "by", "am"… or at the start or end, so `Watch Friday Night Lights` stays as typed. **Shift+Enter** always adds exactly as typed.
+
+With [AI](#ai-on-this-computer-optional) on, text with time words the rules cannot read (`at the end of the month`, `half past nine`) goes to the AI, and so does **Ctrl+Enter** or text dropped onto the field. The AI writes a Quick add line, and the app reads the dates from it as always; a preview shows the result to check or change, with *Add*, *Add as typed* or *Cancel*. Dropped text with several lines also gives notes.
 
 **Drop files on it to import them:** calendar files (`.ics`) and CSV files, one or more at once. A preview lists the entries first, see [Export and import](#export-and-import).
 
@@ -591,6 +595,7 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `GET /api/files/{key}`, `/api/files/{key}/view` | download the file (`name` sets the file name) / what the viewer shows: `kind` text, mail or binary |
 | `GET /api/ai`, `POST /api/ai/unload` | AI status (switched on, helper and model found, running) / stop the helper |
 | `POST /api/ai/subtasks`, `/api/ai/rewrite` | `{id}` – suggested sub-tasks `{items}` / rewritten notes `{text}` (`mode`: `tidy` or `expand`); nothing is saved. `POST /api/ai/test` asks one short question |
+| `POST /api/ai/quick` | `{text, tags}` – the AI turns normal words into a Quick add line `{quick, notes}` (notes only for text with several lines); nothing is saved |
 | `POST /api/ai/tags` | `{id, tags}` – the AI picks up to 5 of these tags for the entry `{tags}`; nothing is saved |
 | `POST /api/estimate` | `{id, ai}` – a suggested estimate `{minutes, reason, used, source}` from finished todos with tracked time; `ai: true` lets the AI guess when there is no such history; `minutes: 0` when there is nothing to go by |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |

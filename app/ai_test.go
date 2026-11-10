@@ -40,6 +40,8 @@ func TestAI(t *testing.T) {
 		switch sys := req.Messages[0].Content; {
 		case strings.Contains(sys, "plan tasks"):
 			answer = `{"subtasks":["Write the outline","Existing one"," write the outline ","Book the room"]}`
+		case strings.Contains(sys, "quick-add line"):
+			answer = `{"quick":" r: Call Anna due:fri @anna ","notes":"Bring the photos."}`
 		case strings.Contains(sys, "You sort entries"):
 			answer = `{"tags":["writing","writing","nope"]}`
 		case strings.Contains(sys, "tidy up"):
@@ -145,6 +147,23 @@ func TestAI(t *testing.T) {
 		t.Errorf("tag question: %q", q)
 	}
 
+	// quick add in normal words: the AI writes a Quick add line, with today's date and the tags to use
+	if r := a.call(200, "POST", "/api/ai/quick", map[string]any{"text": "remind me friday to call anna", "tags": []string{"family"}}); r["quick"] != "r: Call Anna due:fri @anna" || r["notes"] != "" {
+		t.Errorf("ai quick, one line (no notes): %v", r)
+	}
+	q1 := asked[len(asked)-1]
+	if r := a.call(200, "POST", "/api/ai/quick", map[string]any{"text": "remind me friday to call anna"}); !strings.HasPrefix(str(r["quick"]), "r: ") {
+		t.Errorf("remind me must give a reminder: %v", r)
+	}
+	if r := a.call(200, "POST", "/api/ai/quick", map[string]any{"text": "Call Anna on friday\nShe has the photos."}); r["notes"] != "Bring the photos." {
+		t.Errorf("ai quick, several lines (notes): %v", r)
+	}
+	asked = append(asked, q1)
+	if q := asked[len(asked)-1]; !strings.Contains(q, "Today is "+a.s.st.Now().Format("Monday")) || !strings.Contains(q, "these tags, when it clearly fits: family") {
+		t.Errorf("quick question: %q", q)
+	}
+	a.call(400, "POST", "/api/ai/quick", map[string]any{"text": "  "})
+
 	// the helper starts once and stays; Unload stops it, the next question starts it again
 	if starts != 1 || a.call(200, "GET", "/api/ai", nil)["running"] != true {
 		t.Errorf("starts %d, want 1 and running", starts)
@@ -187,5 +206,21 @@ func TestAI(t *testing.T) {
 	startErr = errors.New("the AI helper stopped while starting: out of memory")
 	if r := a.call(400, "POST", "/api/ai/test", nil); !strings.Contains(str(r["error"]), "out of memory") {
 		t.Errorf("start error: %v", r)
+	}
+}
+
+func TestFixQuick(t *testing.T) {
+	for in, want := range map[string]string{
+		"Pay the bills due:30d":           "Pay the bills due:+30d",
+		"Kino due:tom at:20:00":           "Kino due:tomorrow at:20:00",
+		"Kino due:tom":                    "Kino due:tomorrow",
+		"r: Team call due:mon repeat:mon": "r: Team call due:mon repeat:w",
+		"Water plants repeat:Weekly":      "Water plants repeat:w",
+		"Rent due:+1w repeat:monthly":     "Rent due:+1w repeat:m",
+		"Call Anna due:fri @anna":         "Call Anna due:fri @anna",
+	} {
+		if got := fixQuick(in); got != want {
+			t.Errorf("fixQuick(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

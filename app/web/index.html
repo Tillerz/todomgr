@@ -163,6 +163,8 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 @keyframes aispin{to{transform:rotate(360deg)}}
 .ainame{flex:1;padding:4px 6px}
 .aimodes{display:grid;gap:8px}
+.aqprev{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:8px}
+.aqprev b{color:var(--muted);font-weight:600}
 .tagsug{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0}
 .tagsug small{color:var(--muted);display:inline-flex;gap:4px;align-items:center}
 .aimode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;height:auto}
@@ -428,7 +430,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <main>
   <section id="vTree" class="view">
     <div class="treewrap">
-      <div class="toolbar"><input id="quick" autocomplete="off" placeholder="Quick add to Inbox — type a name and press Enter  (↑ ↓ = history)"><button class="btn" id="newProj" data-tip="Create a new top-level project">+ Project</button><button class="btn" id="newRem" data-tip="Create a reminder (pops up at a set time, no status)">+ Reminder</button></div>
+      <div class="toolbar"><input id="quick" autocomplete="off" placeholder="Quick add to Inbox — type a name and press Enter  (↑ ↓ = history)" data-tip="Normal words work too: “Dentist tomorrow at 3pm”. Shift+Enter adds exactly as typed; with AI on, Ctrl+Enter asks the AI"><button class="btn" id="newProj" data-tip="Create a new top-level project">+ Project</button><button class="btn" id="newRem" data-tip="Create a reminder (pops up at a set time, no status)">+ Reminder</button></div>
       <div class="hint"><span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span>at the start: <b>i:</b> or <b>?</b> idea · <b>p:</b> project · <b>r:</b> reminder · <b>t:</b> todo</span></div>
       <div class="filters">
         <div class="search"><span id="ico-search"></span><input id="q" placeholder="Search / filter" autocomplete="off" data-tip="Text, #tag, @person, !high, is:open|done|blocked|overdue|idea (key: /)"></div>
@@ -905,6 +907,52 @@ function parseQuick(txt){const o={tags:[],people:[]},k=txt.match(/^(?:([tipr]):|
     if(!d&&!tm)o.reminder=defaultRemTime();else{if(!d){d=addDays(0);if(tm&&pd(d+'T'+tm)<=new Date())d=addDays(1)}o.reminder=tm?d+'T'+tm:d}}
   else if(o.time&&o.deadline){o.deadline+='T'+o.time;delete o.time}else delete o.time;
   return{name:txt.replace(/\s+/g,' ').trim(),props:o}}
+
+/* Quick add in normal words, without AI (English and German): a few rules turn day and time words into
+   due: and at:, "remind me" into a reminder, and take those words out of the name. quickWords gives the
+   Quick add line, or quick '' when the rules found nothing; hint: time words are left that the rules cannot
+   read, so the AI (when on) should have a look. A weekday only counts after "on", "next", "am", … or at the
+   start or end of the text, so "Watch Friday Night Lights" stays as typed. */
+const QW_DAYS={monday:'mon',tuesday:'tue',wednesday:'wed',thursday:'thu',friday:'fri',saturday:'sat',sunday:'sun',
+  montag:'mon',dienstag:'tue',mittwoch:'wed',donnerstag:'thu',freitag:'fri',samstag:'sat',sonnabend:'sat',sonntag:'sun'};
+const QW_B='(?<![\\p{L}\\p{N}])',QW_E='(?![\\p{L}\\p{N}])',qwRe=s=>new RegExp(s,'iu');
+const QW_HINT=qwRe(QW_B+'(?:half past|quarter (?:past|to)|halb|viertel|next (?:week|month|year)|end of|weekend|morning|evening|afternoon|tonight|o\'?clock|months?|years?|weeks?|days?|'+
+  'january|february|april|june|july|august|september|october|november|december|remind\\w*|morgens|abends|nachmittags|wochenende|monat\\w*|jahr\\w*|'+
+  'woche\\w*|tag(?:e|en)|januar|februar|märz|juni|juli|oktober|dezember|ende|anfang|mitte|erinner\\w*|'+Object.keys(QW_DAYS).join('|')+'|\\d+(?:st|nd|rd|th)|\\d{1,2}\\s*(?:am|pm))'+QW_E);
+function quickWords(txt){let t=' '+txt.trim()+' ',due='',time='',rem=false;
+  const take=(re,fn)=>{let hit=false;t=t.replace(re,(...m)=>{const r=fn(m);if(r===false)return m[0];hit=true;return ' '});return hit};
+  const hhmm=(h,m)=>h>=0&&h<24&&m>=0&&m<60?String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'):'';
+  take(qwRe('^\\s*(?:remind me|erinnere? mich)(?:\\s+(?:to|daran|an))?[\\s,:]'),()=>{rem=true});
+  // noon and midnight first, so "heute Mittag" keeps its time; midnight is the end of that day (23:59)
+  take(qwRe(QW_B+'(?:at |um |by |gegen |bis )?(noon|midday|mittags?|midnight|mitternacht)'+QW_E),m=>{time=/^(?:noon|midday|mittag)/i.test(m[1])?'12:00':'23:59'});
+  // the day
+  const day=(re,v)=>{if(!due)take(qwRe(re),m=>{const x=typeof v==='function'?v(m):v;if(!x)return false;due=x})};
+  day(QW_B+'(?:the )?(?:day after tomorrow|übermorgen)'+QW_E,'+2d');
+  day(QW_B+'heute (?:morgen|früh|vormittag|mittag|nachmittag|abend)'+QW_E,'today');
+  day('(?<!am )'+QW_B+'(?:tomorrow|morgen)'+QW_E,'tomorrow');
+  day(QW_B+'(?:today|tonight|heute)'+QW_E,'today');
+  day(QW_B+'(?:next week|nächste woche|in a week|in einer woche)'+QW_E,'+1w');
+  day(QW_B+'in (\\d{1,3}) (days?|tagen?|weeks?|wochen?)'+QW_E,m=>'+'+m[1]+(/^(w)/i.test(m[2])?'w':'d'));
+  const dn=Object.keys(QW_DAYS).join('|');
+  day(QW_B+'(?:on|next|this|coming|by|until|am|nächsten|nächster|kommenden|diesen|bis) (?:the )?('+dn+')'+QW_E,m=>QW_DAYS[m[1].toLowerCase()]);
+  day('^\\s*('+dn+')'+QW_E,m=>QW_DAYS[m[1].toLowerCase()]);
+  day(QW_B+'('+dn+')[\\s.,!]*$',m=>QW_DAYS[m[1].toLowerCase()]);
+  day(QW_B+'(?:on |am |bis |by )?(\\d{4})-(\\d{2})-(\\d{2})'+QW_E,m=>m[1]+'-'+m[2]+'-'+m[3]);
+  day(QW_B+'(?:on |am |bis |by )?(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})?'+QW_E,m=>{const d=+m[1],mo=+m[2];if(d<1||d>31||mo<1||mo>12)return'';
+    let y=m[3]?+m[3]:new Date().getFullYear();const s=()=>y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');if(!m[3]&&s()<addDays(0))y++;return s()});
+  // the time
+  const tm=(re,fn)=>{if(!time)take(qwRe(re),m=>{const x=fn(m);if(!x)return false;time=x})};
+  tm(QW_B+'(?:at |um |gegen |ab |by )?(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)'+QW_E,m=>{let h=+m[1]%12;if(m[3].toLowerCase()==='pm')h+=12;return +m[1]<=12?hhmm(h,+(m[2]||0)):''});
+  tm(QW_B+'(?:at |um |gegen |ab |by )?(\\d{1,2}):(\\d{2})(?:\\s*uhr)?'+QW_E,m=>hhmm(+m[1],+m[2]));
+  tm(QW_B+'(?:um |gegen |ab )?(\\d{1,2})(?:\\.(\\d{2}))?\\s*uhr'+QW_E,m=>hhmm(+m[1],+(m[2]||0)));
+  tm(QW_B+'(?:at|um) (\\d{1,2})(?![\\p{L}\\p{N}:.])',m=>{const h=+m[1];return h>=1&&h<=23?hhmm(h<=7?h+12:h,0):''});
+  if(!due&&!time&&!rem)return{quick:'',hint:QW_HINT.test(txt)};
+  let name=t.replace(/\s+/g,' ').trim().replace(/^(?:to|zu|that|dass|[,:;-])\s+/i,'').replace(/\s+(?:on|at|by|um|am|bis|and|und|[,:;-])$/i,'').replace(/[\s.,:;-]+$/,'').replace(/^[\s.,:;-]+/,'');
+  if(rem)name=name.replace(/^(?:an|daran|to)\s+/i,'');
+  if(!name)return{quick:'',hint:QW_HINT.test(txt)};
+  if(name!==txt.trim())name=name[0].toUpperCase()+name.slice(1);
+  if(time&&!due&&!rem)due=pd(addDays(0)+'T'+time)>new Date()?'today':'tomorrow';// a time alone: today, or tomorrow when it has passed
+  return{quick:(rem?'r: ':'')+name+(due?' due:'+due:'')+(time?' at:'+time:''),hint:QW_HINT.test(t)}}
 
 /* ============================ filtering ============================ */
 function parseQ(q){const Q={terms:[],tags:[],people:[],is:[],prio:0};q.toLowerCase().split(/\s+/).filter(Boolean).forEach(t=>{
@@ -1392,7 +1440,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1920,8 +1968,39 @@ $('#quick').addEventListener('keydown',e=>{const H=S.prefs.quickHist||(S.prefs.q
     e.target.value=qh===-1?qDraft:H[qh];const l=e.target.value.length;e.target.setSelectionRange(l,l);return}
   if(e.key!=='Enter')return;
   const raw=e.target.value.trim();if(raw){S.prefs.quickHist=[raw,...H.filter(x=>x!==raw)].slice(0,50);qh=-1;qDraft='';persist()}
-  const{name,props}=parseQuick(e.target.value);if(!name)return;
-  const pr=props.kind==='project',n=addNode(pr?'root':inboxId(),null,name,props);e.target.value='';ui.sel=n.id;renderTree();renderDetail();toast(pr?`New project: ${name}`:`Added to Inbox: ${name}`)});
+  if(!raw)return;e.preventDefault();
+  // Ctrl+Enter: with AI; Shift+Enter: exactly as typed; Enter: normal words are read by rules, and by the AI
+  // (when on) if time words are left that the rules cannot read; text with Quick add marks as always
+  if((e.ctrlKey||e.metaKey)&&APP.ai)return aiQuick(raw);
+  if(!e.shiftKey&&!/(^|\s)(due:|at:|repeat:|[#@!~]\S)|^\s*(?:[tipr]:|\?)/i.test(raw)){const w=quickWords(raw);
+    if(w.hint&&APP.ai)return aiQuick(raw);
+    if(w.quick)return quickAdd(w.quick,'',raw)}
+  quickAdd(raw)});
+// Adds a Quick add line. typed: the text as it was typed, when rules or the AI read it; the message then
+// shows how it was read, with "Keep as typed".
+function quickAdd(line,notes='',typed=null){const{name,props}=parseQuick(line);if(!name)return null;if(notes)props.notes=notes;
+  const pr=props.kind==='project',n=addNode(pr?'root':inboxId(),null,name,props);$('#quick').value='';ui.sel=n.id;renderTree();renderDetail();
+  const read=typed!==null&&quickRead(n);
+  toast((pr?'New project: ':'Added to Inbox: ')+name+(read?' · '+read:''),typed!==null&&read?{action:{label:'Keep as typed',fn:()=>{undo();quickAdd(typed)}},ms:9000}:undefined);
+  return n}
+const whenTxt=s=>{const d=pd(s);return d?d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+(s.includes('T')?' '+s.split('T')[1]:''):''};
+function quickRead(n){const p=[];if(n.kind!=='todo')p.push(KL[n.kind]||n.kind);const w=n.reminder||n.deadline;if(w)p.push(whenTxt(w));
+  if(n.people.length)p.push(n.people.map(x=>'@'+x).join(' '));if(n.prio)p.push(PRIO[n.prio]);return p.join(', ')}
+const KL={todo:'Todo',idea:'Idea',project:'Project',reminder:'Reminder'};
+// the AI turns the text into a Quick add line (ai.go); the preview shows what the app reads from it
+async function aiQuick(text){const typed=text.trim();
+  const tags=Object.entries(allNodes().flatMap(x=>x.tags).reduce((a,t)=>(a[t]=(a[t]||0)+1,a),{})).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,100);
+  const r=await aiRun('Quick add with AI','/api/ai/quick',{text:typed,tags});if(!r)return;
+  openModal(`<h3 style="margin-top:0">Add this?</h3><label class="field"><span>Quick add line <small style="color:var(--muted)">(you can change it)</small></span><input id="aqLine" value="${esc(r.quick)}"></label>
+<div id="aqPrev" class="aqprev"></div>${r.notes?`<label class="field" style="margin-top:8px"><span>Notes</span><textarea id="aqNotes" rows="5">${esc(r.notes)}</textarea></label>`:''}
+<div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-aqno>Cancel</button><button class="btn" data-aqtyped data-tip="Add it without the AI, as the text was typed">Add as typed</button><button class="btn pri" data-aqadd>Add</button></div>`,{kind:'aiquick'});
+  const prev=()=>{const{name,props:o}=parseQuick($('#aqLine').value),w=o.reminder||o.deadline,row=(k,v)=>v?`<b>${k}</b><span>${esc(v)}</span>`:'';
+    $('#aqPrev').innerHTML=row('Name',name||'(missing)')+row('Type',KL[o.kind||'todo'])+row('When',w&&whenTxt(w))+row('People',o.people.join(', '))+row('Tags',o.tags.map(t=>'#'+t).join(' '))
+      +row('Priority',o.prio&&PRIO[o.prio])+row('Estimate',o.est&&fmtDur(o.est*60))+row('Repeats',o.recur)};
+  $('#aqLine').oninput=prev;prev();$('#modal [data-aqno]').onclick=closeModal;
+  $('#modal [data-aqadd]').onclick=()=>{const line=$('#aqLine').value,notes=$('#aqNotes')?.value||'';if(!parseQuick(line).name)return toast('The line needs a name');closeModal();quickAdd(line,notes,typed)};
+  $('#modal [data-aqtyped]').onclick=()=>{closeModal();const[first,...rest]=typed.split('\n');quickAdd(first.trim(),rest.join('\n').trim())}}
+
 function setQuery(q){ui.q=q;$('#q').value=q;renderTree()}
 $('#q').addEventListener('input',e=>{ui.q=e.target.value;renderTree()});
 $('#hideDone').onclick=()=>{ui.hideDone=!ui.hideDone;renderTree()};
@@ -1999,10 +2078,11 @@ async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
 const extDrag=e=>!ui.dragging&&e.dataTransfer&&[...e.dataTransfer.types].some(t=>t==='Files'||t==='text/uri-list'||t==='text/plain');
 let hot;const unhot=()=>{hot?.classList.remove('drop-hot');hot=null};
 // a file dropped on Quick add is imported (CSV or calendar); text dropped there is typed in, as before
-const quickText=e=>e.target.id==='quick'&&![...e.dataTransfer.types].includes('Files');
+const quickText=e=>e.target.id==='quick'&&![...e.dataTransfer.types].includes('Files')&&!APP.ai;// with AI on, dropped text goes to the AI
 document.addEventListener('dragover',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)unhot()});
 document.addEventListener('drop',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');unhot();if(!tgt)return;
+  if(tgt.id==='quick'&&![...e.dataTransfer.types].includes('Files')){const tx=e.dataTransfer.getData('text/plain');return tx.trim()?aiQuick(tx):undefined}
   if(tgt.id==='quick'){const fs=[...e.dataTransfer.files].filter(f=>/\.(ics|ical|csv)$/i.test(f.name));return fs.length?importEntries(fs):toast('Drop calendar files (.ics) or CSV files here to import them')}
   const id=tgt.id==='detail'?ui.sel:tgt.closest('.node').dataset.id;const links=dropLinks(e);if(!id)return toast('Select an item first');if(!links.length)return toast('Nothing linkable in that drop');
   if(links.some(l=>l.f))toast('Keeping a copy…');uploadDropped(links).then(ls=>addLinks(id,ls))});
