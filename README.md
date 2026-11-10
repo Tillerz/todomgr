@@ -347,7 +347,7 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 
 **Import JSON** reads this app's export and replaces everything after taking a backup.
 
-**Import CSV / calendar** (⋯ → *Import CSV / calendar…*, or `todo import FILE.csv`) only **adds** entries. They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an updated file again and only get the new entries. Entries without any date are always added. Events that this app exported carry the entry id (`UID:<id>@todomgr`) and are recognised by it, even after the entry was renamed or moved, so a round trip never adds a copy.
+**Import CSV / calendar** (⋯ → *Import CSV / calendar…*, drop one or more files onto the **Quick add** field, or `todo import FILE.csv`) only **adds** entries. In the app, a preview lists the entries first: untick the ones you do not want, then click *Import*. Past events are listed too, but not ticked. Untick *Put them into a new project* to add them to the Inbox instead. They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an updated file again and only get the new entries. Entries without any date are always added. Events that this app exported carry the entry id (`UID:<id>@todomgr`) and are recognised by it, even after the entry was renamed or moved, so a round trip never adds a copy.
 
 **Calendar subscription** (Settings → Calendar subscription, off by default): a link such as `http://localhost:7437/cal/<key>.ics` with your open entries that have a date – the same content as the calendar export. Apple Calendar, Outlook or Thunderbird subscribe to it once and then refresh it by themselves, so changes show up there without copies (each event keeps the entry id).
 
@@ -359,7 +359,7 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 > [!CAUTION]
 > The key in the link is the only protection: anyone with the link can **read** these entries (never change them). *New link* makes a new key, and the old link stops working.
 
-- **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos** (title, description, due date, status, priority, categories as tags, location, link, repeat, progress, alarm), events become **reminders** (start and end time, repeat, the alarm as early warning). Sub-tasks stay sub-entries. Times in UTC or another time zone are converted to local time. **Past one-time events are skipped**; repeating events start at their next date. A past alarm of a task goes into its notes instead of popping up.
+- **Calendar files (.ics)**, for example from Outlook, Google, Apple or Thunderbird: tasks become **todos** (title, description, due date, status, priority, categories as tags, location, link, repeat, progress, alarm), events become **reminders** (start and end time, repeat, the alarm as early warning). Sub-tasks stay sub-entries. Times in UTC or another time zone are converted to local time. **Past one-time events are skipped** by `todo import` (the preview in the app offers them, not ticked); repeating events start at their next date. A past alarm of a task goes into its notes instead of popping up.
 - **CSV files:** this app's own CSV export comes back with its tree. Files from other tools or from Excel work too: the columns are found by name (`name`/`title`/`task`, `notes`/`description`, `due`/`deadline`, `tags`/`labels`, `priority`, `status`, `assignee`, …). Commas, semicolons and tabs work, and so do Excel files saved in the Windows encoding. Dates such as `2026-11-05` or `05.11.2026` are read.
 - Anything that has no field here (an unknown date format, a repeat rule such as "only 5 times") is written into the notes, so nothing is lost silently.
 
@@ -547,7 +547,7 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `POST /api/lan/pair` | a new one-time login code (5 minutes, once) with a link and its QR code (SVG) per LAN address |
 | `GET`/`POST /api/backups`, `POST /api/backups/restore` | list, create, restore |
 | `GET /api/export`, `POST /api/import` | whole data as JSON / replace everything |
-| `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project |
+| `POST /api/import/entries` | `{format: "csv"\|"ics", name, data}` – add the entries of a CSV or calendar file below a new project; `preview: true` only lists them (`items`, nothing is saved), `only: [positions]` adds just those (past events included), `folder: false` puts them into the Inbox |
 | `GET /cal/<key>.ics` | calendar subscription; no token, the calendar key is the access check (Settings) |
 | `GET /api/export.csv`, `GET /api/export.ics` | spreadsheet / calendar export (`closed=1` or `closed=0` to include or leave out finished entries; default: CSV with, calendar without) |
 | `POST /api/files` | `{name, data}` (base64, up to 10 MB) – keep a copy of a file; answers `{file}`, the key for a link's `file` field |

@@ -503,13 +503,29 @@ func (s *Server) hImport(w http.ResponseWriter, r *http.Request) {
 }
 
 // hImportEntries adds the entries of a CSV or ICS file: {format: "csv"|"ics", name, data}.
+// With preview: true it only lists them and saves nothing; only: [positions] adds just those,
+// folder: false puts them into the Inbox instead of a new project.
 func (s *Server) hImportEntries(w http.ResponseWriter, r *http.Request) {
-	var req struct{ Format, Name, Data string }
+	var req struct {
+		Format, Name, Data string
+		Preview            bool
+		Only               []int
+		Folder             *bool // false: into the Inbox instead of a new project
+	}
 	if err := readBody(r, &req, 64<<20); err != nil {
 		fail(w, err)
 		return
 	}
-	res, err := s.st.ImportEntries(actorOf(r), req.Format, req.Name, []byte(req.Data))
+	if req.Preview {
+		res, err := s.st.PreviewImport(req.Format, req.Name, []byte(req.Data))
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		jout(w, 200, res)
+		return
+	}
+	res, err := s.st.ImportSelected(actorOf(r), req.Format, req.Name, []byte(req.Data), req.Only, req.Folder == nil || *req.Folder)
 	if err != nil {
 		fail(w, err)
 		return

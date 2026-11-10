@@ -121,6 +121,19 @@ check('cheer: start, done, all sub-items, many at once, goal, all of today, off'
     let last='';for(let i=0;i<50;i++){const x=cheerPick('done');if(x===last){bad.push('the same message twice in a row');break}last=x}}
   finally{toast=realToast;S.prefs.cheer=prefs;parked.forEach(x=>x.status='open');made.reverse().forEach(n=>{detach(n);delete S.nodes[n.id]})}
   return bad.join('; ')});
+check('import preview: one row per entry, entries that are already there are greyed out and cannot be ticked',()=>{
+  const cal={name:'cal.ics',req:{},p:{skipped:1,items:[{i:0,name:'Stream',kind:'reminder',when:'2026-11-13T19:00',end:'2026-11-13T21:00',known:false},{i:1,name:'Old one',kind:'todo',when:'',known:true,sub:true},{i:2,name:'Kickoff',kind:'reminder',when:'2026-02-20T11:00',past:true}]}};
+  showImport([cal]);
+  let h=el('#modal').innerHTML;const bad=[];if(modalKind!=='import')bad.push('modal '+modalKind);
+  if(!h.includes('Stream')||!h.includes('2026-11-13 19:00 – 2026-11-13 21:00'))bad.push('event row');
+  if(!/class="improw known sub"><input type="checkbox" data-imp="1" data-impf="0" disabled>/.test(h)||!h.includes('already there'))bad.push('known row');
+  if(!/data-imp="2" data-impf="0" >/.test(h)||!h.includes(' · past'))bad.push('past row: offered, not ticked');
+  if(!h.includes('id="impFolder" checked'))bad.push('folder option');
+  if(!h.includes('1 skipped'))bad.push('skipped count');closeModal();
+  // two files, one of them unreadable: a heading per file, the error in place of its entries
+  showImport([cal,{name:'broken.ics',err:'nothing to import'}]);h=el('#modal').innerHTML;
+  if(!h.includes('Import 2 files')||!h.includes('class="imphd">cal.ics')||!h.includes('class="imphd">broken.ics')||!h.includes('Cannot import this file: nothing to import'))bad.push('two files');
+  if(!h.includes('Put each file into a new project'))bad.push('folder option for two files');closeModal();return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

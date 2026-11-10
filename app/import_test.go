@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -212,4 +214,58 @@ func TestImportSkipsEntriesAlreadyThere(t *testing.T) {
 	if res, err := st.ImportEntries("test", "csv", "c.csv", []byte("name\nBuy milk\n")); err != nil || res["added"] != 1 {
 		t.Fatalf("a todo without a date must not be skipped: %v %v", res, err)
 	}
+}
+
+// dropping a calendar file on Quick add: a preview that saves nothing, then only the ticked entries
+func TestImportPreviewAndSelect(t *testing.T) {
+	a := testServer(t)
+	day := a.s.st.Now().AddDate(0, 0, 3).Format("20060102")
+	ics := "BEGIN:VCALENDAR\r\n"
+	for i, name := range []string{"Stream", "Meetup", "Party"} {
+		ics += "BEGIN:VEVENT\r\nUID:u" + strconv.Itoa(i) + "\r\nSUMMARY:" + name + "\r\nDTSTART:" + day + "T190000\r\nEND:VEVENT\r\n"
+	}
+	past := a.s.st.Now().AddDate(0, -3, 0).Format("20060102")
+	ics += "BEGIN:VEVENT\r\nUID:old\r\nSUMMARY:Kickoff\r\nDTSTART:" + past + "T100000\r\nDTEND:" + past + "T110000\r\nEND:VEVENT\r\n"
+	ics += "END:VCALENDAR\r\n"
+	req := func(extra map[string]any) map[string]any {
+		m := map[string]any{"format": "ics", "name": "cal.ics", "data": ics}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	before := len(a.s.st.db.Nodes)
+	p := a.call(200, "POST", "/api/import/entries", req(map[string]any{"preview": true}))
+	items, _ := p["items"].([]any)
+	if len(items) != 4 || len(a.s.st.db.Nodes) != before {
+		t.Fatalf("preview: %d items, %d new entries (want 4 and 0)", len(items), len(a.s.st.db.Nodes)-before)
+	}
+	if it := items[3].(map[string]any); it["name"] != "Kickoff" || it["past"] != true || items[0].(map[string]any)["past"] != false {
+		t.Errorf("a past event is offered, marked past: %v", it)
+	}
+	if it := items[1].(map[string]any); it["name"] != "Meetup" || it["kind"] != "reminder" || it["known"] != false || !strings.HasPrefix(str(it["when"]), a.s.st.Now().AddDate(0, 0, 3).Format("2006-01-02")) {
+		t.Errorf("preview row: %v", it)
+	}
+	if r := a.call(200, "POST", "/api/import/entries", req(map[string]any{"only": []int{0, 2}})); r["added"] != float64(2) {
+		t.Fatalf("only 0 and 2: %v", r)
+	}
+	p = a.call(200, "POST", "/api/import/entries", req(map[string]any{"preview": true}))
+	var known []bool
+	for _, x := range p["items"].([]any) {
+		known = append(known, x.(map[string]any)["known"] == true)
+	}
+	if fmt.Sprint(known) != "[true false true false]" {
+		t.Errorf("after the import, known: %v", known)
+	}
+	// the past event, without a new project: into the Inbox, which is made because there is none
+	r := a.call(200, "POST", "/api/import/entries", req(map[string]any{"only": []int{3}, "folder": false}))
+	in := a.s.st.db.Nodes[str(r["id"])]
+	if r["added"] != float64(1) || r["name"] != "Inbox" || in == nil || in.S("name") != "Inbox" || in.S("parent") != "root" || len(in.Kids()) != 1 {
+		t.Fatalf("into the Inbox: %v", r)
+	}
+	if k := a.s.st.db.Nodes[in.Kids()[0]]; k.S("name") != "Kickoff" {
+		t.Errorf("Inbox holds %q", k.S("name"))
+	}
+	a.call(400, "POST", "/api/import/entries", req(map[string]any{"only": []int{}}))
+	a.call(400, "POST", "/api/import/entries", req(map[string]any{"only": []int{9}}))
 }

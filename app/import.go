@@ -24,6 +24,7 @@ type impItem struct {
 	key, parent, name string
 	f                 map[string]any
 	extra             []string // lines added to the notes
+	past              bool     // an event that has ended: only the preview offers it
 }
 
 func (it *impItem) note(format string, a ...any) {
@@ -46,9 +47,9 @@ func withExtra(notes string, extra []string) string {
 	return notes + strings.Join(extra, "\n")
 }
 
-// ImportEntries adds the entries of a CSV or ICS file below a new project and
-// returns its id and name plus the number of entries added and skipped.
-func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[string]any, error) {
+// parseImport reads a CSV or ICS file into the entries it would add. With keepPast, events that
+// have ended stay in (marked past) instead of being skipped.
+func (s *Store) parseImport(format, file string, data []byte, keepPast bool) (string, impResult, error) {
 	format = strings.ToLower(strings.TrimPrefix(format, "."))
 	if format == "" {
 		format = strings.ToLower(strings.TrimPrefix(filepath.Ext(file), "."))
@@ -56,23 +57,87 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 	if !utf8.Valid(data) {
 		data = []byte(fromWindows1252(data))
 	}
-	now := s.Now()
 	var r impResult
 	var err error
 	switch format {
 	case "csv":
-		r, err = parseCSVImport(data, s.loc, now)
+		r, err = parseCSVImport(data, s.loc, s.Now())
 	case "ics", "ical", "icalendar":
-		r, err = parseICSImport(data, s.loc, now)
+		r, err = parseICSItems(data, s.loc, s.Now(), keepPast)
 	default:
-		return nil, fmt.Errorf("unknown import format %q (use csv or ics)", format)
+		return format, r, fmt.Errorf("unknown import format %q (use csv or ics)", format)
 	}
+	if err == nil && len(r.items) == 0 {
+		err = fmt.Errorf("nothing to import (%d skipped)", r.skipped)
+	}
+	return format, r, err
+}
+
+// PreviewImport lists what ImportEntries would add, without saving anything: one row per entry,
+// in file order. "known" marks an entry that is already there (the import skips it), "sub" one
+// that goes below another entry of the file, "past" an event that has ended.
+func (s *Store) PreviewImport(format, file string, data []byte) (map[string]any, error) {
+	_, r, err := s.parseImport(format, file, data, true)
 	if err != nil {
 		return nil, err
 	}
-	if len(r.items) == 0 {
-		return nil, fmt.Errorf("nothing to import (%d skipped)", r.skipped)
+	keys := map[string]bool{}
+	for _, it := range r.items {
+		if it.key != "" {
+			keys[it.key] = true
+		}
 	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rows := make([]map[string]any, len(r.items))
+	for i, it := range r.items {
+		kind, when := str(it.f["kind"]), str(it.f["reminder"])
+		if kind == "" {
+			kind = "todo"
+		}
+		if when == "" {
+			when = str(it.f["deadline"])
+		}
+		rows[i] = map[string]any{"i": i, "name": it.name, "kind": kind, "when": when, "end": str(it.f["end"]),
+			"recur": str(it.f["recur"]), "sub": it.parent != "" && keys[it.parent], "known": s.db.knownEntry(it) != "", "past": it.past}
+	}
+	return map[string]any{"items": rows, "skipped": r.skipped}, nil
+}
+
+// ImportEntries adds the entries of a CSV or ICS file below a new project and
+// returns its id and name plus the number of entries added and skipped.
+func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[string]any, error) {
+	return s.ImportSelected(actor, format, file, data, nil, true)
+}
+
+// ImportSelected is ImportEntries for only the entries at these positions of PreviewImport
+// (nil: all, without past events). A sub-entry whose parent is not picked goes to the top of
+// the import. Without folder, the entries go into the Inbox instead of a new project.
+func (s *Store) ImportSelected(actor, format, file string, data []byte, only []int, folder bool) (map[string]any, error) {
+	format, r, err := s.parseImport(format, file, data, only != nil)
+	if err != nil {
+		return nil, err
+	}
+	if only != nil {
+		pick := map[int]bool{}
+		for _, i := range only {
+			if i < 0 || i >= len(r.items) {
+				return nil, fmt.Errorf("entry %d is not in the file", i)
+			}
+			pick[i] = true
+		}
+		if len(pick) == 0 {
+			return nil, errors.New("no entries selected")
+		}
+		var items []*impItem
+		for i, it := range r.items {
+			if pick[i] {
+				items = append(items, it)
+			}
+		}
+		r.items = items
+	}
+	now := s.Now()
 	name := filepath.Base(strings.TrimSpace(file))
 	if name == "" || name == "." || name == "/" {
 		name = strings.ToUpper(format) + " file"
@@ -89,11 +154,29 @@ func (s *Store) ImportEntries(actor, format, file string, data []byte) (map[stri
 		if known == len(r.items) {
 			return fmt.Errorf("nothing new to import: all %d entries are already there", known)
 		}
-		p, err := tx.create(title, "", 0, map[string]any{"kind": "project", "status": "active"})
-		if err != nil {
-			return err
+		var pid string
+		if folder {
+			p, err := tx.create(title, "", 0, map[string]any{"kind": "project", "status": "active"})
+			if err != nil {
+				return err
+			}
+			pid = p.S("id")
+		} else { // the Inbox, as for Quick add; made if there is none
+			for _, c := range tx.db.Nodes["root"].Kids() {
+				if n := tx.db.Nodes[c]; n.S("name") == "Inbox" && n["trashed"] == nil {
+					pid = c
+					break
+				}
+			}
+			if pid == "" {
+				p, err := tx.create("Inbox", "root", 0, nil)
+				if err != nil {
+					return err
+				}
+				pid = p.S("id")
+			}
+			res["name"] = "Inbox"
 		}
-		pid := p.S("id")
 		byKey := map[string]*impItem{}
 		for _, it := range r.items {
 			if _, dup := byKey[it.key]; it.key != "" && !dup {
@@ -541,8 +624,11 @@ func icsEvent(c *icsComp, loc *time.Location, now time.Time) (*impItem, bool) {
 	}
 	if r := c.get("RRULE"); r != nil {
 		recur, exact, until := icsRule(r.value, loc)
-		if !until.IsZero() && until.Before(now) || recur == "" && over() {
-			return nil, false
+		if !until.IsZero() && until.Before(now) || recur == "" && over() { // the series has ended
+			it.past = true
+			it.note("Repeat rule from the calendar: %s", r.value)
+			exact = true // noted already
+			recur = ""
 		}
 		if recur != "" {
 			it.f["recur"] = recur
@@ -556,7 +642,7 @@ func icsEvent(c *icsComp, loc *time.Location, now time.Time) (*impItem, bool) {
 			it.note("Repeat rule from the calendar: %s", r.value)
 		}
 	} else if over() {
-		return nil, false
+		it.past = true
 	}
 	it.f["reminder"] = when
 	if end != "" {
@@ -644,6 +730,11 @@ func icsTodo(c *icsComp, loc *time.Location, now time.Time) *impItem {
 }
 
 func parseICSImport(data []byte, loc *time.Location, now time.Time) (impResult, error) {
+	return parseICSItems(data, loc, now, false)
+}
+
+// parseICSItems reads a calendar file; with keepPast, events that have ended stay in (marked past).
+func parseICSItems(data []byte, loc *time.Location, now time.Time, keepPast bool) (impResult, error) {
 	root, err := parseICS(data)
 	if err != nil {
 		return impResult{}, err
@@ -660,7 +751,7 @@ func parseICSImport(data []byte, loc *time.Location, now time.Time) (impResult, 
 			case x.name == "VTODO":
 				r.items = append(r.items, icsTodo(x, loc, now))
 			case x.name == "VEVENT":
-				if it, ok := icsEvent(x, loc, now); ok {
+				if it, ok := icsEvent(x, loc, now); ok && (keepPast || !it.past) {
 					r.items = append(r.items, it)
 				} else {
 					r.skipped++

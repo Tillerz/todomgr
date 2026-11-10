@@ -150,7 +150,14 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .row.multi{box-shadow:inset 0 0 0 2px var(--accent)}
 .row.closed .name{color:var(--muted);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
 .row.blocked .name{color:var(--muted)}
-.row.drop-hot{outline:2px dashed var(--accent)}
+.row.drop-hot,#quick.drop-hot{outline:2px dashed var(--accent)}
+.implist{max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 0}
+.improw{display:flex;gap:8px;align-items:baseline;padding:5px 10px;cursor:pointer}
+.improw.sub{padding-left:32px}
+.improw small{color:var(--muted);margin-left:auto;white-space:nowrap}
+.improw.known{opacity:.5;cursor:default}
+.imphd{font-weight:600;padding:8px 10px 2px;border-top:1px solid var(--line)}
+.imphd:first-child{border-top:0}
 .grip{width:18px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:grab;opacity:0;touch-action:none;flex:none}
 .row:hover .grip,.row.sel .grip{opacity:.7}
 @media (pointer:coarse){.grip{opacity:.6;width:26px}}
@@ -240,7 +247,7 @@ body.notags .bd.tag,body.notags #tagbar{display:none}
 .codebox{background:var(--hover);border-radius:8px;padding:8px 10px;font:12px/1.7 ui-monospace,Consolas,monospace;word-break:break-all;margin-top:6px}
 /* detail */
 .detail{background:var(--panel);border-left:1px solid var(--line);overflow:auto;min-height:0;padding:14px 16px 40px}
-.detail .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.detail .hd{display:flex;align-items:center;gap:8px;margin:-14px -16px 10px;padding:14px 16px 8px;position:sticky;top:0;z-index:5;background:var(--panel)}/* stays at the top while the panel scrolls */
 .detail h4{margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;display:flex;gap:6px;align-items:center}
 .detail input[data-f=name]{width:100%;font-size:17px;font-weight:600;padding:8px 10px}
 .seg{display:inline-flex;background:var(--hover);padding:2px;border-radius:8px;gap:2px}
@@ -436,7 +443,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <div id="tip"></div>
 <div id="print"></div>
 <input type="file" id="file" accept=".json,application/json" hidden>
-<input type="file" id="file2" accept=".csv,.ics,text/csv,text/calendar" hidden>
+<input type="file" id="file2" accept=".csv,.ics,text/csv,text/calendar" multiple hidden>
 
 <script src="/sortable.min.js"></script>
 <script src="/marked.umd.js"></script>
@@ -1373,7 +1380,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1438,14 +1445,40 @@ async function importJSON(text){try{JSON.parse(text)}catch{return toast('That fi
   if(!confirm('Replace ALL current data with this file? (A backup of the current data is kept in data/backups.)'))return;
   try{await Store.sync();await Store.api('POST','/api/import',text);await Store.refresh();toast('Imported')}catch(e){toast('Import failed: '+e.message,{ms:9000})}}
 // CSV / calendar import: adds the entries below a new project, nothing is replaced
-async function importEntries(f){
-  try{const buf=await f.arrayBuffer();let text;// German Excel saves CSV as Windows-1252, not UTF-8
-    try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{text=new TextDecoder('windows-1252').decode(buf)}
-    await Store.sync();
-    const r=await Store.api('POST','/api/import/entries',{format:f.name.split('.').pop(),name:f.name,data:text});
-    await Store.refresh();ui.sel=r.id;ui.panel=true;renderAll();
-    toast(`Added ${r.added} entr${r.added===1?'y':'ies'} to “${r.name}”${r.skipped?` · ${r.skipped} skipped`:''}${r.duplicates?` · ${r.duplicates} already there`:''}${r.partly?` · ${r.partly} with problems (see their notes)`:''}`,{ms:9000})}
-  catch(e){toast('Import failed: '+e.message,{ms:9000})}}
+// CSV / calendar import, one or more files: the program first lists what it would add (nothing is
+// saved yet), then adds only the ticked entries, file by file. Entries that are already there are greyed out.
+async function importEntries(files){const list=[];
+  for(const f of files){const x={name:f.name};list.push(x);
+    try{const buf=await f.arrayBuffer();let text;// German Excel saves CSV as Windows-1252, not UTF-8
+      try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{text=new TextDecoder('windows-1252').decode(buf)}
+      x.req={format:f.name.split('.').pop(),name:f.name,data:text};
+      x.p=await Store.api('POST','/api/import/entries',{...x.req,preview:true})}
+    catch(e){x.err=e.message}}
+  if(list.every(x=>x.err))return toast('Import failed: '+list.map(x=>(list.length>1?x.name+': ':'')+x.err).join(' · '),{ms:9000});
+  showImport(list)}
+const entries=n=>`${n} entr${n===1?'y':'ies'}`;
+function showImport(list){const many=list.length>1,items=list.flatMap(x=>x.p?x.p.items:[]),skipped=list.reduce((a,x)=>a+(x.p?x.p.skipped:0),0);
+  const row=(x,fi)=>`<label class="improw${x.known?' known':''}${x.sub?' sub':''}"><input type="checkbox" data-imp="${x.i}" data-impf="${fi}" ${x.known?'disabled':x.past?'':'checked'}><span>${esc(x.name)}</span><small>${x.kind==='reminder'?'Event':'Todo'}${x.when?' · '+esc(x.when.replace('T',' '))+(x.end?' – '+esc(x.end.replace('T',' ')):''):''}${x.recur?' · repeats':''}${x.past?' · past':''}${x.known?' · already there':''}</small></label>`;
+  const sec=(x,fi)=>(many?`<div class="imphd">${esc(x.name)}${x.p?` <small>${entries(x.p.items.length)}${x.p.skipped?`, ${x.p.skipped} skipped`:''}</small>`:''}</div>`:'')
+    +(x.err?`<div class="improw known">Cannot import this file: ${esc(x.err)}</div>`:x.p.items.map(r=>row(r,fi)).join(''));
+  openModal(`<h3 style="margin-top:0">${many?`Import ${list.length} files`:`Import “${esc(list[0].name)}”`}</h3><p>${entries(items.length)}${skipped?`, ${skipped} skipped`:''}. Untick what you do not want. Past events are not ticked.</p>
+<div class="implist">${list.map(sec).join('')}</div>
+<label class="chk-row" style="margin-top:10px"><input type="checkbox" id="impFolder" checked> ${many?'Put each file into a new project “Import: file name”':`Put them into a new project “Import: ${esc(list[0].name)}”`} <small style="color:var(--muted)">(otherwise into the Inbox)</small></label>
+<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-impall>Select none</button><span class="sp" style="flex:1"></span><button class="btn" data-impno>Cancel</button><button class="btn pri" data-impgo>Import <b id="impN"></b></button></div>`,{kind:'import'});
+  const boxes=$$('#modal [data-imp]:not(:disabled)'),count=()=>{const n=boxes.filter(b=>b.checked).length;$('#impN').textContent=n;$('#modal [data-impgo]').disabled=!n;$('#modal [data-impall]').textContent=n===boxes.length?'Select none':'Select all'};
+  boxes.forEach(b=>b.onchange=count);count();
+  $('#modal [data-impall]').onclick=()=>{const on=boxes.some(b=>!b.checked);boxes.forEach(b=>b.checked=on);count()};
+  $('#modal [data-impno]').onclick=closeModal;
+  $('#modal [data-impgo]').onclick=async()=>{const folder=$('#impFolder').checked,picked=boxes.filter(b=>b.checked);closeModal();
+    let added=0,dups=0,partly=0,last=null,files=0;const errs=[];
+    try{await Store.sync()}catch(e){return toast('Import failed: '+e.message,{ms:9000})}
+    for(const [fi,x] of list.entries()){const only=picked.filter(b=>+b.dataset.impf===fi).map(b=>+b.dataset.imp);if(!x.p||!only.length)continue;
+      try{const r=await Store.api('POST','/api/import/entries',{...x.req,only,folder});added+=r.added;dups+=r.duplicates||0;partly+=r.partly||0;last=r;files++}
+      catch(e){errs.push((many?x.name+': ':'')+e.message)}}
+    if(last){await Store.refresh();ui.sel=last.id;ui.panel=true;renderAll()}
+    const where=!folder?'to the Inbox':files>1?`into ${files} new projects`:`to “${last?.name}”`;
+    toast((last?`Added ${entries(added)} ${where}${dups?` · ${dups} already there`:''}${partly?` · ${partly} with problems (see their notes)`:''}`:'')
+      +(errs.length?(last?' · ':'')+'Import failed: '+errs.join(' · '):''),{ms:9000})}}
 async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current data with the demo data? (A backup of the current data is kept in data/backups.)'))return;
   const keep=S,keepSel=ui.sel;seed();const data=JSON.stringify(S);S=keep;ui.sel=keepSel;
   try{await Store.sync();await Store.api('POST','/api/import',data);await Store.refresh();toast('Demo data loaded — your previous data is in data/backups')}catch(e){toast('Could not load demo data: '+e.message,{ms:9000})}}
@@ -1839,7 +1872,7 @@ $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>
   r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
   r.addEventListener('dblclick',()=>{setDetailW(DEF.detailW);persist()})})();
 $('#file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importJSON);e.target.value=''};
-$('#file2').onchange=e=>{const f=e.target.files[0];if(f)importEntries(f);e.target.value=''};
+$('#file2').onchange=e=>{const fs=[...e.target.files];if(fs.length)importEntries(fs);e.target.value=''};
 window.addEventListener('pagehide',()=>{Drafts.orphan();Store.beacon()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){Drafts.orphan();Store.sync()}else Drafts.claim()});
 
@@ -1868,9 +1901,12 @@ async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
     :(hd?`<div class="fvhd">${hd}${v.attachments?.length?`<b>Attached</b><span>${v.attachments.map(esc).join(', ')}</span>`:''}</div>`:'')+`<pre class="fvtext">${esc(v.text||'(no text)')}</pre>`}
 const extDrag=e=>!ui.dragging&&e.dataTransfer&&[...e.dataTransfer.types].some(t=>t==='Files'||t==='text/uri-list'||t==='text/plain');
 let hot;const unhot=()=>{hot?.classList.remove('drop-hot');hot=null};
-document.addEventListener('dragover',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
+// a file dropped on Quick add is imported (CSV or calendar); text dropped there is typed in, as before
+const quickText=e=>e.target.id==='quick'&&![...e.dataTransfer.types].includes('Files');
+document.addEventListener('dragover',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)unhot()});
-document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail');unhot();if(!tgt)return;
+document.addEventListener('drop',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');unhot();if(!tgt)return;
+  if(tgt.id==='quick'){const fs=[...e.dataTransfer.files].filter(f=>/\.(ics|ical|csv)$/i.test(f.name));return fs.length?importEntries(fs):toast('Drop calendar files (.ics) or CSV files here to import them')}
   const id=tgt.id==='detail'?ui.sel:tgt.closest('.node').dataset.id;const links=dropLinks(e);if(!id)return toast('Select an item first');if(!links.length)return toast('Nothing linkable in that drop');
   if(links.some(l=>l.f))toast('Keeping a copy…');uploadDropped(links).then(ls=>addLinks(id,ls))});
 
