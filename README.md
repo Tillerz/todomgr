@@ -3,7 +3,7 @@
 [![tests](https://github.com/Tillerz/todomgr/actions/workflows/test.yml/badge.svg)](https://github.com/Tillerz/todomgr/actions/workflows/test.yml)
 
 A small, portable todo, idea, and project manager. One program, no installation: the UI, the API,
-the command line and the (optional) MCP server for AI assistants are all in one executable.
+ the command line and the (optional) MCP server for AI assistants are all in one executable.
  The UI runs in your web browser: start the program and it opens `http://localhost:7437/` (configurable).
  The page comes from your own computer or local network, so you need no internet connection and no account.
  Everything you enter is stored in the `data/` folder next to the program, so you can copy
@@ -66,7 +66,7 @@ More in [Screenshots](#screenshots).
 
 ### Works with your other tools
 
-- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel. Import an updated file again and you only get the new entries.
+- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel: drop the files onto Quick add and pick the entries you want. Import an updated file again and you only get the new entries.
 - Subscribe to your TodoMgr dates in Apple Calendar, Outlook or Thunderbird: they update by themselves, without copies.
 - Export to CSV, a calendar file, Markdown, or a printed list.
 - A command line (`todo add "…"`), and an MCP server, so AI assistants such as Claude can read and update your list.
@@ -241,6 +241,8 @@ Press **?** in the app to see this list.
 
 The field above the tree adds to the **Inbox** and understands a small syntax. The Inbox is a normal top-level entry. The app makes it the first time you add something here.
 
+**Drop files on it to import them:** calendar files (`.ics`) and CSV files, one or more at once. A preview lists the entries first, see [Export and import](#export-and-import).
+
 ```
 Call Anna #work @anna !high due:fri at:14:00 ~30m
 ```
@@ -391,7 +393,18 @@ A small AI that runs on your own computer, without an account and without the in
 1. **llama-server** from [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases): the archive for your system, for example `llama-…-bin-win-cpu-x64.zip` (Windows), `…-bin-win-vulkan-x64.zip` (Windows with a graphics card), `…-bin-ubuntu-x64.tar.gz` (Linux) or `…-bin-macos-arm64.tar.gz` (Mac). Unpack all of it into `ai/`; a sub-folder is fine.
 2. **A model:** [`Qwen3.5-4B-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) (2.7 GB, Apache 2.0 licence). Bigger models work too, for example `Qwen3.5-9B-Q4_K_M.gguf` (5.7 GB) with a graphics card.
 
-Then Settings → AI → *Use AI*, and *Test*. The program starts the helper at the first AI click (this takes a few seconds up to a minute) and stops it after 15 minutes without use; *Unload* stops it at once. While it runs, it needs about 3–4 GB of memory. It only listens on `127.0.0.1`, with a new random key at each start. Its output goes to `ai/llama-server.log`.
+Then Settings → AI → *Use AI*, and *Test*. The program starts the helper at the first AI click (this takes a few seconds up to a minute) and stops it after 15 minutes without use; *Unload* stops it at once. While it runs, it needs a bit more memory than the model file's size (about 3–4 GB for the 4B model).
+
+> [!TIP]
+> **Bigger models give much better answers**, but need more memory. A model needs a bit more memory than its file size: on the graphics card (VRAM) if it fits there, otherwise in the computer's memory, where it is much slower. A rough guide:
+>
+> | Model file | Answers | Runs well with |
+> |---|---|---|
+> | about 3 GB (4B) | OK for simple tasks | the processor alone |
+> | about 6 GB (9B) | better | a graphics card with 8 GB |
+> | about 13 GB | much better | a graphics card with 16 GB or more |
+>
+> Put several `.gguf` files into `ai/` and pick one in Settings → AI → *Model*. It only listens on `127.0.0.1`, with a new random key at each start. Its output goes to `ai/llama-server.log`.
 
 ### Settings (⋯ → Settings)
 

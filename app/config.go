@@ -23,6 +23,7 @@ type ConfigData struct {
 	CalKey            string `json:"calKey"`     // calendar subscription key; empty = off (the default)
 	LANEnabled        bool   `json:"lanEnabled"` // OFF by default: other devices may connect (with the token); needs a restart
 	AIEnabled         bool   `json:"aiEnabled"`  // OFF by default: the AI buttons (helper and model in the ai folder, see ai.go)
+	AIModel           string `json:"aiModel"`    // the model file in the ai folder; empty: the first one by name
 }
 
 type Config struct {

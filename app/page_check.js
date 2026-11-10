@@ -168,6 +168,7 @@ check('AI: no AI buttons while AI is off; buttons and menu entry when on; setup 
     const st=aiSettings({enabled:true,ready:false,dir:'/x/ai',helper:'',model:'',running:false});
     if(!st.includes('llama-server missing')||!st.includes('Qwen3.5-4B-Q4_K_M.gguf')||!/id="aiTest" disabled/.test(st)||!/id="aiUnload" disabled/.test(st))bad.push('settings, not set up');
     const st2=aiSettings({enabled:true,ready:true,dir:'/x/ai',helper:'llama-server',model:'m.gguf',running:true});
+    if(st2.includes('id="aiModel"')||!aiSettings({enabled:true,ready:true,dir:'/x',helper:'h',model:'b.gguf',models:['a.gguf','b.gguf']}).includes('<option value="b.gguf" selected>'))bad.push('model list only for two or more models');
     if(st2.includes('To set it up')||/id="aiTest" disabled/.test(st2)||/id="aiUnload" disabled/.test(st2)||!st2.includes('loaded'))bad.push('settings, set up and loaded')}
   finally{APP.ai=keep;ui.sel=null}
   return bad.join('; ')});

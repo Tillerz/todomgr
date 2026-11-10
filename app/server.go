@@ -70,7 +70,9 @@ func NewServer(st *Store, cfg *Config, port int, uiDir string) (*Server, error) 
 		}
 		ui = sub
 	}
-	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir), ai: newAIHelper()}, nil
+	ai := newAIHelper()
+	ai.pick = cfg.Get().AIModel
+	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir), ai: ai}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -386,7 +388,8 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 			Renew   bool  `json:"renew"` // a new key: the old links stop working
 		} `json:"cal"`
 		AI *struct {
-			Enabled *bool `json:"enabled"`
+			Enabled *bool   `json:"enabled"`
+			Model   *string `json:"model"` // a model file name in the ai folder
 		} `json:"ai"`
 	}
 	if err := readBody(r, &req, 1<<16); err != nil {
@@ -415,6 +418,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 		if req.AI != nil && req.AI.Enabled != nil {
 			d.AIEnabled = *req.AI.Enabled
 		}
+		if req.AI != nil && req.AI.Model != nil {
+			d.AIModel = *req.AI.Model
+		}
 		if req.Cal != nil {
 			if req.Cal.Enabled != nil && !*req.Cal.Enabled {
 				d.CalKey = ""
@@ -426,6 +432,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		jerr(w, 500, err)
 		return
+	}
+	if req.AI != nil && req.AI.Model != nil {
+		s.ai.choose(*req.AI.Model)
 	}
 	if req.AI != nil && req.AI.Enabled != nil && !*req.AI.Enabled {
 		s.ai.unload() // switched off: free the memory now

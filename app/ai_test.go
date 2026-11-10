@@ -150,6 +150,26 @@ func TestAI(t *testing.T) {
 		t.Errorf("off: stops %d, want 2", stops)
 	}
 
+	// two models: the first by name is used until another one is picked; picking another one unloads the AI
+	a.call(200, "PUT", "/api/settings", map[string]any{"ai": map[string]any{"enabled": true}})
+	if err := os.WriteFile(filepath.Join(h.dir, "Qwen3.5-9B-Q4_K_M.gguf"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if st := a.call(200, "GET", "/api/ai", nil); st["model"] != "Qwen3.5-4B-Q4_K_M.gguf" || len(st["models"].([]any)) != 2 {
+		t.Errorf("two models: %v", st)
+	}
+	a.call(200, "POST", "/api/ai/test", nil) // loaded
+	st := a.call(200, "PUT", "/api/settings", map[string]any{"ai": map[string]any{"model": "Qwen3.5-9B-Q4_K_M.gguf"}})["ai"].(map[string]any)
+	if st["model"] != "Qwen3.5-9B-Q4_K_M.gguf" || st["running"] != false || stops != 3 || a.s.cfg.Get().AIModel != "Qwen3.5-9B-Q4_K_M.gguf" {
+		t.Errorf("pick the other model: %v, stops %d", st, stops)
+	}
+	a.call(200, "POST", "/api/ai/test", nil)
+	a.call(200, "PUT", "/api/settings", map[string]any{"ai": map[string]any{"model": "Qwen3.5-9B-Q4_K_M.gguf"}})
+	if stops != 3 {
+		t.Errorf("picking the same model again must not unload: stops %d", stops)
+	}
+	a.call(200, "POST", "/api/ai/unload", nil)
+
 	// a helper that cannot start: its reason reaches the page
 	a.call(200, "PUT", "/api/settings", map[string]any{"ai": map[string]any{"enabled": true}})
 	startErr = errors.New("the AI helper stopped while starting: out of memory")

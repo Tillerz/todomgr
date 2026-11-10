@@ -39,6 +39,7 @@ type aiHelper struct {
 
 	starting sync.Mutex // one start at a time; mu stays free meanwhile, so the status can be read
 	mu       sync.Mutex
+	pick     string // the chosen model file (Settings → AI); "" or missing: the first one
 	base     string // http://127.0.0.1:port of the running helper, or ""
 	key      string
 	exited   <-chan struct{}
@@ -71,14 +72,44 @@ func (h *aiHelper) files() (bin, model string) {
 			break
 		}
 	}
-	ms, _ := filepath.Glob(filepath.Join(h.dir, "*.gguf"))
-	sort.Strings(ms)
+	ms := h.models()
+	h.mu.Lock()
+	pick := h.pick
+	h.mu.Unlock()
 	for _, m := range ms {
-		if !strings.Contains(strings.ToLower(filepath.Base(m)), "mmproj") {
+		if filepath.Base(m) == pick {
 			return bin, m
 		}
 	}
+	if len(ms) > 0 {
+		return bin, ms[0]
+	}
 	return bin, ""
+}
+
+// models lists the model files in the ai folder, sorted by name.
+func (h *aiHelper) models() []string {
+	ms, _ := filepath.Glob(filepath.Join(h.dir, "*.gguf"))
+	sort.Strings(ms)
+	var out []string
+	for _, m := range ms {
+		if !strings.Contains(strings.ToLower(filepath.Base(m)), "mmproj") {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+// choose sets the model to use; a running helper with another model is stopped, so the next
+// question loads the new one.
+func (h *aiHelper) choose(name string) {
+	_, before := h.files()
+	h.mu.Lock()
+	h.pick = name
+	h.mu.Unlock()
+	if _, after := h.files(); after != before {
+		h.unload()
+	}
 }
 
 func (h *aiHelper) status(enabled bool) map[string]any {
@@ -93,7 +124,11 @@ func (h *aiHelper) status(enabled bool) map[string]any {
 		r, _ := filepath.Rel(h.dir, p)
 		return filepath.ToSlash(r)
 	}
-	return map[string]any{"enabled": enabled, "dir": h.dir, "helper": rel(bin), "model": rel(model),
+	models := []string{}
+	for _, m := range h.models() {
+		models = append(models, filepath.Base(m))
+	}
+	return map[string]any{"enabled": enabled, "dir": h.dir, "helper": rel(bin), "model": rel(model), "models": models,
 		"ready": bin != "" && model != "", "running": running}
 }
 
