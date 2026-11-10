@@ -177,6 +177,11 @@ check('writing goals: +500 and totals, words today from the start of the day, th
     renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+c6.id+'"'))bad.push('a goal that waits for another entry must not show');
     c6.deps=[];c6.status='later';renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+c6.id+'"'))bad.push('a postponed goal must not show');
     r.deadline=addDays(1);renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+r.id+'"'))bad.push('a daily goal finished for today must leave Today');
+    if(!h.includes('data-wtimer="'+n.id+'"'))bad.push('clock button on the goal');
+    S.timer={id:n.id,start:now()-25*60000,end:null,min:0,alarmed:false};const t0=n.time.length;stopTimer(true);
+    if(S.nodes[n.id].time.length!==t0+1||modalKind!=='wlog'||!el('#modal').innerHTML.includes('You wrote for 25m'))bad.push('timer stop on a goal: time '+(S.nodes[n.id].time.length-t0)+', modal '+modalKind);closeModal();
+    S.timer={id:n.id,start:now()-10*60000,end:null,min:0,alarmed:false};startTimer(25,n.id);
+    if(modalKind!=='wlog'||!S.timer||S.timer.min!==25)bad.push('a new timer: the old one asks for words after it starts: '+modalKind);closeModal();S.timer=null;
     wordLog(n.id);if(modalKind!=='wlog'||!el('#modal').innerHTML.includes('Now: 1,500 of 11,000 words'))bad.push('log window: '+modalKind);closeModal();
     renderTree();if(!/class="pace-t"/.test(el('#tree').innerHTML))bad.push('words-left tag in the tree')}
   finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}

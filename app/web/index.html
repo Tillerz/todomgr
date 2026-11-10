@@ -167,6 +167,7 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .aqprev b{color:var(--muted);font-weight:600}
 .goal{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;cursor:pointer}
 .goal-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.goal-btns{display:flex;gap:4px;align-items:center}
 .goal-left{cursor:pointer;text-decoration:underline dotted}
 .goal-txt{font-size:13px;color:var(--muted);margin-top:4px}.goal-txt b{color:var(--ink)}.goal-txt .late{color:var(--danger)}
 .gbar{height:8px;border-radius:4px;background:var(--line);margin-top:6px;overflow:hidden}.gbar i{display:block;height:100%;background:var(--accent)}.gbar.met i{background:var(--ok,#3fae5a)}
@@ -1248,20 +1249,21 @@ function goalNodes(){return allNodes().filter(n=>n.prog.mode==='units'&&!isClose
 function goalsBox(){const G=goalNodes();if(!G.length)return'';const num=x=>Math.ceil(x).toLocaleString('en');
   return`<h2>Writing goals<small>${G.length}</small></h2>${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
     const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
-    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></div>
+    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></span></div>
 ${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
 <div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}
  · <span class="goal-left" data-wlog="${n.id}" data-tip="Click to log progress">${num(left)}${u} left</span>${pc&&pc.days<=0?' · <span class="late">the deadline has passed</span>':n.deadline?` · until ${fmtWhen(n.deadline)}`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</div></div>`}).join('')}`}
 // Log progress with few clicks: "+500" adds, "-200" takes away, a plain number is the new total
-function wordLog(id){const n=S.nodes[id];if(!n)return;const u=unitTxt(n),t=todayOf(n),num=x=>Math.round(x).toLocaleString('en');
-  openModal(`<h3 style="margin-top:0">Log progress: “${esc(n.name)}”</h3>
-<label class="field"><span>Add with + (for example <b>+500</b>), or type the new total</span><input id="wlIn" inputmode="numeric" autocomplete="off" placeholder="+500"></label>
+// secs: after the timer, the time it logged; the message then shows it too, also on Cancel
+function wordLog(id,secs=0){const n=S.nodes[id];if(!n)return;const u=unitTxt(n),t=todayOf(n),num=x=>Math.round(x).toLocaleString('en'),unit=n.prog.unit||'units';
+  openModal(`<h3 style="margin-top:0">${secs?`You wrote for ${fmtDur(secs)} on “${esc(n.name)}”: how many ${esc(unit)}?`:`Log progress: “${esc(n.name)}”`}</h3>
+<label class="field"><span>Type <b>+600</b> to add what you wrote now, or <b>${num(n.prog.done+600)}</b> for the new total</span><input id="wlIn" inputmode="numeric" autocomplete="off" placeholder="+600"></label>
 <p class="note">Now: ${num(n.prog.done)} of ${num(n.prog.total)}${u} · ${num(t.done)}${u} today</p>
 <div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-wlno>Cancel</button><button class="btn pri" data-wlok>Log</button></div>`,{kind:'wlog'});
   const go=()=>{const v=wordLogValue($('#wlIn').value,S.nodes[id].prog.done);if(v===null)return toast('Type +500 to add, or the new total');const x=S.nodes[id];closeModal();
     const before=x.prog.done;mutate(()=>setProgress(x,v),{panel:true});const d=x.prog.done-before;
-    toast(`${d>=0?'+':''}${num(d)}${u} · ${num(todayOf(x).done)}${u} today`,{action:{label:'Undo',fn:undo}})};
-  $('#modal [data-wlno]').onclick=closeModal;$('#modal [data-wlok]').onclick=go;
+    toast(`${secs?fmtDur(secs)+' · ':''}${d>=0?'+':''}${num(d)}${u} · ${num(todayOf(x).done)}${u} today`,{action:{label:'Undo',fn:undo}})};
+  $('#modal [data-wlno]').onclick=()=>{closeModal();if(secs)toast(`Logged ${fmtDur(secs)} on “${n.name}”`)};$('#modal [data-wlok]').onclick=go;
   $('#wlIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}};$('#wlIn').focus()}
 // "+500" → done + 500, "-200" → done − 200, "12,500" → 12500; null when it is not a number
 function wordLogValue(s,done){const m=String(s).trim().match(/^([+-])?\s*(\d[\d.,' ]*)$/);if(!m)return null;
@@ -1364,7 +1366,8 @@ let ac,alarmIv,titleIv,tc=0;
 function ensureAudio(){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume()}catch{}}
 function beep(){if(!ac)return;const t=ac.currentTime;[0,.28,.56].forEach(d=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=d===.56?1175:880;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.35,t+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t+d+.22);o.connect(g).connect(ac.destination);o.start(t+d);o.stop(t+d+.25)})}
 function notify(title,body){try{if('Notification'in window&&Notification.permission==='granted')new Notification(title,{body})}catch{}}
-function ring(){ensureAudio();beep();clearInterval(alarmIv);alarmIv=setInterval(beep,2200);const t0=document.title;let f=0;clearInterval(titleIv);titleIv=setInterval(()=>document.title=(f^=1)?'⏰ Time is up!':t0,800);
+// the timer's alarm: a beep every 2.2 s for one minute, then quiet; the window and the blinking tab title stay
+function ring(){ensureAudio();beep();clearInterval(alarmIv);const quiet=now()+60000;alarmIv=setInterval(()=>{if(now()>=quiet)clearInterval(alarmIv);else beep()},2200);const t0=document.title;let f=0;clearInterval(titleIv);titleIv=setInterval(()=>document.title=(f^=1)?'⏰ Time is up!':t0,800);
   const T=S.timer,n=T&&S.nodes[T.id];notify('Time is up',n?n.name:'Timer finished');showAlarm()}
 function stopAlarm(){clearInterval(alarmIv);clearInterval(titleIv);titleIv=null;document.title=pageTitle()}
 // the browser tab shows the one most important thing: a running timer, a reminder that pops up,
@@ -1380,12 +1383,14 @@ function pageTitle(){const T=S.timer;
 function showAlarm(){const T=S.timer;if(!T)return;const n=S.nodes[T.id];
   openModal(`<div style="text-align:center"><div style="font-size:42px">⏰</div><h3 style="margin:4px 0">Time is up!</h3><p style="color:var(--muted)">${T.min} minute${T.min>1?'s':''}${n?` on “${esc(n.name)}”`:''}</p>
   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn pri" data-t="stop">${n?'Log time & close':'Close'}</button><button class="btn" data-t="plus5">+5 min</button><button class="btn" data-t="plus15">+15 min</button><button class="btn dng" data-t="discard">Discard</button></div></div>`,{cls:'center',kind:'alarm'})}
-function startTimer(min,id){if(S.timer)stopTimer(true);S.timer={id:id||null,start:now(),end:min?now()+min*60000:null,min:min||0,alarmed:false};ensureAudio();
-  if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();persist();closeModal();renderTimerBtn();toast(min?`Timer started: ${min} min`:'Stopwatch started')}
+function startTimer(min,id){const prev=S.timer?stopTimer(true,true):null;/* the words for the old one: asked after this one runs */S.timer={id:id||null,start:now(),end:min?now()+min*60000:null,min:min||0,alarmed:false};ensureAudio();
+  if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();persist();closeModal();renderTimerBtn();toast(min?`Timer started: ${min} min`:'Stopwatch started');if(prev)wordLog(prev.id,prev.secs)}
 const elapsedSec=()=>{const T=S.timer;return Math.max(0,((T.end&&now()>T.end?T.end:now())-T.start)/1000)};
-function stopTimer(logIt){const T=S.timer;if(!T)return;const secs=Math.round(elapsedSec()),n=S.nodes[T.id];S.timer=null;stopAlarm();
-  if(logIt&&secs>=30){if(n){push();n.time.push({at:now(),secs});n.updated=now();toast(`Logged ${fmtDur(secs)} on “${n.name}”`)}log('time',T.id,{secs})}
-  persist();closeModal();renderTimerBtn();renderTree();renderDetail()}
+// On an entry with a word goal, it then asks how many words were written (wordLog), and the message shows both.
+function stopTimer(logIt,later){const T=S.timer;if(!T)return;const secs=Math.round(elapsedSec()),n=S.nodes[T.id];S.timer=null;stopAlarm();
+  const ask=logIt&&secs>=30&&n&&n.prog.mode==='units'&&!isClosed(n)&&!kids(n).length;
+  if(logIt&&secs>=30){if(n){push();n.time.push({at:now(),secs});n.updated=now();if(!ask)toast(`Logged ${fmtDur(secs)} on “${n.name}”`)}log('time',T.id,{secs})}
+  persist();closeModal();renderTimerBtn();renderTree();renderDetail();if(ask&&!later)wordLog(n.id,secs);return ask?{id:n.id,secs}:null}// later: the caller asks
 function extendTimer(min){const T=S.timer;if(!T)return;T.end=Math.max(T.end||now(),now())+min*60000;T.min+=min;T.alarmed=false;stopAlarm();persist();closeModal();renderTimerBtn()}
 function renderTimerBtn(){const b=$('#btnTimer'),T=S.timer;b.className='ib'+(T?(T.end&&T.alarmed?' up':' run'):'');
   if(!T)b.innerHTML=ic('clock');else{const n=S.nodes[T.id];b.innerHTML=ic('clock')+`<span>${T.end?(T.alarmed?'Time is up':fmtClock((T.end-now())/1000)):fmtClock(elapsedSec())}</span>`}}
@@ -2055,7 +2060,7 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
   else if(a==='tag'){const t=prompt('Tag to add:');if(t)mutate(()=>ids.forEach(id=>{const n=S.nodes[id],tg=t.replace(/^#/,'').trim();if(tg&&!n.tags.includes(tg))n.tags.push(tg)}),{panel:true})}
   if(a!=='trash'){ui.multi.clear();renderTree()}});
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
-$('#vToday').addEventListener('click',e=>{const wl=e.target.closest('[data-wlog]');if(wl){wordLog(wl.dataset.wlog);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
+$('#vToday').addEventListener('click',e=>{const wl=e.target.closest('[data-wlog]');if(wl){wordLog(wl.dataset.wlog);return}const wt=e.target.closest('[data-wtimer]');if(wt){openTimer(wt.dataset.wtimer);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
   const tv=e.target.closest('[data-tv]');if(tv){ui.todayWeek=!!tv.dataset.tv;renderToday();return}
   if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});

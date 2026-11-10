@@ -38,7 +38,8 @@ More in [Screenshots](#screenshots).
 
 - **Word goals that keep up with you:** give a manuscript, a chapter or a short story a word goal and a deadline. The app works out how many words you need today, and when you miss a day, it spreads the rest over the days left by itself.
 - **Writing goals at the top of Today:** today's amount, a bar for what you wrote today, the words left, and when you will be done at your speed so far.
-- **Log words in two clicks:** click *+ Log* or "words left", type `+500`, press Enter. Scripts and other writing tools can add words through the API.
+- **Log words in two clicks:** click *+ Log* or "words left", type `+500` (or the new total), press Enter. Scripts and other writing tools can add words through the API.
+- **Write with the timer:** the clock next to a goal starts a countdown or stopwatch for it. When it stops, the time is logged and the app asks how many words you wrote.
 - **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
 - **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
 - **A cheer when you reach a goal**, and an AI (optional, on your own computer) that can tidy up or expand your notes and summarize research mails and documents.
@@ -316,6 +317,7 @@ the list.
        -d '{"prog":{"add":500}}' http://127.0.0.1:7437/api/nodes/ENTRY_ID
   ```
   The token is in Settings and in `data/config.json`; the entry id is in the detail panel.
+- **Write with the timer:** the clock button next to a goal in the Writing goals box opens the timer for that goal (countdown or stopwatch). When it stops, the time is logged to the goal and a window asks for the words: `+600` for what you wrote now, or the new total. *Cancel* logs only the time. The same happens when you start the timer for any entry with a word goal.
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
 - **Dependencies:** an entry that depends on unfinished entries is shown as blocked. Dependency cycles are refused.
