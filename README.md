@@ -15,6 +15,12 @@ More in [Screenshots](#screenshots).
 
 ## At a glance
 
+### 100% local
+
+- Everything runs on your own computer: no account, no cloud, no tracking, and no internet connection needed.
+- The program never goes online by itself. The only exception is a Discord announcement, and only when you set up a webhook for a project and send one.
+- The optional AI also runs on your computer. Your entries and notes never leave it.
+
 ### Capture in seconds
 
 - Quick Add: type `Call Anna @anna !high due:fri at:14:00` and it creates a todo with the person, priority, date, and time already set.
@@ -372,6 +378,21 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 - **Project tags:** the tag list below the search shows only the tags of the selected entry's top-level entry (for example *Writing*) and everything in it. Click it again for all tags. A tag you filter by always stays in the list.
 - Works offline: SortableJS, marked (Markdown) and the Lucide tag icons are bundled, no CDN.
 
+### AI on this computer (optional)
+
+A small AI that runs on your own computer, without an account and without the internet. Off by default.
+
+- **Suggest sub-tasks:** in the detail panel (*Actions*) or the right-click menu. An entry without sub-items is split into steps; an entry with sub-items gets the ones that are still missing. A list shows the suggestions first: untick what you do not want, change the names, then *Add*.
+- **Rewrite notes:** the *Rewrite* button above the notes offers two choices. **Tidy up** fixes spelling, turns items into lists and open tasks into tick boxes, and groups what belongs together; it adds nothing and keeps every fact and link. **Expand** adds next steps, things to prepare, open questions and tips below your notes, from the notes and the entry's name, so it also works on an entry without notes. You see the old and the new text side by side and choose.
+- The AI buttons only show when AI is switched on and set up. Every answer is a suggestion: nothing changes until you accept it, and *Undo* works as always.
+
+**Set it up** (once): put two things into a folder `ai` next to the program (`todo` / `todo.exe`):
+
+1. **llama-server** from [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases): the archive for your system, for example `llama-…-bin-win-cpu-x64.zip` (Windows), `…-bin-win-vulkan-x64.zip` (Windows with a graphics card), `…-bin-ubuntu-x64.tar.gz` (Linux) or `…-bin-macos-arm64.tar.gz` (Mac). Unpack all of it into `ai/`; a sub-folder is fine.
+2. **A model:** [`Qwen3.5-4B-Q4_K_M.gguf`](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF) (2.7 GB, Apache 2.0 licence). Bigger models work too, for example `Qwen3.5-9B-Q4_K_M.gguf` (5.7 GB) with a graphics card.
+
+Then Settings → AI → *Use AI*, and *Test*. The program starts the helper at the first AI click (this takes a few seconds up to a minute) and stops it after 15 minutes without use; *Unload* stops it at once. While it runs, it needs about 3–4 GB of memory. It only listens on `127.0.0.1`, with a new random key at each start. Its output goes to `ai/llama-server.log`.
+
 ### Settings (⋯ → Settings)
 
 - **Theme**, **font**, **font size**, **row height** and **full page width** (use the whole window on wide screens). The font list only shows fonts that are installed on the computer that opens the page.
@@ -380,6 +401,7 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 - **Tag icons** (behind *Show tag icons*): which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
 - **LAN access** on/off (off by default; needs a restart), with the addresses, the token and a QR code for other devices.
 - **Calendar subscription** on/off (off by default), with the links, a QR code and *New link*.
+- **AI** on/off (off by default), whether the helper and the model are there, *Test* and *Unload*. See [AI on this computer](#ai-on-this-computer-optional).
 - **MCP server** on/off (off by default) and read-only switch, with the endpoint, token and a ready-made client configuration to copy.
 - **Backups:** the snapshot interval, *Back up now*, and *Show backups* for one-click restore from the list.
 - **Data:** export JSON / CSV / calendar, import JSON, load demo data (three example areas, *Personal*, *Worldbuilding* and *Writing*, that use every feature), and **Start with empty data** – clears everything (after taking a backup) without restarting the program. Your settings stay.
@@ -552,6 +574,8 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `GET /api/export.csv`, `GET /api/export.ics` | spreadsheet / calendar export (`closed=1` or `closed=0` to include or leave out finished entries; default: CSV with, calendar without) |
 | `POST /api/files` | `{name, data}` (base64, up to 10 MB) – keep a copy of a file; answers `{file}`, the key for a link's `file` field |
 | `GET /api/files/{key}`, `/api/files/{key}/view` | download the file (`name` sets the file name) / what the viewer shows: `kind` text, mail or binary |
+| `GET /api/ai`, `POST /api/ai/unload` | AI status (switched on, helper and model found, running) / stop the helper |
+| `POST /api/ai/subtasks`, `/api/ai/rewrite` | `{id}` – suggested sub-tasks `{items}` / rewritten notes `{text}` (`mode`: `tidy` or `expand`); nothing is saved. `POST /api/ai/test` asks one short question |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |
 

@@ -22,6 +22,7 @@ type ConfigData struct {
 	Timezone          string `json:"timezone"`   // IANA name; empty = system time zone
 	CalKey            string `json:"calKey"`     // calendar subscription key; empty = off (the default)
 	LANEnabled        bool   `json:"lanEnabled"` // OFF by default: other devices may connect (with the token); needs a restart
+	AIEnabled         bool   `json:"aiEnabled"`  // OFF by default: the AI buttons (helper and model in the ai folder, see ai.go)
 }
 
 type Config struct {
@@ -41,7 +42,7 @@ func newToken() string {
 func LoadConfig(dir string) (*Config, error) {
 	c := &Config{path: filepath.Join(dir, "config.json")}
 	c.d = ConfigData{Port: DefaultPort, BackupIntervalMin: DefaultBackupIntervalMin, // see defaults.go
-		LANEnabled: DefaultLANEnabled, MCPEnabled: DefaultMCPEnabled, MCPReadOnly: DefaultMCPReadOnly}
+		LANEnabled: DefaultLANEnabled, MCPEnabled: DefaultMCPEnabled, MCPReadOnly: DefaultMCPReadOnly, AIEnabled: DefaultAIEnabled}
 	b, err := os.ReadFile(c.path)
 	switch {
 	case err == nil:

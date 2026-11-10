@@ -40,6 +40,7 @@ type Server struct {
 	started time.Time
 	http    *http.Server
 	inst    string // the id of this data folder (see instanceID)
+	ai      *aiHelper
 }
 
 // instanceID: a short fingerprint of the data folder's full path. Two programs with different data
@@ -69,7 +70,7 @@ func NewServer(st *Store, cfg *Config, port int, uiDir string) (*Server, error) 
 		}
 		ui = sub
 	}
-	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir)}, nil
+	return &Server{st: st, cfg: cfg, port: port, ui: ui, started: time.Now(), inst: instanceID(st.dir), ai: newAIHelper()}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -98,6 +99,11 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/reset", s.hReset)
 	api("POST /api/discord", s.hDiscord)
 	api("POST /api/files", s.hFileUpload)
+	api("GET /api/ai", s.hAIStatus)
+	api("POST /api/ai/unload", s.hAIUnload)
+	api("POST /api/ai/test", s.hAITest)
+	api("POST /api/ai/subtasks", s.hAISubtasks)
+	api("POST /api/ai/rewrite", s.hAIRewrite)
 	api("GET /api/files/{key}", s.hFileGet)
 	api("GET /api/files/{key}/view", s.hFileView)
 	api("POST /api/alerts/ack", s.hAck)
@@ -275,7 +281,8 @@ func (s *Server) info() map[string]any {
 		"name": AppName, "version": Version, "schema": schemaVersion, "dataDir": s.st.dir, "port": s.port, "instance": s.inst,
 		"timezone": s.st.tzName(), "startedAt": s.started.Format(time.RFC3339),
 		"mcp":      map[string]any{"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly},
-		"defaults": uiDefaults, // the page's settings until changed (defaults.go)
+		"ai":       c.AIEnabled && s.ai.status(true)["ready"] == true, // show the AI buttons
+		"defaults": uiDefaults,                                        // the page's settings until changed (defaults.go)
 	}
 }
 
@@ -354,6 +361,7 @@ func (s *Server) settings() map[string]any {
 		// enabled: the setting; active: this run listens on the network (a change needs a restart)
 		"lan": map[string]any{"enabled": c.LANEnabled, "active": s.lan, "urls": lanURLs(s.port), "token": c.Token},
 		"cal": s.calInfo(c.CalKey),
+		"ai":  s.ai.status(c.AIEnabled),
 		"mcp": map[string]any{
 			"enabled": c.MCPEnabled, "readOnly": c.MCPReadOnly,
 			"url": fmt.Sprintf("http://127.0.0.1:%d/mcp", s.port), "token": c.Token,
@@ -377,6 +385,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 			Enabled *bool `json:"enabled"`
 			Renew   bool  `json:"renew"` // a new key: the old links stop working
 		} `json:"cal"`
+		AI *struct {
+			Enabled *bool `json:"enabled"`
+		} `json:"ai"`
 	}
 	if err := readBody(r, &req, 1<<16); err != nil {
 		fail(w, err)
@@ -401,6 +412,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 		if req.LAN != nil && req.LAN.Enabled != nil {
 			d.LANEnabled = *req.LAN.Enabled
 		}
+		if req.AI != nil && req.AI.Enabled != nil {
+			d.AIEnabled = *req.AI.Enabled
+		}
 		if req.Cal != nil {
 			if req.Cal.Enabled != nil && !*req.Cal.Enabled {
 				d.CalKey = ""
@@ -412,6 +426,9 @@ func (s *Server) hSettingsPut(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		jerr(w, 500, err)
 		return
+	}
+	if req.AI != nil && req.AI.Enabled != nil && !*req.AI.Enabled {
+		s.ai.unload() // switched off: free the memory now
 	}
 	jout(w, 200, s.settings())
 }
@@ -750,4 +767,5 @@ func (s *Server) Shutdown() {
 	if s.http != nil {
 		_ = s.http.Shutdown(ctx)
 	}
+	s.ai.unload()
 }

@@ -6,5 +6,6 @@
 /prototype/
 *.corrupt-*.json
 /todo
+/ai/
 /todo.exe
 *:Zone.Identifier

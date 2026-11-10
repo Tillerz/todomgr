@@ -24,15 +24,15 @@ else
   build darwin  arm64 todomgr-macos-arm64   todo
   build darwin  amd64 todomgr-macos-amd64   todo
 
-  # Release archives: dist/todomgr-v<Version>-<platform>.zip|.tar.gz + SHA256SUMS.txt (never with a data folder).
+  # Release archives: dist/todomgr-v<Version>-<platform>.zip|.tar.gz + SHA256SUMS.txt (never with a data or ai folder).
   version=$(sed -n 's/^[[:space:]]*Version = "\(.*\)"$/\1/p' app/main.go)
   [ -n "$version" ] || { echo "no Version in app/main.go"; exit 1; }
   rm -f dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt
   (
     cd dist
-    zip -qr "todomgr-v$version-windows-amd64.zip" todomgr-windows-amd64 -x 'todomgr-windows-amd64/data/*'
+    zip -qr "todomgr-v$version-windows-amd64.zip" todomgr-windows-amd64 -x 'todomgr-windows-amd64/data/*' 'todomgr-windows-amd64/ai/*'
     for p in linux-amd64 macos-arm64 macos-amd64; do
-      tar -czf "todomgr-v$version-$p.tar.gz" --exclude="todomgr-$p/data" "todomgr-$p"
+      tar -czf "todomgr-v$version-$p.tar.gz" --exclude="todomgr-$p/data" --exclude="todomgr-$p/ai" "todomgr-$p"
     done
     sha256sum *.zip *.tar.gz > SHA256SUMS.txt
   )

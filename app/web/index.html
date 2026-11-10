@@ -158,6 +158,16 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .improw.known{opacity:.5;cursor:default}
 .imphd{font-weight:600;padding:8px 10px 2px;border-top:1px solid var(--line)}
 .imphd:first-child{border-top:0}
+.aiwait{display:flex;gap:10px;align-items:center}
+.aiwait i{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:aispin .8s linear infinite;flex:none}
+@keyframes aispin{to{transform:rotate(360deg)}}
+.ainame{flex:1;padding:4px 6px}
+.aimodes{display:grid;gap:8px}
+.aimode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;height:auto}
+.aimode small{color:var(--muted);font-weight:400;white-space:normal}
+.aicmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.aicmp textarea{width:100%;height:45vh;box-sizing:border-box;resize:vertical}
+@media (max-width:700px){.aicmp{grid-template-columns:1fr}.aicmp textarea{height:28vh}}
 .grip{width:18px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:grab;opacity:0;touch-action:none;flex:none}
 .row:hover .grip,.row.sel .grip{opacity:.7}
 @media (pointer:coarse){.grip{opacity:.6;width:26px}}
@@ -1052,14 +1062,14 @@ ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.file?'Click to view the copy kept in data/files'+(l.uri?'\n'+l.uri:''):l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${l.uri||l.file?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
 <div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
-<div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> <button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
+<div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> ${APP.ai?'<button class="chip" data-act="airewrite" data-tip="Tidy up or expand the notes with the AI. You see the old and the new text first.">'+ic('bot',12)+' Rewrite</button> ':''}<button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
 ${ui.mdPrev?`<div class="md" data-tip="Double-click to edit">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
 ${(()=>{const re=new RegExp(`\\[\\[${n.id}[\\]|]`),b=allNodes().filter(x=>x.id!==n.id&&re.test(x.notes||''));
   return b.length?`<h4>Linked from</h4><div class="list">${b.map(x=>`<div class="li"><span class="t"><a class="elink" data-act="goto" data-v="${x.id}">${esc(x.name)}</a></span></div>`).join('')}</div>`:''})()}
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
-<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-act="addchild">${ic('plus',14)} Sub-item</button><button class="btn" data-act="dup" data-tip="Copy this item with all sub-items">Duplicate</button><button class="btn dng" data-act="trash" data-tip="Move to trash (can be restored)">${ic('trash',14)} Trash</button></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-act="addchild">${ic('plus',14)} Sub-item</button>${APP.ai&&n.kind!=='reminder'?'<button class="btn" data-act="aisub" data-tip="The AI suggests sub-tasks. You pick which ones to add.">'+ic('bot',14)+' Suggest sub-tasks</button>':''}<button class="btn" data-act="dup" data-tip="Copy this item with all sub-items">Duplicate</button><button class="btn dng" data-act="trash" data-tip="Move to trash (can be restored)">${ic('trash',14)} Trash</button></div>
 <datalist id="dl-tags">${[...new Set(allNodes().flatMap(x=>x.tags))].map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
 <datalist id="dl-people">${[...new Set(allNodes().flatMap(x=>x.people))].map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
 <datalist id="dl-nodes">${allNodes().filter(x=>x.kind!=='reminder'&&x.id!==n.id&&!inSubtree(x.id,n.id)&&!dependsOn(x,n.id)).map(x=>`<option value="${esc(x.name)} [${x.id}]">`).join('')}</datalist>`;
@@ -1161,7 +1171,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'addtime':{const mi=+$('[data-f=mintime]').value;if(mi>0)m(()=>{n.time.push({at:now(),secs:mi*60});log('time',n.id,{secs:mi*60})});break}
     case'rmtime':m(()=>n.time=n.time.filter(t=>t.at!==+b.dataset.at));break;
     case'fmttoggle':mutate(()=>{n.notesFormat=n.notesFormat==='bbcode'?'markdown':'bbcode';touch(n)},{panel:true});break;
-    case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
+    case'aisub':aiSubtasks(n.id);break;case'airewrite':aiRewrite(n.id);break;case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
     case'dup':{let c;mutate(()=>{c=dupNode(n.id,n.parent,S.nodes[n.parent].children.indexOf(n.id)+1,true);log('create',c.id)});ui.sel=c.id;renderAll();break}
     case'trash':trash(n.id);break;
   }}
@@ -1380,7 +1390,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1479,6 +1489,53 @@ function showImport(list){const many=list.length>1,items=list.flatMap(x=>x.p?x.p
     const where=!folder?'to the Inbox':files>1?`into ${files} new projects`:`to “${last?.name}”`;
     toast((last?`Added ${entries(added)} ${where}${dups?` · ${dups} already there`:''}${partly?` · ${partly} with problems (see their notes)`:''}`:'')
       +(errs.length?(last?' · ':'')+'Import failed: '+errs.join(' · '):''),{ms:9000})}}
+/* AI (Settings → AI): runs on this computer through the program (ai.go). APP.ai: switched on and set up,
+   so the AI buttons show. Every answer is a suggestion: nothing changes until it is accepted. */
+// a "thinking" window with Cancel; resolves with the answer, or null when cancelled or failed
+async function aiRun(title,path,body){const ac=new AbortController();
+  openModal(`<h3 style="margin-top:0">${esc(title)}</h3><p class="aiwait"><i></i><span>The AI is thinking… <small style="color:var(--muted)">(the first time it also has to start, which can take a while)</small></span></p><div style="text-align:right"><button class="btn" data-aicancel>Cancel</button></div>`,{kind:'ai'});
+  $('#modal [data-aicancel]').onclick=()=>{ac.abort();closeModal()};
+  try{await Store.sync();
+    const r=await fetch(path,{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','X-Client':Store.clientId},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>null);if(!r.ok)throw new Error((j&&j.error)||'Server answered '+r.status);
+    if(modalKind!=='ai'){ac.abort();return null}// closed meanwhile (Esc)
+    return j}
+  catch(e){if(ac.signal.aborted)return null;if(modalKind==='ai')closeModal();toast('AI: '+e.message,{ms:9000});return null}}
+async function aiSubtasks(id){const n=S.nodes[id];if(!n)return;
+  const r=await aiRun(`Suggest sub-tasks for “${n.name}”`,'/api/ai/subtasks',{id});if(!r)return;
+  if(!r.items.length){closeModal();return toast('The AI found nothing to add')}
+  openModal(`<h3 style="margin-top:0">Sub-tasks for “${esc(n.name)}”</h3><p>Untick what you do not want. You can change the names.</p>
+<div class="implist">${r.items.map((t,i)=>`<div class="improw"><input type="checkbox" data-ais="${i}" checked><input class="ainame" data-ain="${i}" value="${esc(t)}"></div>`).join('')}</div>
+<div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-aino>Cancel</button><button class="btn pri" data-aiadd>Add <b id="aiN"></b></button></div>`,{kind:'aisub'});
+  const boxes=$$('#modal [data-ais]'),count=()=>{const k=boxes.filter(b=>b.checked).length;$('#aiN').textContent=k;$('#modal [data-aiadd]').disabled=!k};
+  boxes.forEach(b=>b.onchange=count);count();$('#modal [data-aino]').onclick=closeModal;
+  $('#modal [data-aiadd]').onclick=()=>{const p=S.nodes[id];if(!p)return closeModal();
+    const names=boxes.filter(b=>b.checked).map(b=>$(`#modal [data-ain="${b.dataset.ais}"]`).value.trim()).filter(Boolean);closeModal();
+    mutate(()=>{names.forEach(nm=>{const c=mk(nm);attach(c,id);log('create',c.id)});p.collapsed=false},{panel:true});
+    toast(`Added ${names.length} sub-task${names.length===1?'':'s'} to “${p.name}”`,{action:{label:'Undo',fn:undo}})}}
+// Rewrite: Tidy up (spelling, lists, tick boxes, groups; adds nothing) or Expand (adds next steps, things to
+// prepare, open questions and tips below the notes; also works without notes, from the entry's name)
+function aiRewrite(id){const n=S.nodes[id];if(!n)return;document.activeElement?.blur?.();// the notes field saves when it loses focus
+  const empty=!S.nodes[id].notes.trim(),opt=(m,title,text,off)=>`<button class="btn aimode" data-aimode="${m}" ${off?'disabled':''}><b>${title}</b><small>${text}</small></button>`;
+  openModal(`<h3 style="margin-top:0">Rewrite the notes of “${esc(n.name)}”</h3><div class="aimodes">
+${opt('tidy','Tidy up',empty?'There are no notes to tidy up yet.':'Fixes spelling, makes lists and tick boxes for open tasks, groups what belongs together. Adds nothing.',empty)}
+${opt('expand','Expand','Adds next steps, things to prepare, open questions and tips below your notes. Uses the entry’s name too, so it also works without notes.')}</div>
+<div style="text-align:right;margin-top:12px"><button class="btn" data-aino>Cancel</button></div>`,{kind:'aimode'});
+  $('#modal [data-aino]').onclick=closeModal;
+  $$('#modal [data-aimode]').forEach(b=>b.onclick=()=>aiRewriteRun(id,b.dataset.aimode))}
+async function aiRewriteRun(id,mode){
+  const r=await aiRun(mode==='tidy'?'Tidy up the notes':'Expand the notes','/api/ai/rewrite',{id,mode});const n=S.nodes[id];if(!r||!n)return;
+  openModal(`<h3 style="margin-top:0">${mode==='tidy'?'Tidied':'Expanded'} notes for “${esc(n.name)}”</h3><div class="aicmp"><div><b>Old text</b><textarea readonly>${esc(n.notes)}</textarea></div><div><b>New text</b> <small style="color:var(--muted)">(you can change it)</small><textarea id="aiNew">${esc(r.text)}</textarea></div></div>
+<div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-aino>Keep the old text</button><button class="btn pri" data-aiuse>Use the new text</button></div>`,{kind:'airew',cls:'fview'});
+  $('#modal [data-aino]').onclick=closeModal;
+  $('#modal [data-aiuse]').onclick=()=>{const x=S.nodes[id],t=$('#aiNew').value;closeModal();if(!x)return;
+    mutate(()=>{x.notes=t;touch(x)},{panel:true});toast('Notes rewritten',{action:{label:'Undo',fn:undo}})}}
+function aiSettings(A){const ok=(v,what)=>v?`✔ ${esc(v)}`:`<span style="color:var(--danger)">✘ ${what} missing</span>`;
+  return `<div class="sh">AI <span class="bd" data-tip="A small AI that runs on this computer, for Suggest sub-tasks and Rewrite notes. Nothing leaves the computer.">?</span></div>
+  <label class="chk-row"><input type="checkbox" id="aiOn" ${A.enabled?'checked':''}> Use AI <small style="color:var(--muted)">(off by default)</small></label>
+  <div class="note">Helper: ${ok(A.helper,'llama-server')} · Model: ${ok(A.model,'a .gguf file')}${A.running?' · <b>loaded</b>':''}</div>
+  <div style="display:flex;gap:6px;margin-top:6px"><button class="btn" id="aiTest" ${A.enabled&&A.ready?'':'disabled'} data-tip="Asks the AI one short question">Test</button><button class="btn" id="aiUnload" ${A.running?'':'disabled'} data-tip="Stops the AI now and frees its memory. It also stops by itself after 15 minutes without use.">Unload</button></div>
+  ${A.ready?'':`<div class="note">To set it up, put two things into the folder <code>${esc(A.dir)}</code>:<br>1. <b>llama-server</b>: from <a href="https://github.com/ggml-org/llama.cpp/releases" target="_blank" rel="noopener">llama.cpp releases</a>, download the archive for your system (for example <code>…-bin-win-cpu-x64.zip</code>, or <code>…-bin-win-vulkan-x64.zip</code> to use a graphics card) and unpack all of it there.<br>2. <b>A model</b>: from <a href="https://huggingface.co/unsloth/Qwen3.5-4B-GGUF" target="_blank" rel="noopener">Qwen3.5-4B</a>, the file <code>Qwen3.5-4B-Q4_K_M.gguf</code> (2.7 GB).</div>`}`}
 async function loadDemo(){if(allNodes().length&&!confirm('Replace ALL current data with the demo data? (A backup of the current data is kept in data/backups.)'))return;
   const keep=S,keepSel=ui.sel;seed();const data=JSON.stringify(S);S=keep;ui.sel=keepSel;
   try{await Store.sync();await Store.api('POST','/api/import',data);await Store.refresh();toast('Demo data loaded — your previous data is in data/backups')}catch(e){toast('Could not load demo data: '+e.message,{ms:9000})}}
@@ -1634,6 +1691,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   try{cfg=await Store.api('GET','/api/settings');bk=(await Store.api('GET','/api/backups')).backups}
   catch(e){if($('#setBody'))$('#setBody').innerHTML='<div class="empty">Could not load settings: '+esc(e.message)+'</div>';return}
   if(modalKind!=='settings')return;
+  const ai=!!(cfg.ai.enabled&&cfg.ai.ready);if(ai!==!!APP.ai){APP.ai=ai;renderDetail()}// AI buttons on or off
   const m=cfg.mcp,L=cfg.lan,C=cfg.cal,snippet=JSON.stringify({mcpServers:{todomgr:{type:'http',url:m.url,headers:{Authorization:'Bearer '+m.token}}}},null,2);
   $('#setBody').innerHTML=`
   <div class="sh">Appearance</div>
@@ -1660,6 +1718,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   ${C.links.some(l=>l.svg)?`<div id="calQrBox" hidden><div class="note" style="margin-top:6px">QR codes for a phone or tablet: pick the address of your Wi-Fi or network cable (usually 192.168.… or 10.…), not 172.…</div><div>${C.links.filter(l=>l.svg).map(l=>`<div class="qrbox">${l.svg}<small>${esc(l.url.split('/cal/')[0])}</small></div>`).join('')}</div></div>`:''}
   <div class="row-between" style="margin-top:6px"><span class="note" style="margin:0">Anyone with this link can read your calendar entries (not change them).</span><button class="btn" id="calNew" data-tip="The old links stop working; subscribe again with the new one">New link</button></div>`:''}
   <div class="note">In Apple Calendar: File → New Calendar Subscription, and choose <b>On My Mac</b> as the location, not iCloud: iCloud fetches it from the internet and cannot reach this computer. ${L.active?'':'For a phone or tablet, switch on LAN access first.'}</div>
+  ${aiSettings(cfg.ai)}
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
   <label class="chk-row"><input type="checkbox" id="mcpOn" ${m.enabled?'checked':''}> Enable the MCP server <small style="color:var(--muted)">(off by default)</small></label>
   <label class="chk-row"><input type="checkbox" id="mcpRo" ${m.readOnly?'checked':''}> Read-only — AI tools can look but not change anything</label>
@@ -1702,6 +1761,9 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
     $('#lanQr').onclick=async()=>{try{const r=await Store.api('POST','/api/lan/pair',{}),box=$('#lanQrBox');
       box.innerHTML=r.links.map(l=>`<div class="qrbox">${l.svg}<small>${esc(l.url)}</small></div>`).join('')+`<div class="note">Scan it with the camera of the phone or tablet and open the link. Valid for ${Math.round(r.validSeconds/60)} minutes, and only once.</div>`;
       clearTimeout(box.tm);box.tm=setTimeout(()=>{if(box.isConnected)box.innerHTML='<div class="note">The QR code has expired. Click “Show QR code” for a new one.</div>'},r.validSeconds*1000)}catch(e){toast(e.message)}}}
+  $('#aiOn').onchange=e=>put({ai:{enabled:e.target.checked}});
+  $('#aiTest').onclick=async()=>{const r=await aiRun('Test the AI','/api/ai/test',{});if(!r)return;closeModal();toast(`The AI answered in ${r.secs.toFixed(1)} s: ${r.text}`,{ms:9000})};
+  $('#aiUnload').onclick=async()=>{try{await Store.api('POST','/api/ai/unload',{});toast('AI unloaded');showSettings()}catch(e){toast('Could not unload: '+e.message)}};
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
   $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
@@ -1952,7 +2014,7 @@ function ctxHTML(items){return items.map(it=>{
   if(it.sep)return'<div class="csep"></div>';
   if(it.sw)return`<div class="cswatches">${it.sw.map(w=>`<button class="sw ${w.c?'':'none'} ${w.on?'on':''}" style="--c:${w.c}" data-a="${ctxActs.push(w.fn)-1}" data-tip="${esc(w.t||'')}"></button>`).join('')}</div>`;
   const a=it.sub?'':` data-a="${ctxActs.push(it.fn)-1}"`;
-  return`<div class="ci${it.dis?' dis':''}${it.danger?' danger':''}${it.sub?' has-sub':''}" tabindex="-1" role="menuitem"${a}><span class="ck">${it.checked?'✓':''}</span><span class="lb">${esc(it.label)}</span>${it.key?`<kbd>${esc(it.key)}</kbd>`:''}${it.sub?`<span class="arr">›</span><div class="sub">${ctxHTML(it.sub)}</div>`:''}</div>`}).join('')}
+  return`<div class="ci${it.dis?' dis':''}${it.danger?' danger':''}${it.sub?' has-sub':''}" tabindex="-1" role="menuitem"${a}><span class="ck">${it.checked?'✓':it.icon?ic(it.icon,14):''}</span><span class="lb">${esc(it.label)}</span>${it.key?`<kbd>${esc(it.key)}</kbd>`:''}${it.sub?`<span class="arr">›</span><div class="sub">${ctxHTML(it.sub)}</div>`:''}</div>`}).join('')}
 function showCtx(items,x,y){closeCtx();tip.classList.remove('show');const el=document.createElement('div');el.className='ctx';el.setAttribute('role','menu');el.tabIndex=-1;
   el.innerHTML=ctxHTML(items);document.body.append(el);ctx=el;ctxAt=now();
   const w=el.offsetWidth,h=el.offsetHeight;el.style.left=Math.max(6,Math.min(x,innerWidth-w-8))+'px';el.style.top=Math.max(6,Math.min(y,innerHeight-h-8))+'px';el.focus({preventScroll:true})}
@@ -2001,7 +2063,7 @@ const focusField=(id,f)=>()=>{ui.sel=id;ui.panel=true;renderTree();renderDetail(
 function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexOf(id),kind=n.kind,isRem=kind==='reminder',url=openUrl(n);
   const doM=fn=>()=>mutate(fn,{panel:true});
   const items=[mi('Open details',()=>{ui.sel=id;ui.panel=true;renderTree();renderDetail()}),mi('Rename',()=>{ui.sel=id;rename(id)},{key:'F2'}),
-    mi('Add sub-item',()=>newAndRename(id),{key:'Ins'}),
+    mi('Add sub-item',()=>newAndRename(id),{key:'Ins'}),...(APP.ai&&!isRem?[mi('Suggest sub-tasks…',()=>aiSubtasks(id),{icon:'bot'})]:[]),
     mi('Add sibling below',()=>newAndRename(n.parent,i+1,kind==='project'?{kind:'project',status:'planning'}:undefined),{key:'Enter'}),MSEP];
   if(!isRem){
     const st=KS[kind].map(s=>mi(STAT[s]+(s==='later'?' (postponed)':''),doM(()=>setStatus(n,s)),{checked:n.status===s}));
@@ -2056,7 +2118,7 @@ $('#tree').addEventListener('touchstart',e=>{const row=e.target.closest('.row');
 
 /* ============================ init ============================ */
 (async function init(){
-  try{const st=await Store.api('GET','/api/state');Object.assign(DEF,st.info.defaults);Store.adopt(st);APP.name=st.info.name;APP.instance=st.info.instance;APP.version='v'+st.info.version;
+  try{const st=await Store.api('GET','/api/state');Object.assign(DEF,st.info.defaults);Store.adopt(st);APP.name=st.info.name;APP.instance=st.info.instance;APP.ai=!!st.info.ai;APP.version='v'+st.info.version;
     if(st.recovered)setTimeout(()=>toast('Data was recovered: '+st.recovered,{ms:25000}),600)}
   catch(e){document.body.innerHTML=`<div style="padding:40px;font:16px system-ui;max-width:560px"><h2>Cannot reach the Todo server</h2><p>${esc(e.message)}</p><p>Start it with <code>todo serve</code> and reload this page.</p><button onclick="location.reload()" style="padding:8px 16px;font:inherit">Retry</button></div>`;return}
   document.title=APP.name+' '+APP.version;$('.brand small').textContent=APP.version;applyPrefs();applyTheme();setView('tree');renderTimerBtn();chrome();Drafts.restore();

@@ -156,6 +156,21 @@ check('note drafts: kept in the browser, put back on the next page load, asks wh
     if(notes()!=='phone text')bad.push('a background tab that the phone closed: not put back at once, notes '+notes())}
   finally{S.nodes[id].notes=old;saved();localStorage=realLS;Store.clientId=me;closeModal()}
   return bad.join('; ')});
+check('AI: no AI buttons while AI is off; buttons and menu entry when on; setup help in Settings',()=>{const bad=[],keep=APP.ai;
+  const n=allNodes().find(x=>x.kind==='todo'&&x.notes.trim()),r=allNodes().find(x=>x.kind==='reminder');
+  const panel=x=>{ui.sel=x.id;ui.panel=true;ui.prevFor=null;renderDetail();ui.mdPrev=true;return el('#detail').innerHTML};
+  const menu=x=>nodeMenu(x).some(i=>i.label==='Suggest sub-tasks…');
+  try{APP.ai=false;const h=panel(n);if(h.includes('data-act="aisub"')||h.includes('data-act="airewrite"')||menu(n))bad.push('buttons while off');
+    APP.ai=true;const h2=panel(n);if(!h2.includes('data-act="aisub"')||!h2.includes('data-act="airewrite"')||!menu(n))bad.push('buttons while on');
+    if(nodeMenu(n).find(i=>i.label==='Suggest sub-tasks…').icon!=='bot'||!ctxHTML(nodeMenu(n)).includes('<span class="ck"><svg')||!/data-act="aisub"[^>]*><svg/.test(h2))bad.push('robot icon in the menu and on the button');closeCtx();
+    if(r&&(panel(r).includes('data-act="aisub"')||menu(r)))bad.push('a reminder gets Suggest sub-tasks');
+    const e=allNodes().find(x=>!x.notes.trim()&&x.kind==='todo');if(e&&!panel(e).includes('data-act="airewrite"'))bad.push('Rewrite hidden for empty notes');
+    const st=aiSettings({enabled:true,ready:false,dir:'/x/ai',helper:'',model:'',running:false});
+    if(!st.includes('llama-server missing')||!st.includes('Qwen3.5-4B-Q4_K_M.gguf')||!/id="aiTest" disabled/.test(st)||!/id="aiUnload" disabled/.test(st))bad.push('settings, not set up');
+    const st2=aiSettings({enabled:true,ready:true,dir:'/x/ai',helper:'llama-server',model:'m.gguf',running:true});
+    if(st2.includes('To set it up')||/id="aiTest" disabled/.test(st2)||/id="aiUnload" disabled/.test(st2)||!st2.includes('loaded'))bad.push('settings, set up and loaded')}
+  finally{APP.ai=keep;ui.sel=null}
+  return bad.join('; ')});
 // login repair (Store.heal) with fake server answers: [status, body] per path, in order
 const fakeNet=routes=>{const log=[];fetch=async p=>{log.push(p);const q=routes[p]||[];const [st,b]=q.length>1?q.shift():q[0]||[404,{}];return{status:st,ok:st<300,json:async()=>b}};return log};
 const asyncCheck=async(name,fn)=>{let why;try{why=await fn()}catch(e){why='error: '+e.message}check(name,()=>why)};
@@ -172,6 +187,19 @@ return (async()=>{const realFetch=fetch,realLoc=location;APP.instance='aaaa1111'
   await asyncCheck('login repair: another device without a valid login: the page reloads (login page)',async()=>{
     let reloaded=false;location={reload(){reloaded=true}};fakeNet({'/api/x':[[401,{}]],'/':[[200,{}]],'/api/info':[[401,{}]]});
     const r=await Store.api('POST','/api/x',{}).then(()=>'saved',()=>'refused');return reloaded&&r==='refused'?'':'reloaded '+reloaded+', '+r});
+  const realSync=Store.sync;Store.sync=async()=>{};
+  await asyncCheck('AI: suggested sub-tasks and rewritten notes are shown first; an error closes the thinking window',async()=>{const bad=[];
+    const n=allNodes().find(x=>x.kind==='todo'&&x.notes.trim());
+    fakeNet({'/api/ai/subtasks':[[200,{items:['Buy the food','Book the room']}]]});await aiSubtasks(n.id);
+    const h=el('#modal').innerHTML;if(modalKind!=='aisub'||!h.includes('value="Buy the food"')||!h.includes('value="Book the room"'))bad.push('sub-tasks: modal '+modalKind);closeModal();
+    aiRewrite(n.id);const hm=el('#modal').innerHTML;if(modalKind!=='aimode'||!/data-aimode="tidy" >/.test(hm)||!hm.includes('data-aimode="expand"'))bad.push('choice: modal '+modalKind);closeModal();
+    const e=allNodes().find(x=>!x.notes.trim()&&x.kind==='todo');if(e){aiRewrite(e.id);if(!/data-aimode="tidy" disabled/.test(el('#modal').innerHTML))bad.push('Tidy up must be off for empty notes');closeModal()}
+    fakeNet({'/api/ai/rewrite':[[200,{text:'Clean new text'}]]});await aiRewriteRun(n.id,'tidy');
+    const h2=el('#modal').innerHTML;if(modalKind!=='airew'||!h2.includes('Clean new text')||!h2.includes(esc(n.notes).slice(0,20)))bad.push('rewrite: modal '+modalKind);closeModal();
+    fakeNet({'/api/ai/subtasks':[[400,{error:'AI is off (Settings → AI)'}]]});const r=await aiRun('x','/api/ai/subtasks',{id:n.id});
+    if(r!==null||modalKind)bad.push('error: result '+JSON.stringify(r)+', modal '+modalKind);
+    return bad.join('; ')});
+  Store.sync=realSync;
   fetch=realFetch;location=realLoc})();
 `);
 const pageAsync = page(...Object.values(env), db, check, el, text, uiDefaults);

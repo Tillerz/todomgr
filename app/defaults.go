@@ -19,6 +19,7 @@ const (
 	DefaultMCPEnabled   = false // AI assistants may connect (from this computer only)
 	DefaultMCPReadOnly  = false // when MCP is on: AI assistants can read but not change anything
 	DefaultCalendarFeed = false // offer the calendar subscription link (Settings → Calendar subscription)
+	DefaultAIEnabled    = false // the AI buttons; also needs llama-server and a model in the ai folder (Settings → AI)
 )
 
 // ---------------------------------------------------------------- page (Settings → Appearance and more)
