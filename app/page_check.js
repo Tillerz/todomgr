@@ -186,6 +186,14 @@ check('writing goals: +500 and totals, words today from the start of the day, th
     renderTree();if(!/class="pace-t"/.test(el('#tree').innerHTML))bad.push('words-left tag in the tree')}
   finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}
   return bad.join('; ')});
+check('today: an event of today that is over moves from Upcoming reminders to Earlier today',()=>{const bad=[],made=[];
+  const t=new Date(Date.now()-3*3600e3),hh=x=>String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0'),e=new Date(Date.now()-2*3600e3);
+  if(t.getDate()!==new Date().getDate())return '';// too early in the day to test
+  const ev=mk('Dentist past',{kind:'reminder',status:'set',reminder:addDays(0)+'T'+hh(t),end:addDays(0)+'T'+hh(e)});attach(ev,'root');made.push(ev);
+  try{ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML,iu=h.indexOf('Upcoming reminders'),ie=h.indexOf('Earlier today'),ip=h.indexOf('Dentist past');
+    if(ie<0||ip<ie)bad.push('not under Earlier today');if(iu>=0&&iu<ip&&(ie<0||ip<ie))bad.push('still under Upcoming')}
+  finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

@@ -167,6 +167,7 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .aqprev b{color:var(--muted);font-weight:600}
 .goal{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;cursor:pointer}
 .goal-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.past .trow{opacity:.55}
 .goal-btns{display:flex;gap:4px;align-items:center}
 .goal-left{cursor:pointer;text-decoration:underline dotted}
 .goal-txt{font-size:13px;color:var(--muted);margin-top:4px}.goal-txt b{color:var(--ink)}.goal-txt .late{color:var(--danger)}
@@ -1321,9 +1322,11 @@ function renderToday(){
   const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'&&!waits(n)),used=new Set();
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(n=>trow(n)).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
-  const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
+  const wk=startOfToday().getTime()+7*864e5,evAll=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
+  // an event or reminder of today whose time is over goes to "Earlier today", not to the upcoming ones
+  const over=n=>(n.end?evEnd(n):remAt(n))<=new Date(),upc=evAll.filter(n=>!over(n)),past=evAll.filter(over);
   const html=goalsBox()+sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
-   +sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
+   +(past.length?`<div class="past">${sec('Earlier today',past,'over')}</div>`:'')+sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
   const wk7=ui.todayWeek,seg=`<span class="seg" style="float:right"><button data-tv="" class="${wk7?'':'on'}">Today</button><button data-tv="1" class="${wk7?'on':''}" data-tip="Tomorrow and the 6 days after it">Next 7 days</button></span>`;
   $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">${seg}${wk7?'Next 7 days':`Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small>`}</h2>${wk7?renderWeek():planBar()+(html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>')}</div>`}
