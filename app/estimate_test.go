@@ -89,3 +89,30 @@ func TestEstRound(t *testing.T) {
 		}
 	}
 }
+
+// progress for scripts: {add: N}; the count at the start of the day is kept for "words today"
+func TestProgressAddAndDay(t *testing.T) {
+	a := testServer(t)
+	id := a.call(201, "POST", "/api/nodes", map[string]any{"name": "Novel", "prog": map[string]any{"mode": "units", "total": 1000, "done": 100, "unit": "words"}})["id"].(string)
+	if n := a.call(200, "GET", "/api/nodes/"+id, nil); n["progDay"] != nil {
+		t.Errorf("a new entry has no progDay yet: %v", n["progDay"])
+	}
+	n := a.call(200, "PATCH", "/api/nodes/"+id, map[string]any{"prog": map[string]any{"add": 250}})
+	today := a.s.st.Now().Format("2006-01-02")
+	if p := n["prog"].(map[string]any); p["done"] != float64(350) {
+		t.Errorf("add: done %v, want 350", p["done"])
+	}
+	if d, _ := n["progDay"].(map[string]any); d["d"] != today || d["start"] != float64(100) {
+		t.Errorf("progDay after the first change: %v", n["progDay"])
+	}
+	n = a.call(200, "PATCH", "/api/nodes/"+id, map[string]any{"prog": map[string]any{"add": 50}})
+	if d, _ := n["progDay"].(map[string]any); d["start"] != float64(100) || n["prog"].(map[string]any)["done"] != float64(400) {
+		t.Errorf("a second change today keeps the start: %v %v", n["progDay"], n["prog"])
+	}
+	if p := a.call(200, "PATCH", "/api/nodes/"+id, map[string]any{"prog": map[string]any{"add": -1000}})["prog"].(map[string]any); p["done"] != float64(0) {
+		t.Errorf("add never goes below 0: %v", p["done"])
+	}
+	if p := a.call(200, "PATCH", "/api/nodes/"+id, map[string]any{"prog": map[string]any{"add": 5000}})["prog"].(map[string]any); p["done"] != float64(1000) {
+		t.Errorf("add never goes above the total: %v", p["done"])
+	}
+}

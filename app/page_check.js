@@ -162,6 +162,25 @@ check('quick add in normal words: day and time words become due: and at:, the re
     const r=quickWords(inp);if(r.quick||r.hint!==hint)bad.push(inp+' → '+JSON.stringify(r))}
   if(quickWords('Dentist tomorrow, end of the month').hint!==true)bad.push('hint left after the rules');
   return bad.slice(0,6).join('; ')});
+check('writing goals: +500 and totals, words today from the start of the day, the Today box and the log window',()=>{const bad=[],made=[];
+  for(const [inp,want] of [['+500',1500],['-200',800],['12,500',12500],['12.500',12500],['  +1 000',2000],['abc',null],['',null],['+',null]]){const v=wordLogValue(inp,1000);if(v!==want)bad.push(inp+' → '+v)}
+  const dl=addDays(9),n=mk('Draft the novel',{prog:{mode:'units',done:1000,total:11000,unit:'words'},deadline:dl});attach(n,'root');made.push(n);
+  try{setProgress(n,1300);if(!n.progDay||n.progDay.d!==addDays(0)||n.progDay.start!==1000)bad.push('progDay: '+JSON.stringify(n.progDay));
+    setProgress(n,1500);const t=todayOf(n);if(t.done!==500||t.goal!==1000)bad.push('today: '+JSON.stringify(t)+' want 500 of 1000');
+    n.progDay={d:addDays(-1),start:200};if(todayOf(n).done!==0)bad.push('an old progDay counts as nothing today');
+    ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML;
+    if(!h.includes('Writing goals')||!h.includes('Draft the novel')||!h.includes('data-wlog="'+n.id+'"'))bad.push('Today box');
+    if(!h.includes('class="goal-left" data-wlog="'+n.id+'"'))bad.push('words left opens the log too');
+    const r=mk('Write 500 words',{prog:{mode:'units',done:0,total:500,unit:'words'},recur:'d',deadline:addDays(0)});attach(r,'root');made.push(r);
+    renderToday();if(!el('#vToday').innerHTML.includes('data-wlog="'+r.id+'"'))bad.push('a daily goal due today shows');
+    const c6=mk('Chapter six',{prog:{mode:'units',done:0,total:4000,unit:'words'},deps:[n.id]});attach(c6,'root');made.push(c6);
+    renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+c6.id+'"'))bad.push('a goal that waits for another entry must not show');
+    c6.deps=[];c6.status='later';renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+c6.id+'"'))bad.push('a postponed goal must not show');
+    r.deadline=addDays(1);renderToday();if(el('#vToday').innerHTML.includes('data-wlog="'+r.id+'"'))bad.push('a daily goal finished for today must leave Today');
+    wordLog(n.id);if(modalKind!=='wlog'||!el('#modal').innerHTML.includes('Now: 1,500 of 11,000 words'))bad.push('log window: '+modalKind);closeModal();
+    renderTree();if(!/class="pace-t"/.test(el('#tree').innerHTML))bad.push('words-left tag in the tree')}
+  finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

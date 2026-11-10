@@ -35,15 +35,18 @@ fi
 # ---------------------------------------------------------------- 2. notes preview
 echo "Notes preview (app/web/index.html with marked, in node)"
 if command -v node > /dev/null; then
-  node app/notes_test.js > "$tmp/notes.log" 2>&1
+  node app/notes_test.js > "$tmp/notes.log" 2>&1; rc=$?
   while read -r status rest; do
     [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
   done < <(grep -E '^(PASS|FAIL) ' "$tmp/notes.log")
+  # a script that stops in the middle (exit code, no FAIL line) would otherwise just lose its later checks
+  [ "$rc" -ne 0 ] && ! grep -q '^FAIL ' "$tmp/notes.log" && bad "notes_test.js stopped early" "$(grep -m1 -E 'Error' "$tmp/notes.log" || tail -1 "$tmp/notes.log")"
   grep -q -E '^(PASS|FAIL) ' "$tmp/notes.log" || bad "notes_test.js" "$(tail -1 "$tmp/notes.log")"
-  node app/page_check.js > "$tmp/page.log" 2>&1
+  node app/page_check.js > "$tmp/page.log" 2>&1; rc=$?
   while read -r status rest; do
     [ "$status" = "PASS" ] && ok "$rest" || bad "${rest%%: *}" "${rest#*: }"
   done < <(grep -E '^(PASS|FAIL) ' "$tmp/page.log")
+  [ "$rc" -ne 0 ] && ! grep -q '^FAIL ' "$tmp/page.log" && bad "page_check.js stopped early" "$(grep -m1 -E 'Error' "$tmp/page.log" || tail -1 "$tmp/page.log")"
   grep -q -E '^(PASS|FAIL) ' "$tmp/page.log" || bad "page_check.js" "$(tail -1 "$tmp/page.log")"
 else
   bad "notes preview" "node not found in PATH"

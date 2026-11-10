@@ -32,7 +32,18 @@ More in [Screenshots](#screenshots).
 - **Today** shows what is overdue, due, running and coming up, and **Next 7 days** shows the week ahead, day by day.
 - A day plan bar warns you when your estimates and meetings do not fit into the work day.
 - A countdown timer or stopwatch logs the time to the task you worked on.
-- Word or page goals show how much per day you need, and when you will be done at your speed so far.
+- Word or page goals show how much per day you need, and when you will be done at your speed so far. *Today* shows each goal's amount for today, and `+500` logs new words in two clicks.
+
+### Made for writers
+
+- **Word goals that keep up with you:** give a manuscript, a chapter or a short story a word goal and a deadline. The app works out how many words you need today, and when you miss a day, it spreads the rest over the days left by itself.
+- **Writing goals at the top of Today:** today's amount, a bar for what you wrote today, the words left, and when you will be done at your speed so far.
+- **Log words in two clicks:** click *+ Log* or "words left", type `+500`, press Enter. Scripts and other writing tools can add words through the API.
+- **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
+- **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
+- **A cheer when you reach a goal**, and an AI (optional, on your own computer) that can tidy up or expand your notes and summarize research mails and documents.
+
+See [Progress](#progress) for the details.
 
 ### Never miss a date
 
@@ -298,6 +309,13 @@ the list.
 - **Percent** or **units** ("450 of 1200 words"), set per entry.
 - **Daily pace:** units progress with a deadline shows what is left and how much per day you need, for example "5,500 words left · 197 words per day for 28 days, until 30 Nov". The tree and Today show the short form after the name: "5,500 words left · 197 words/day".
 - **Forecast:** units progress also shows your real speed so far and when you will be done at that speed, with or without a deadline: "At your speed so far, 300 words per day since 2 Nov: done on 4 Dec, 4 days after the deadline". It turns red when that is after the deadline. The tree adds "done ~4 Dec". The speed counts from the day the entry was created, because the app does not keep a history of the count.
+- **Writing goals on Today:** every open word or page goal gets a box at the top of *Today*: today's amount (the words left at the start of the day, spread over the days until the deadline, so a missed day raises the next days' amount by itself), a bar for what you wrote today, the words left, and when you will be done at your speed. A **repeating** goal (for example "Write 500 words", daily) shows only while it is due today or overdue: once today's words are written, the next round moves to tomorrow and the goal leaves *Today* until then. A goal that waits for another entry (for example the chapter before it) or is postponed is left out until it can start.
+- **Log progress quickly:** click *+ Log* or the "words left" text in that box, or the "words left" tag in the tree, type `+500` to add 500 (or `-200`, or the new total) and press Enter. Scripts and other writing tools can add words too, for example:
+  ```
+  curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+       -d '{"prog":{"add":500}}' http://127.0.0.1:7437/api/nodes/ENTRY_ID
+  ```
+  The token is in Settings and in `data/config.json`; the entry id is in the detail panel.
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
 - **Dependencies:** an entry that depends on unfinished entries is shown as blocked. Dependency cycles are refused.
@@ -619,7 +637,7 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |
 
-Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` (`#rrggbb`), `prio` (0–4), `tags`, `people`, `location`, `deadline`, `reminder` and `end` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`; `end` is the end of an event, not before its start), `deps`, `notes`, `notesFormat` (`markdown` or `bbcode`), `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog` (`{mode: percent|units, done, total, unit}`), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last, every N months on weekdays: `2m:1fr`; a `+` at the end counts from the day it is done: `3d+`), `est` (minutes), `lead` (minutes of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
+Entry fields: `name`, `kind` (todo, idea, project, reminder), `status`, `color` (`#rrggbb`), `prio` (0–4), `tags`, `people`, `location`, `deadline`, `reminder` and `end` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM`; `end` is the end of an event, not before its start), `deps`, `notes`, `notesFormat` (`markdown` or `bbcode`), `links` (`[{title, uri}]`), `url` (http/https), `webhook` (Discord, projects), `prog` (`{mode: percent|units, done, total, unit}`; `{add: N}` adds N to done), `recur` (`d`, `w`, `m`, `y`; every N: `2w`, `3d`, `6m`; monthly on weekdays: `m:1fr,3fr,-1fr` with `-1` = last, every N months on weekdays: `2m:1fr`; a `+` at the end counts from the day it is done: `3d+`), `est` (minutes), `lead` (minutes of early warning for reminders), `discord` (true: also post a reminder to its project's channel).
 
 ## Licence
 

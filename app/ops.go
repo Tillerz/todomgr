@@ -262,7 +262,7 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 	case "prog":
 		m, ok := v.(map[string]any)
 		if !ok {
-			return errors.New("must be {mode, done, total, unit}")
+			return errors.New("must be {mode, done, total, unit}, or {add: N} to add to done")
 		}
 		cur := n.Obj("prog")
 		if cur == nil {
@@ -282,6 +282,9 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		if x, ok := m["done"]; ok {
 			out["done"] = max(0.0, num(x))
 		}
+		if x, ok := m["add"]; ok { // for scripts: add words without knowing the total so far
+			out["done"] = max(0.0, num(out["done"])+num(x))
+		}
 		if x, ok := m["unit"]; ok {
 			out["unit"] = str(x)
 		}
@@ -290,6 +293,13 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		}
 		if num(out["done"]) > num(out["total"]) {
 			out["done"] = out["total"]
+		}
+		// progDay: the count at the start of today, for "words today" (the page keeps it the same way)
+		if old := num(cur["done"]); !creating && out["mode"] == "units" && num(out["done"]) != old {
+			today := time.Now().In(t.loc).Format("2006-01-02")
+			if d, _ := n["progDay"].(map[string]any); d == nil || str(d["d"]) != today {
+				n["progDay"] = map[string]any{"d": today, "start": old}
+			}
 		}
 		n["prog"] = out
 	case "recur":

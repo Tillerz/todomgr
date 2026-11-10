@@ -165,6 +165,11 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .aimodes{display:grid;gap:8px}
 .aqprev{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:8px}
 .aqprev b{color:var(--muted);font-weight:600}
+.goal{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;cursor:pointer}
+.goal-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.goal-left{cursor:pointer;text-decoration:underline dotted}
+.goal-txt{font-size:13px;color:var(--muted);margin-top:4px}.goal-txt b{color:var(--ink)}.goal-txt .late{color:var(--danger)}
+.gbar{height:8px;border-radius:4px;background:var(--line);margin-top:6px;overflow:hidden}.gbar i{display:block;height:100%;background:var(--accent)}.gbar.met i{background:var(--ok,#3fae5a)}
 .tagsug{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0}
 .tagsug small{color:var(--muted);display:inline-flex;gap:4px;align-items:center}
 .aimode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;height:auto}
@@ -301,7 +306,7 @@ textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
 .chk.has-ic.st-active{color:var(--accent)}.chk.has-ic.st-paused{color:var(--warn)}.chk.has-ic.st-done{color:var(--ok)}.chk.has-ic:hover{color:var(--accent)}
 .plan{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 14px;background:var(--panel)}.plan.over{border-color:var(--danger)}.plan.over .row-between>span:last-child{color:var(--danger)}
 .planbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--hover);margin-top:8px;overflow:hidden}.planbar i{height:100%}.planbar .ev{background:#8a63d2}.planbar .tk{background:var(--accent)}
-.qrbox{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:8px 12px 0 0}.qrbox svg{width:180px;height:180px;border-radius:6px}.pace{margin-top:6px}.pace.late,.pace-t .late{color:var(--danger)}.pace-t{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
+.qrbox{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:8px 12px 0 0}.qrbox svg{width:180px;height:180px;border-radius:6px}.pace{margin-top:6px}.pace.late,.pace-t .late{color:var(--danger)}.pace-t{cursor:pointer;flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted);margin-left:4px}.plan{cursor:pointer}.plantog{color:var(--muted);margin-left:8px}
 .planlist{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .pli{display:flex;align-items:center;gap:8px;padding:4px 2px;border-radius:6px}.pli:hover{background:var(--hover)}
 .pli i{width:10px;height:10px;border-radius:3px;flex:none}.pli i.ev{background:#8a63d2}.pli i.tk{background:var(--accent)}
@@ -861,7 +866,9 @@ function recurNext(n){const step=s=>nextOcc(s,n.recur);
   if(n.recur.endsWith('+'))[n.deadline,n.reminder]=afterDone(n.deadline,n.reminder,n.recur,dayKey(now()));
   else{if(n.deadline)n.deadline=step(n.deadline);if(n.reminder)n.reminder=step(n.reminder)}
   toast(`Repeats ${recurText(n.recur)} — next: ${n.deadline?fmtWhen(n.deadline):'reopened'}`)}
-function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));if(n.prog.mode==='units'&&n.prog.done<c&&v>=c)cheerNote('goal',n);n.prog.done=v;log('progress',n.id);n.updated=now();
+function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));
+  if(n.prog.mode==='units'&&v!==n.prog.done&&!(n.progDay&&n.progDay.d===addDays(0)))n.progDay={d:addDays(0),start:n.prog.done};// see todayOf
+ if(n.prog.mode==='units'&&n.prog.done<c&&v>=c)cheerNote('goal',n);n.prog.done=v;log('progress',n.id);n.updated=now();
   if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
   else if(v>0&&v<c&&n.status==='open')setStatus(n,'progress');
   else if(v<c&&n.status==='done')setStatus(n,'progress')}
@@ -1228,6 +1235,37 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
 
 /* ============================ today ============================ */
 function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+// Words today: progress since the start of the day. progDay {d, start} holds the count at the first change of
+// the day; the program keeps it the same way for changes from the CLI, MCP or scripts (ops.go).
+function todayOf(n){const p=n.prog,start=n.progDay&&n.progDay.d===addDays(0)?n.progDay.start:p.done,pc=paceOf(n);
+  return{done:Math.max(0,p.done-start),goal:pc&&pc.days>0?Math.ceil(Math.max(0,p.total-start)/pc.days):0}}
+// the open word / page goals, soonest deadline first; not blocked (waiting for another entry) and not postponed.
+// A repeating goal only when it is due today or overdue: finished for today, its next round moves on, and it
+// leaves Today until then.
+function goalNodes(){return allNodes().filter(n=>n.prog.mode==='units'&&!isClosed(n)&&n.status!=='later'&&!blocked(n)&&!kids(n).length&&n.prog.done<n.prog.total&&!(n.recur&&n.deadline&&n.deadline.slice(0,10)>addDays(0)))
+  .sort((a,b)=>(a.deadline||'9')<(b.deadline||'9')?-1:(a.deadline||'9')>(b.deadline||'9')?1:a.name.localeCompare(b.name))}
+// Writing goals at the top of Today: today's amount, a bar for today's progress, and + Log
+function goalsBox(){const G=goalNodes();if(!G.length)return'';const num=x=>Math.ceil(x).toLocaleString('en');
+  return`<h2>Writing goals<small>${G.length}</small></h2>${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
+    const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
+    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></div>
+${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
+<div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}
+ · <span class="goal-left" data-wlog="${n.id}" data-tip="Click to log progress">${num(left)}${u} left</span>${pc&&pc.days<=0?' · <span class="late">the deadline has passed</span>':n.deadline?` · until ${fmtWhen(n.deadline)}`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</div></div>`}).join('')}`}
+// Log progress with few clicks: "+500" adds, "-200" takes away, a plain number is the new total
+function wordLog(id){const n=S.nodes[id];if(!n)return;const u=unitTxt(n),t=todayOf(n),num=x=>Math.round(x).toLocaleString('en');
+  openModal(`<h3 style="margin-top:0">Log progress: “${esc(n.name)}”</h3>
+<label class="field"><span>Add with + (for example <b>+500</b>), or type the new total</span><input id="wlIn" inputmode="numeric" autocomplete="off" placeholder="+500"></label>
+<p class="note">Now: ${num(n.prog.done)} of ${num(n.prog.total)}${u} · ${num(t.done)}${u} today</p>
+<div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-wlno>Cancel</button><button class="btn pri" data-wlok>Log</button></div>`,{kind:'wlog'});
+  const go=()=>{const v=wordLogValue($('#wlIn').value,S.nodes[id].prog.done);if(v===null)return toast('Type +500 to add, or the new total');const x=S.nodes[id];closeModal();
+    const before=x.prog.done;mutate(()=>setProgress(x,v),{panel:true});const d=x.prog.done-before;
+    toast(`${d>=0?'+':''}${num(d)}${u} · ${num(todayOf(x).done)}${u} today`,{action:{label:'Undo',fn:undo}})};
+  $('#modal [data-wlno]').onclick=closeModal;$('#modal [data-wlok]').onclick=go;
+  $('#wlIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}};$('#wlIn').focus()}
+// "+500" → done + 500, "-200" → done − 200, "12,500" → 12500; null when it is not a number
+function wordLogValue(s,done){const m=String(s).trim().match(/^([+-])?\s*(\d[\d.,' ]*)$/);if(!m)return null;
+  const x=+m[2].replace(/[.,' ]/g,'');return m[1]==='+'?done+x:m[1]==='-'?Math.max(0,done-x):x}
 // Today's plan, in minutes: the open estimates of the todos due today or overdue (minus tracked time), and
 // the timed events in the rest of the work day (not the "free" ones), against the time left in it (Settings → Work day)
 function dayPlan(){const wd=S.prefs.workDay||DEF.workDay,t0=startOfToday();
@@ -1257,7 +1295,7 @@ function pace(n){const p=paceOf(n),fc=forecast(n);if(!p)return fc;const{left,day
   return`<div class="note pace">${num(left)}${u} left · ${days>0?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, until ${fmtWhen(n.deadline)}`:'<b>the deadline has passed</b>'}</div>${fc}`}
 // the same, short, after the name in the tree
 function paceTag(n){const p=paceOf(n),f=speedOf(n);if(!p&&!f)return'';const left=n.prog.total-n.prog.done,u=unitTxt(n),num=x=>Math.ceil(x).toLocaleString('en'),days=p?p.days:0;
-  const tip=(p?'Left until the deadline'+(days>0?', and how much per day (today counts)':''):'Left')+(f?'. done ~: when it is finished at your speed so far':'');
+  const tip=(p?'Left until the deadline'+(days>0?', and how much per day (today counts)':''):'Left')+(f?'. done ~: when it is finished at your speed so far':'')+'. Click to log progress';
   return`<span class="pace-t" data-tip="${tip}">${num(left)}${u} left${days>0?` · ${num(left/days)}${u}/day`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</span>`}
 function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if(!plan)return'';
   const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60),hm=t=>{const x=new Date(t);return pad(x.getHours())+':'+pad(x.getMinutes())},open=S.prefs.planOpen;
@@ -1282,7 +1320,7 @@ function renderToday(){
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(n=>trow(n)).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
   const wk=startOfToday().getTime()+7*864e5,upc=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
-  const html=sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
+  const html=goalsBox()+sec('Upcoming reminders',upc,'next 7 days')+sec('Overdue',A.filter(n=>dueState(n)==='over'))+sec('Due today',A.filter(n=>dueState(n)==='today'))+sec('Reminders',rem)+sec('In progress',A.filter(n=>n.status==='progress'))
    +sec('Due soon',A.filter(n=>n.deadline&&dueState(n)==='soon'&&(pd(n.deadline)-now())<7*864e5).sort((a,b)=>pd(a.deadline)-pd(b.deadline)))
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
   const wk7=ui.todayWeek,seg=`<span class="seg" style="float:right"><button data-tv="" class="${wk7?'':'on'}">Today</button><button data-tv="1" class="${wk7?'on':''}" data-tip="Tomorrow and the 6 days after it">Next 7 days</button></span>`;
@@ -1440,7 +1478,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick','aisum'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick','aisum','wlog'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1882,6 +1920,7 @@ function toggleTheme(){S.prefs.theme=document.documentElement.dataset.theme==='d
 $('#tree').addEventListener('click',e=>{
   const li=e.target.closest('.node');if(!li)return;if(e.target.closest('.urlbtn'))return;const id=li.dataset.id,n=S.nodes[id];
   const tg=e.target.closest('[data-tag]');if(tg){setQuery('#'+tg.dataset.tag);return}
+  if(e.target.closest('.pace-t')){wordLog(id);return}// the words-left tag: log progress
   if(e.target.closest('.tw')){n.collapsed=!n.collapsed;persist();renderTree();return}
   if(e.target.closest('.chk')){mutate(()=>toggleDone(n),{panel:true});return}
   const mo=e.target.closest('.more');if(mo){const r=mo.getBoundingClientRect();openRowMenu(id,r.left,r.bottom+2);return}
@@ -2016,7 +2055,7 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
   else if(a==='tag'){const t=prompt('Tag to add:');if(t)mutate(()=>ids.forEach(id=>{const n=S.nodes[id],tg=t.replace(/^#/,'').trim();if(tg&&!n.tags.includes(tg))n.tags.push(tg)}),{panel:true})}
   if(a!=='trash'){ui.multi.clear();renderTree()}});
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
-$('#vToday').addEventListener('click',e=>{const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
+$('#vToday').addEventListener('click',e=>{const wl=e.target.closest('[data-wlog]');if(wl){wordLog(wl.dataset.wlog);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
   const tv=e.target.closest('[data-tv]');if(tv){ui.todayWeek=!!tv.dataset.tv;renderToday();return}
   if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
