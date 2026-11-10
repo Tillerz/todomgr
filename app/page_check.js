@@ -134,6 +134,18 @@ check('import preview: one row per entry, entries that are already there are gre
   showImport([cal,{name:'broken.ics',err:'nothing to import'}]);h=el('#modal').innerHTML;
   if(!h.includes('Import 2 files')||!h.includes('class="imphd">cal.ics')||!h.includes('class="imphd">broken.ics')||!h.includes('Cannot import this file: nothing to import'))bad.push('two files');
   if(!h.includes('Put each file into a new project'))bad.push('folder option for two files');closeModal();return bad.join('; ')});
+check('tags: suggested from existing tags as whole words, with short endings; short tags only as exact words',()=>{const made=[],bad=[];
+  const T=(name,props)=>{const x=mk(name,props);attach(x,'root');made.push(x);return x};
+  try{T('Old',{tags:['ai','novel']});
+    const n=T('Plan meetings and call Tom about the recall',{notes:'the mail server needs streamlining, my NOVEL, air'});
+    const got=tagMatches(n);for(const t of ['meeting','call','mail','novel'])if(!got.includes(t))bad.push('missing '+t);
+    for(const t of ['stream','ai','research'])if(got.includes(t))bad.push('wrong '+t);
+    n.tags.push('mail');if(tagMatches(n).includes('mail'))bad.push('a tag the entry has already');
+    const m=T('An ai idea');if(!tagMatches(m).includes('ai'))bad.push('exact short tag');
+    ui.sel=n.id;ui.panel=true;ui.prevFor=n.id;ui.tagSug={id:n.id,tags:['call','mail'],ai:false};renderDetail();const h=el('#detail').innerHTML;
+    if(!h.includes('data-act="addsug" data-v="call"')||h.includes('data-v="mail"'))bad.push('suggestion row')}
+  finally{ui.tagSug=null;ui.sel=null;made.reverse().forEach(x=>{detach(x);delete S.nodes[x.id]})}
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

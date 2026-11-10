@@ -163,6 +163,8 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 @keyframes aispin{to{transform:rotate(360deg)}}
 .ainame{flex:1;padding:4px 6px}
 .aimodes{display:grid;gap:8px}
+.tagsug{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0}
+.tagsug small{color:var(--muted);display:inline-flex;gap:4px;align-items:center}
 .aimode{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;height:auto}
 .aimode small{color:var(--muted);font-weight:400;white-space:normal}
 .aicmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -1017,7 +1019,7 @@ function renderDetail(){
   document.body.dataset.panel=ui.panel?'1':'0';
   el.classList.toggle('open',ui.panel);
   if(!n||n.trashed){el.innerHTML=`<div class="hd"><span class="sp"></span><button class="ib close-panel" data-act="closepanel">${ic('x')}</button></div><div class="empty">Select an item to see and edit its details.<br><br><small>Tip: double-click a name to rename it.<br>Drag URLs or files onto an item to attach them.</small></div>`;return}
-  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim();ui.notesMax=false}// a newly opened entry: preview if it has notes, else edit
+  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim();ui.notesMax=false;ui.tagSug=null}// a newly opened entry: preview if it has notes, else edit
   const k=kids(n),tr=treeTime(n),own=n.time.reduce((a,t)=>a+t.secs,0);
   const depNames=S.nodes;
   const blocking=allNodes().filter(x=>x.deps.includes(n.id));
@@ -1044,7 +1046,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
 <label class="field"><span>Estimate (minutes)${n.kind==='todo'?` <button class="chip" data-act="estsuggest" data-tip="Suggest an estimate from your finished todos with tracked time">${ic('clock',12)} Suggest</button>`:''}</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?afterHTML(n):''}
-<h4>Tags</h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
+<h4>Tags <button class="chip" data-act="tagsuggest" data-tip="Suggest tags from your existing tags that appear in the name or notes">${ic('tag',12)} Suggest</button></h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}${tagSugHTML(n)}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
 <h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
 <h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
 <h4>Depends on <span class="bd" data-tip="This item is blocked until all of these are done">?</span></h4>
@@ -1163,7 +1165,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'prio':m(()=>n.prio=+v);break;case'color':m(()=>n.color=v);break;
     case'pmode':if(n.prog.mode!==v)m(()=>{if(v==='units'){n.prog.total=10;n.prog.done=Math.round(n.prog.done/10)}else{n.prog.done=Math.round(n.prog.done/n.prog.total*100);n.prog.total=100}n.prog.mode=v});break;
     case'pstep':mutate(()=>setProgress(n,n.prog.done+(+v)),{panel:true});break;
-    case'rmtag':m(()=>n.tags.splice(i,1));break;case'rmperson':m(()=>n.people.splice(i,1));break;case'rmdep':m(()=>n.deps.splice(i,1));break;case'rmlink':m(()=>n.links.splice(i,1));break;
+    case'rmtag':m(()=>n.tags.splice(i,1));break;case'tagsuggest':tagSuggest(n.id);break;case'addsug':addTag([n],b.dataset.v);break;case'addallsug':{const ts=sugLeft(n);mutate(()=>{ts.forEach(t=>n.tags.push(t));touch(n)},{panel:true});ui.tagSug=null;break}case'rmperson':m(()=>n.people.splice(i,1));break;case'rmdep':m(()=>n.deps.splice(i,1));break;case'rmlink':m(()=>n.links.splice(i,1));break;
     case'goto':reveal(b.dataset.id);break;
     case'openlink':{const l=n.links[i];if(l.file)showFile(l);else if(/^(https?:|mailto:|file:)/i.test(l.uri))window.open(l.uri,'_blank','noopener');else if(l.uri){navigator.clipboard?.writeText(l.uri);toast('Path copied to clipboard (browsers cannot open local paths)')}else toast('No path stored for this file');break}
     case'whtest':{if(!n.webhook)break;b.disabled=true;sendDiscord(n.id,'Webhook test from '+APP.name,'').then(()=>toast('Test message sent')).catch(err=>toast('Failed: '+err.message)).finally(()=>b.disabled=false);break}
@@ -1526,6 +1528,24 @@ async function estSuggest(id){const n=S.nodes[id];if(!n)return;let r;
 <div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-esno>Cancel</button><button class="btn pri" data-esuse>Use ${fmtDur(r.minutes*60)}</button></div>`,{kind:'est'});
   $('#modal [data-esno]').onclick=closeModal;
   $('#modal [data-esuse]').onclick=()=>{const y=S.nodes[id];closeModal();if(!y)return;mutate(()=>{y.est=r.minutes;touch(y)},{panel:true});toast(`Estimate: ${fmtDur(r.minutes*60)}`)}}
+// the suggested tags of the open entry that it does not have yet
+function sugLeft(n){const g=ui.tagSug;return g&&g.id===n.id?g.tags.filter(t=>!n.tags.includes(t)):[]}
+function tagSugHTML(n){const l=sugLeft(n);if(!l.length)return'';
+  return`<div class="tagsug"><small>${ui.tagSug.ai?ic('bot',12)+' ':''}Suggested:</small>${l.map(t=>`<button class="chip" data-act="addsug" data-v="${esc(t)}" data-tip="Add this tag">+ #${esc(t)}</button>`).join('')}${l.length>1?'<button class="chip" data-act="addallsug">Add all</button>':''}</div>`}
+// Suggest tags: only tags that exist already (in use, or in Settings → Tag icons), so no near-duplicates appear.
+// Without AI: a tag that appears as a whole word in the name or notes, also with a short ending
+// ("meetings" → meeting, "reviewed" → review); short tags need the exact word. With no match and AI on,
+// the AI picks from the same list (ai.go). The suggestions show as chips under the tags: click to add.
+function tagCandidates(n){const count={};allNodes().forEach(x=>x.tags.forEach(t=>count[t]=(count[t]||0)+1));
+  Object.keys(S.prefs.tagIcons||DEF.tagIcons||{}).forEach(t=>count[t]=count[t]||0);
+  return Object.keys(count).filter(t=>!n.tags.some(x=>x.toLowerCase()===t.toLowerCase())).sort((a,b)=>count[b]-count[a]||a.localeCompare(b))}
+function tagMatches(n){const text=n.name+'\n'+n.notes,esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return tagCandidates(n).filter(t=>t.length>1&&new RegExp(`(^|[^\\p{L}\\p{N}])${esc(t)}${t.length>3?'\\p{L}{0,3}':''}(?![\\p{L}\\p{N}])`,'iu').test(text)).slice(0,8)}
+async function tagSuggest(id){const n=S.nodes[id];if(!n)return;document.activeElement?.blur?.();
+  let tags=tagMatches(n),ai=false;
+  if(!tags.length&&APP.ai){const cand=tagCandidates(n).slice(0,200);if(cand.length){const r=await aiRun(`Suggest tags for “${n.name}”`,'/api/ai/tags',{id,tags:cand});if(!r)return;closeModal();tags=r.tags;ai=true}}
+  if(!tags.length)return toast(APP.ai?'No fitting tags found among your tags':'None of your tags appears in the name or notes');
+  ui.tagSug={id,tags,ai};renderDetail()}
 // Rewrite: Tidy up (spelling, lists, tick boxes, groups; adds nothing) or Expand (adds next steps, things to
 // prepare, open questions and tips below the notes; also works without notes, from the entry's name)
 function aiRewrite(id){const n=S.nodes[id];if(!n)return;document.activeElement?.blur?.();// the notes field saves when it loses focus

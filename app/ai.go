@@ -592,3 +592,70 @@ func (s *Server) hAIRewrite(w http.ResponseWriter, r *http.Request) {
 	}
 	jout(w, 200, map[string]any{"text": text})
 }
+
+// aiTags picks up to five tags for an entry from the given list (the tags that exist already); the JSON
+// schema allows nothing else, so no new near-duplicate tags appear.
+func (s *Server) aiTags(ctx context.Context, id string, list []string) ([]string, error) {
+	n, err := s.st.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	have, allowed := map[string]bool{}, []string{}
+	for _, t := range strs(n["tags"]) {
+		have[strings.ToLower(t)] = true
+	}
+	for _, t := range list {
+		if t = strings.TrimSpace(t); t != "" && !have[strings.ToLower(t)] && len(allowed) < 200 {
+			allowed = append(allowed, t)
+		}
+	}
+	if len(allowed) == 0 {
+		return []string{}, nil
+	}
+	q := "Entry: " + str(n["name"]) + "\n"
+	if notes := clip(strings.TrimSpace(str(n["notes"])), 2000); notes != "" {
+		q += "Notes:\n" + notes + "\n"
+	}
+	q += "\nTags to choose from: " + strings.Join(allowed, ", ")
+	var out struct {
+		Tags []string `json:"tags"`
+	}
+	err = s.ai.ask(ctx, 0.2, "You sort entries of a todo app. Pick the tags from the given list that clearly fit the entry: at most "+
+		"5, the best first. Pick only tags that really fit; an empty list is fine.", q,
+		map[string]any{"type": "object", "required": []string{"tags"}, "properties": map[string]any{
+			"tags": map[string]any{"type": "array", "maxItems": 5, "items": map[string]any{"type": "string", "enum": allowed}}}}, &out)
+	if err != nil {
+		return nil, err
+	}
+	ok, res := map[string]bool{}, []string{}
+	for _, t := range allowed {
+		ok[t] = true
+	}
+	for _, t := range out.Tags {
+		if ok[t] { // the schema already allows only these; once more, and no doubles
+			res = append(res, t)
+			ok[t] = false
+		}
+	}
+	return res, nil
+}
+
+func (s *Server) hAITags(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID   string
+		Tags []string
+	}
+	if err := readBody(r, &req, 1<<16); err != nil {
+		fail(w, err)
+		return
+	}
+	if !s.aiOn(w) {
+		return
+	}
+	tags, err := s.aiTags(r.Context(), req.ID, req.Tags)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	jout(w, 200, map[string]any{"tags": tags})
+}

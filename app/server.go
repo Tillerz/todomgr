@@ -106,6 +106,7 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/ai/test", s.hAITest)
 	api("POST /api/ai/subtasks", s.hAISubtasks)
 	api("POST /api/ai/rewrite", s.hAIRewrite)
+	api("POST /api/ai/tags", s.hAITags)
 	api("POST /api/estimate", s.hEstimate)
 	api("GET /api/files/{key}", s.hFileGet)
 	api("GET /api/files/{key}/view", s.hFileView)

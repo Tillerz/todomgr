@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -39,6 +40,8 @@ func TestAI(t *testing.T) {
 		switch sys := req.Messages[0].Content; {
 		case strings.Contains(sys, "plan tasks"):
 			answer = `{"subtasks":["Write the outline","Existing one"," write the outline ","Book the room"]}`
+		case strings.Contains(sys, "You sort entries"):
+			answer = `{"tags":["writing","writing","nope"]}`
 		case strings.Contains(sys, "tidy up"):
 			answer = `{"rewritten_notes":"Clean text"}`
 		case strings.Contains(sys, "list only what is missing"):
@@ -132,6 +135,15 @@ func TestAI(t *testing.T) {
 		t.Errorf("expand below the notes: %q", r["text"])
 	}
 	a.call(400, "POST", "/api/ai/rewrite", map[string]any{"id": p, "mode": "poem"})
+
+	// tags: only from the given list, without the entry's own tags, no doubles
+	a.call(200, "PATCH", "/api/nodes/"+p, map[string]any{"tags": []string{"art"}})
+	if r := a.call(200, "POST", "/api/ai/tags", map[string]any{"id": p, "tags": []string{"writing", "art", " "}}); fmt.Sprint(r["tags"]) != "[writing]" {
+		t.Errorf("ai tags: %v", r)
+	}
+	if q := asked[len(asked)-1]; !strings.HasSuffix(q, "Tags to choose from: writing") {
+		t.Errorf("tag question: %q", q)
+	}
 
 	// the helper starts once and stays; Unload stops it, the next question starts it again
 	if starts != 1 || a.call(200, "GET", "/api/ai", nil)["running"] != true {
