@@ -42,7 +42,7 @@ More in [Screenshots](#screenshots).
 - **Write with the timer:** the clock next to a goal starts a countdown or stopwatch for it. When it stops, the time is logged and the app asks how many words you wrote.
 - **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
 - **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
-- **A cheer when you reach a goal**, and an AI (optional, on your own computer) that can tidy up or expand your notes and summarize research mails and documents.
+- **A cheer when you reach a goal**.
 
 See [Progress](#progress) for the details.
 
@@ -71,9 +71,10 @@ See [Progress](#progress) for the details.
 ### Your data stays yours
 
 - One program for Windows, macOS and Linux. No install, no account, no cloud.
+- Install it as an app window (on Windows)
 - Copy the folder to an USB stick and take everything with you.
 - Every change is saved at once, and automatic backups restore with one click.
-- Install it as an app window (on Windows)
+- Undo and Redo restore accidental changes immediately.
 - Open it from your phone or tablet at home (LAN access, off by default). Quickly log in by scanning a QR code (the code works once and only for 5 minutes).
 
 ### Works with your other tools
@@ -81,7 +82,7 @@ See [Progress](#progress) for the details.
 - Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel: drop the files onto Quick add and pick the entries you want. Import an updated file again and you only get the new entries.
 - Subscribe to your TodoMgr dates in Apple Calendar, Outlook or Thunderbird: they update by themselves, without copies.
 - Export to CSV, a calendar file, Markdown, or a printed list.
-- A command line (`todo add "…"`), and an MCP server, so AI assistants such as Claude can read and update your list.
+- A command line (`todo add "…"`), an API, and an MCP server, so AI assistants such as Claude can read and update your list.
 
 ### Nice to use
 
@@ -316,7 +317,7 @@ the list.
   curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
        -d '{"prog":{"add":500}}' http://127.0.0.1:7437/api/nodes/ENTRY_ID
   ```
-  The token is in Settings and in `data/config.json`; the entry id is in the detail panel.
+  The token is in Settings and in `data/config.json`; the entry id is in the detail panel (top right).
 - **Write with the timer:** the clock button next to a goal in the Writing goals box opens the timer for that goal (countdown or stopwatch). When it stops, the time is logged to the goal and a window asks for the words: `+600` for what you wrote now, or the new total. *Cancel* logs only the time. The same happens when you start the timer for any entry with a word goal.
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
