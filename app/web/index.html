@@ -1043,7 +1043,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
-<label class="field"><span>Estimate (minutes)</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?afterHTML(n):''}
+<label class="field"><span>Estimate (minutes)${n.kind==='todo'?` <button class="chip" data-act="estsuggest" data-tip="Suggest an estimate from your finished todos with tracked time">${ic('clock',12)} Suggest</button>`:''}</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?afterHTML(n):''}
 <h4>Tags</h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
 <h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
 <h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
@@ -1171,7 +1171,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'addtime':{const mi=+$('[data-f=mintime]').value;if(mi>0)m(()=>{n.time.push({at:now(),secs:mi*60});log('time',n.id,{secs:mi*60})});break}
     case'rmtime':m(()=>n.time=n.time.filter(t=>t.at!==+b.dataset.at));break;
     case'fmttoggle':mutate(()=>{n.notesFormat=n.notesFormat==='bbcode'?'markdown':'bbcode';touch(n)},{panel:true});break;
-    case'aisub':aiSubtasks(n.id);break;case'airewrite':aiRewrite(n.id);break;case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
+    case'aisub':aiSubtasks(n.id);break;case'estsuggest':estSuggest(n.id);break;case'airewrite':aiRewrite(n.id);break;case'addchild':newAndRename(n.id);if(innerWidth<=1100){ui.panel=false;renderDetail()}break;
     case'dup':{let c;mutate(()=>{c=dupNode(n.id,n.parent,S.nodes[n.parent].children.indexOf(n.id)+1,true);log('create',c.id)});ui.sel=c.id;renderAll();break}
     case'trash':trash(n.id);break;
   }}
@@ -1390,7 +1390,7 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
-function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode'].includes(modalKind))showRem();
+function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
 /* ============================ modal / toast / tooltip / palette ============================ */
@@ -1513,6 +1513,19 @@ async function aiSubtasks(id){const n=S.nodes[id];if(!n)return;
     const names=boxes.filter(b=>b.checked).map(b=>$(`#modal [data-ain="${b.dataset.ais}"]`).value.trim()).filter(Boolean);closeModal();
     mutate(()=>{names.forEach(nm=>{const c=mk(nm);attach(c,id);log('create',c.id)});p.collapsed=false},{panel:true});
     toast(`Added ${names.length} sub-task${names.length===1?'':'s'} to “${p.name}”`,{action:{label:'Undo',fn:undo}})}}
+// Suggest estimate: from your own finished todos with tracked time (at once, no AI); only when there is no
+// such history and AI is on, the AI makes a guess (estimate.go)
+async function estSuggest(id){const n=S.nodes[id];if(!n)return;let r;
+  try{await Store.sync();r=await Store.api('POST','/api/estimate',{id})}catch(e){return toast('Could not suggest an estimate: '+e.message,{ms:9000})}
+  if(!r.minutes&&APP.ai){r=await aiRun(`Estimate “${n.name}”`,'/api/estimate',{id,ai:true});if(!r)return}
+  if(modalKind==='ai')closeModal();
+  if(!r.minutes)return toast('No similar finished todos with tracked time yet. Track the time of a few todos, then try again.',{ms:9000});
+  const x=S.nodes[id];if(!x)return;
+  openModal(`<h3 style="margin-top:0">Estimate for “${esc(x.name)}”</h3><p style="font-size:22px;margin:6px 0"><b>${fmtDur(r.minutes*60)}</b>${r.source==='ai'?' <span class="bd" data-tip="No similar finished todos with tracked time, so the AI guessed">AI guess</span>':''}</p>
+<p>${esc(r.reason)}</p>${x.est?`<p class="note">The estimate now: ${fmtDur(x.est*60)}</p>`:''}
+<div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-esno>Cancel</button><button class="btn pri" data-esuse>Use ${fmtDur(r.minutes*60)}</button></div>`,{kind:'est'});
+  $('#modal [data-esno]').onclick=closeModal;
+  $('#modal [data-esuse]').onclick=()=>{const y=S.nodes[id];closeModal();if(!y)return;mutate(()=>{y.est=r.minutes;touch(y)},{panel:true});toast(`Estimate: ${fmtDur(r.minutes*60)}`)}}
 // Rewrite: Tidy up (spelling, lists, tick boxes, groups; adds nothing) or Expand (adds next steps, things to
 // prepare, open questions and tips below the notes; also works without notes, from the entry's name)
 function aiRewrite(id){const n=S.nodes[id];if(!n)return;document.activeElement?.blur?.();// the notes field saves when it loses focus
@@ -2065,7 +2078,7 @@ const focusField=(id,f)=>()=>{ui.sel=id;ui.panel=true;renderTree();renderDetail(
 function nodeMenu(n){const id=n.id,sibs=S.nodes[n.parent].children,i=sibs.indexOf(id),kind=n.kind,isRem=kind==='reminder',url=openUrl(n);
   const doM=fn=>()=>mutate(fn,{panel:true});
   const items=[mi('Open details',()=>{ui.sel=id;ui.panel=true;renderTree();renderDetail()}),mi('Rename',()=>{ui.sel=id;rename(id)},{key:'F2'}),
-    mi('Add sub-item',()=>newAndRename(id),{key:'Ins'}),...(APP.ai&&!isRem?[mi('Suggest sub-tasks…',()=>aiSubtasks(id),{icon:'bot'})]:[]),
+    mi('Add sub-item',()=>newAndRename(id),{key:'Ins'}),...(APP.ai&&!isRem?[mi('Suggest sub-tasks…',()=>aiSubtasks(id),{icon:'bot'})]:[]),...(kind==='todo'?[mi('Suggest estimate…',()=>estSuggest(id),{icon:'clock'})]:[]),
     mi('Add sibling below',()=>newAndRename(n.parent,i+1,kind==='project'?{kind:'project',status:'planning'}:undefined),{key:'Enter'}),MSEP];
   if(!isRem){
     const st=KS[kind].map(s=>mi(STAT[s]+(s==='later'?' (postponed)':''),doM(()=>setStatus(n,s)),{checked:n.status===s}));

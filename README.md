@@ -315,6 +315,7 @@ Reminders are scheduled by the **program itself**, not by the browser page, so t
 ### Time tracking and the timer
 
 - Log time by hand or from the timer; each entry shows *estimate vs. tracked*.
+- **Suggest estimate** (next to *Estimate* in the detail panel, or in the right-click menu): a suggestion from your own history, without AI. A repeating todo uses its own past times; other todos use finished todos with tracked time that share words in the name, tags or project. The reason names them, and nothing changes until you click *Use*. With no such history and [AI](#ai-on-this-computer-optional) switched on, the AI makes a guess, marked as such.
 - The **timer** counts down ("45 minutes, go") or counts up as a stopwatch, optionally attached to an entry. When it runs out there is a sound, a flashing title, a notification and a dialog with *Log time & close*, *+5 min*, *+15 min* and *Discard*. It survives reloads, because it is stored as timestamps.
 
 ### Today, search and views
@@ -589,6 +590,7 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `GET /api/files/{key}`, `/api/files/{key}/view` | download the file (`name` sets the file name) / what the viewer shows: `kind` text, mail or binary |
 | `GET /api/ai`, `POST /api/ai/unload` | AI status (switched on, helper and model found, running) / stop the helper |
 | `POST /api/ai/subtasks`, `/api/ai/rewrite` | `{id}` – suggested sub-tasks `{items}` / rewritten notes `{text}` (`mode`: `tidy` or `expand`); nothing is saved. `POST /api/ai/test` asks one short question |
+| `POST /api/estimate` | `{id, ai}` – a suggested estimate `{minutes, reason, used, source}` from finished todos with tracked time; `ai: true` lets the AI guess when there is no such history; `minutes: 0` when there is nothing to go by |
 | `POST /api/reset` | replace everything with empty data (a backup is taken first) |
 | `POST /mcp` | MCP (JSON-RPC 2.0), only when enabled in Settings, header token only |
 

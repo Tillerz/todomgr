@@ -200,6 +200,15 @@ return (async()=>{const realFetch=fetch,realLoc=location;APP.instance='aaaa1111'
     fakeNet({'/api/ai/subtasks':[[400,{error:'AI is off (Settings → AI)'}]]});const r=await aiRun('x','/api/ai/subtasks',{id:n.id});
     if(r!==null||modalKind)bad.push('error: result '+JSON.stringify(r)+', modal '+modalKind);
     return bad.join('; ')});
+  await asyncCheck('estimate: from history at once; with no history and no AI a message and no window',async()=>{const bad=[],keep=APP.ai;
+    const n=allNodes().find(x=>x.kind==='todo');
+    fakeNet({'/api/estimate':[[200,{minutes:45,reason:'Similar finished todos: x (40 min).',source:'history',used:[]}]]});await estSuggest(n.id);
+    const h=el('#modal').innerHTML;if(modalKind!=='est'||!h.includes('45m')||!h.includes('Similar finished todos')||h.includes('AI guess'))bad.push('history: modal '+modalKind);closeModal();
+    APP.ai=false;fakeNet({'/api/estimate':[[200,{minutes:0,reason:'',source:'',used:[]}]]});await estSuggest(n.id);if(modalKind)bad.push('no history: modal '+modalKind);
+    APP.ai=true;fakeNet({'/api/estimate':[[200,{minutes:0,reason:'',source:'',used:[]}],[200,{minutes:30,reason:'Guess.',source:'ai',used:[]}]]});await estSuggest(n.id);
+    if(modalKind!=='est'||!el('#modal').innerHTML.includes('AI guess'))bad.push('AI guess: modal '+modalKind);closeModal();APP.ai=keep;
+    if(!nodeMenu(n).some(i=>i.label==='Suggest estimate…'))bad.push('menu entry');
+    return bad.join('; ')});
   Store.sync=realSync;
   fetch=realFetch;location=realLoc})();
 `);
