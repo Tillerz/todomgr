@@ -533,6 +533,10 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 <img alt="The detail panel of a todo" src="docs/detail-pane.png" width=400px>
 
+### The help window with all keyboard shortcuts (hotkey: ?)
+
+<img alt="The help window with all keyboard shortcuts" src="docs/help-window.png" width=450px>
+
 ### The Today view with reminders, sci-fi theme
 
 <img alt="The Today view with reminders, sci-fi theme" src="docs/today.png" width=65%>
@@ -541,13 +545,17 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 <img alt="Next 7 days: the week ahead, day by day" src="docs/today-next-7-days.png" width=65%>
 
-### The help window with all keyboard shortcuts (hotkey: ?)
-
-<img alt="The help window with all keyboard shortcuts" src="docs/help-window.png" width=450px>
-
 ### The writing/work timer
 
 <img alt="The writing/work timer" src="docs/timer.png" width=300px>
+
+### The writing/work timer: finished
+
+<img alt="The writing/work timer" src="docs/timer-finished.png" width=300px>
+
+### The writing/work timer: logging words
+
+<img alt="The writing/work timer" src="docs/timer-log.png" width=300px>
 
 ### Notes in BBCode (hotkey: Alt-Enter to open the notes of the current entry)
 
