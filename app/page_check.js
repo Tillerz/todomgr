@@ -194,6 +194,23 @@ check('today: an event of today that is over moves from Upcoming reminders to Ea
     if(ie<0||ip<ie)bad.push('not under Earlier today');if(iu>=0&&iu<ip&&(ie<0||ip<ie))bad.push('still under Upcoming')}
   finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}
   return bad.join('; ')});
+check('growing pictures: a project counts the words of its goals; book and journey grow; Today and the detail panel',()=>{const bad=[],made=[];
+  const T=(name,props,parent='root')=>{const x=mk(name,props);attach(x,parent);made.push(x);return x};
+  try{const p=T('Pic novel',{kind:'project',status:'active',pic:'journey'});
+    T('Ch one',{prog:{mode:'units',done:3000,total:4000,unit:'words'}},p.id);T('Ch two',{status:'done',prog:{mode:'units',done:0,total:4000,unit:'words'}},p.id);T('Plot notes',{},p.id);
+    const r=picProg(p);if(r.txt!=='7,000 of 8,000 words'||Math.abs(r.f-.875)>1e-9)bad.push('project words: '+JSON.stringify(r));
+    const q=T('Pic plain',{kind:'project',pic:'book'});T('a',{status:'done'},q.id);T('b',{},q.id);if(Math.abs(picProg(q).f-.5)>1e-9)bad.push('project without word goals: '+picProg(q).f);
+    const j0=picJourney(0),j1=picJourney(1);if(!j0.includes('<circle')||j1.includes('<circle')||!j1.includes('M147 1L153'))bad.push('journey: marker before, flag at the end');
+    if(picJourney(.3)===picJourney(.31))bad.push('the journey must change with every step');
+    const b1=picBook(1,'The <Crown>');if(!b1.includes('The &lt;Crown&gt;')||picBook(.5,'x').includes('text-anchor'))bad.push('book: the title only on the finished book, escaped');
+    if(picBook(.4,'x')===picBook(.41,'x'))bad.push('the book must change with every step');
+    ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML;if(!h.includes('class="piccard" data-goto="'+p.id+'"')||!h.includes('7,000 of 8,000 words · 88%'))bad.push('Today card');
+    if(h.includes('data-goto="'+made[3].id+'"')&&h.includes('Plot notes'))bad.push('only entries with a picture');
+    ui.sel=p.id;ui.panel=true;ui.prevFor=null;renderDetail();const d=el('#detail').innerHTML;
+    if(!d.includes('<option value="journey" selected>')||!d.includes('class="picbig"'))bad.push('detail panel');
+    p.pic='';renderToday();if(el('#vToday').innerHTML.includes('class="piccard" data-goto="'+p.id+'"'))bad.push('no picture: no card')}
+  finally{ui.sel=null;made.reverse().forEach(x=>{detach(x);delete S.nodes[x.id]})}
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

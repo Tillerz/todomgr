@@ -168,6 +168,11 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .goal{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;cursor:pointer}
 .goal-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .past .trow{opacity:.55}
+.piccards{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 10px}
+.piccard{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;cursor:pointer;background:var(--panel)}
+.piccap{display:flex;flex-direction:column}.piccap small{color:var(--muted)}
+.pic-s{width:120px;height:66px}.picbig{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px}.picbig small{color:var(--muted)}.pic-l{width:100%;max-width:300px}
+.pic-done{animation:picshine 1.8s ease-out 1}@keyframes picshine{0%{filter:drop-shadow(0 0 0 var(--accent))}40%{filter:drop-shadow(0 0 8px var(--accent))}100%{filter:drop-shadow(0 0 0 transparent)}}
 .goal-btns{display:flex;gap:4px;align-items:center}
 .goal-left{cursor:pointer;text-decoration:underline dotted}
 .goal-txt{font-size:13px;color:var(--muted);margin-top:4px}.goal-txt b{color:var(--ink)}.goal-txt .late{color:var(--danger)}
@@ -1099,6 +1104,8 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 `<div class="seg"><button data-act="pmode" data-v="percent" class="${n.prog.mode==='percent'?'on':''}" data-tip="0–100 %">Percent</button><button data-act="pmode" data-v="units" class="${n.prog.mode==='units'?'on':''}" data-tip="Count something: words written, images created, steps run…">Units</button></div>
 <div style="margin-top:8px">${n.prog.mode==='percent'?`<div class="stepper"><input type="range" data-f="pct" min="0" max="100" step="5" value="${n.prog.done}"><b id="pctv" style="width:44px;text-align:right">${n.prog.done}%</b></div>`:
 `<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div><div class="pace-slot">${pace(n)}</div>`}</div>`}
+<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: pages stack up to a bound book'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
+${n.pic?`<div class="picbig">${picSVG(n,'l')}<small>${esc(picProg(n).txt)} · ${Math.round(picProg(n).f*100)}%</small></div>`:''}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
@@ -1188,6 +1195,7 @@ function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!
   switch(f){
     case'name':if(!v.trim()){t.value=n.name;return toast('A name is required')}m(()=>n.name=v.trim());break;
     case'status':mutate(()=>setStatus(n,v),{panel:true});break;
+    case'pic':m(()=>n.pic=v,true);break;
     case'notes':Drafts.keep(n.id,v);m(()=>n.notes=v);break;case'location':m(()=>n.location=v.trim(),true);break;
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
     case'reminder-d':case'reminder-t':{const old=n.reminder;m(()=>{setDT(n,'reminder');if(n.kind==='reminder')afterFollow(n,old)})}if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
@@ -1237,6 +1245,63 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
 
 /* ============================ today ============================ */
 function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+/* Growing pictures (detail panel → Progress → Picture; off by default): a picture for an entry's progress, 0 to 100 %.
+   A project counts the words (or other units) of the word goals below it; without such goals, its finished
+   sub-entries. Drawn here as SVG shapes, in the theme's colours; every step looks finished. */
+function picProg(n){const num=x=>Math.round(x).toLocaleString('en');
+  if(kids(n).length){const L=[],walk=x=>kids(x).forEach(c=>{if(kids(c).length)walk(c);else if(c.prog.mode==='units'&&c.status!=='cancelled')L.push(c)});walk(n);
+    const unit=L.length?L[0].prog.unit:'',U=L.filter(c=>c.prog.unit===unit);
+    if(U.length){const done=U.reduce((a,c)=>a+(c.status==='done'?c.prog.total:c.prog.done),0),total=U.reduce((a,c)=>a+c.prog.total,0);
+      return{f:isClosed(n)?1:Math.min(1,done/(total||1)),txt:`${num(done)} of ${num(total)}${unit?' '+unit:''}`}}
+    const f=isClosed(n)?1:frac(n);return{f,txt:`${Math.round(f*100)}% of the sub-items`}}
+  if(n.prog.mode==='units'){const f=n.status==='done'?1:Math.min(1,n.prog.done/(n.prog.total||1));return{f,txt:`${num(n.prog.done)} of ${num(n.prog.total)}${n.prog.unit?' '+n.prog.unit:''}`}}
+  const f=n.status==='done'?1:frac(n);return{f,txt:`${Math.round(f*100)}%`}}
+const PIC_ST=(fill,stroke,w)=>`style="fill:${fill};stroke:${stroke||'none'};stroke-width:${w||1}"`;
+// sparkles around a finished picture
+const picStars=pts=>pts.map(([x,y,r])=>`<path d="M${x} ${y-r}L${x+r*.3} ${y-r*.3}L${x+r} ${y}L${x+r*.3} ${y+r*.3}L${x} ${y+r}L${x-r*.3} ${y+r*.3}L${x-r} ${y}L${x-r*.3} ${y-r*.3}Z" ${PIC_ST('var(--accent)')}/>`).join('');
+// The book: an empty desk; pages stack up; the back cover comes in; at 100 % the bound book with the title.
+function picBook(f,title){const desk=66,w=56,x=22,H=2+f*30,top=desk-H;let s='';
+  s+=`<rect x="4" y="${desk}" width="112" height="5" rx="2" ${PIC_ST('var(--line)')}/>`;
+  s+=`<rect x="95" y="${desk-9}" width="11" height="9" rx="2" ${PIC_ST('var(--ink)')}/><path d="M100 ${desk-9}L112 ${desk-38}L108 ${desk-36}Z" ${PIC_ST('var(--muted)')}/>`;// ink pot and quill
+  if(f>=1){const t=esc((title||'').slice(0,18));
+    s+=`<rect x="${x-3}" y="${top-3}" width="${w+6}" height="${H+3}" rx="3" ${PIC_ST('var(--accent)')}/><rect x="${x-3}" y="${top-3}" width="6" height="${H+3}" rx="2" ${PIC_ST('var(--ink)')} opacity=".25"/>`
+      +`<rect x="${x+8}" y="${top+H/2-8}" width="${w-14}" height="14" rx="2" ${PIC_ST('var(--panel)')}/><text x="${x+w/2+1}" y="${top+H/2+2}" text-anchor="middle" style="font-size:6px;font-weight:700;fill:var(--ink)">${t}</text>`
+      +picStars([[12,top-2,4],[88,top-8,3],[96,14,2.5]]);}
+  else{if(f>=.8)s+=`<rect x="${x-3}" y="${desk-3}" width="${w+6}" height="3" rx="1" ${PIC_ST('var(--accent)')} opacity="${Math.min(1,(f-.8)/.15).toFixed(2)}"/>`;// the back cover comes in
+    s+=`<rect x="${x}" y="${top}" width="${w}" height="${H}" rx="1" ${PIC_ST('var(--panel)','var(--muted)',.8)}/>`;
+    for(let y=top+2;y<desk-.5;y+=2)s+=`<line x1="${x+1}" y1="${y}" x2="${x+w-1}" y2="${y}" ${PIC_ST('none','var(--line)',.5)}/>`;
+    const ly=(x0,y0)=>`${x0} ${(y0-(x0-x)*.07).toFixed(1)}`;// the page being written, on top, a little tilted
+    s+=`<path d="M${ly(x+8,top-1)}L${ly(x+48,top-1)}L${ly(x+48,top-8)}L${ly(x+8,top-8)}Z" ${PIC_ST('var(--panel)','var(--muted)',.6)}/>`
+      +`<path d="M${ly(x+11,top-6)}L${ly(x+42,top-6)}M${ly(x+11,top-3.5)}L${ly(x+24+f*18,top-3.5)}" ${PIC_ST('none','var(--muted)',.7)}/>`;}
+  return s}
+// The journey: a marker walks from the village past a forest, over a bridge and through the mountains to a castle.
+const PIC_PATH=[[14,76],[30,71],[44,62],[60,63],[74,55],[86,54],[100,44],[114,40],[126,30],[140,24]];
+function picAt(f){const P=PIC_PATH,len=[0];for(let i=1;i<P.length;i++)len.push(len[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
+  const tgt=f*len[len.length-1];let i=1;while(i<P.length-1&&len[i]<tgt)i++;const t=(tgt-len[i-1])/((len[i]-len[i-1])||1);
+  return{pt:[P[i-1][0]+(P[i][0]-P[i-1][0])*t,P[i-1][1]+(P[i][1]-P[i-1][1])*t],i}}
+function picJourney(f){const P=PIC_PATH,{pt,i}=picAt(f),done=f>=1,pts=a=>a.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');let s='';
+  const tree=(x,y)=>`<path d="M${x} ${y-9}L${x+5} ${y}L${x-5} ${y}Z" ${PIC_ST('var(--muted)')} opacity=".7"/><rect x="${x-.8}" y="${y}" width="1.6" height="3" ${PIC_ST('var(--muted)')}/>`;
+  s+=`<path d="M92 58L106 32L120 58Z" ${PIC_ST('var(--line)')}/><path d="M106 58L120 26L134 58Z" ${PIC_ST('var(--line)')}/><path d="M117 33L120 26L123 33Z" ${PIC_ST('var(--panel)')}/>`;// mountains
+  s+=[[36,56],[44,52],[50,57],[56,53]].map(([x,y])=>tree(x,y)).join('');// forest
+  s+=`<path d="M70 86C74 74 66 66 72 58C77 51 72 46 76 40" ${PIC_ST('none','var(--accent)',2.2)} opacity=".35"/>`;// river
+  s+=`<rect x="70" y="53.5" width="9" height="3" rx="1" ${PIC_ST('var(--ink)')} opacity=".5"/>`;// bridge
+  s+=`<rect x="6" y="70" width="8" height="7" ${PIC_ST('var(--muted)')}/><path d="M5 70L10 65L15 70Z" ${PIC_ST('var(--ink)')} opacity=".6"/><rect x="16" y="73" width="6" height="5" ${PIC_ST('var(--muted)')}/>`;// village
+  const lit=done?'var(--accent)':'var(--panel)';// the castle: towers left and right, a gate, windows (lit at the end)
+  s+=`<g><rect x="134" y="10" width="7" height="16" ${PIC_ST('var(--ink)')} opacity=".75"/><rect x="153" y="10" width="7" height="16" ${PIC_ST('var(--ink)')} opacity=".75"/><rect x="139" y="15" width="16" height="11" ${PIC_ST('var(--ink)')} opacity=".75"/>`
+    +`<path d="M133 10L137.5 4L142 10Z M152 10L156.5 4L161 10Z M138 15L147 8L156 15Z" ${PIC_ST('var(--ink)')}/>`
+    +`<path d="M144 26V21Q147 18 150 21V26Z" ${PIC_ST('var(--panel)')}/><rect x="136" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="155" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="145.5" y="16.5" width="3" height="2.5" ${PIC_ST(lit)}/></g>`;
+  if(done)s+=`<line x1="147" y1="8" x2="147" y2="0.5" ${PIC_ST('none','var(--ink)',.8)}/><path d="M147 1L153 2.5L147 4Z" ${PIC_ST('var(--accent)')}/>`+picStars([[128,8,3],[160,34,2.5],[120,18,2]]);
+  s+=`<polyline points="${pts(P)}" ${PIC_ST('none','var(--muted)',1.2)} stroke-dasharray="2 2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  s+=`<polyline points="${pts([...P.slice(0,i),pt])}" ${PIC_ST('none','var(--accent)',2.4)} stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(!done)s+=`<circle cx="${pt[0].toFixed(1)}" cy="${pt[1].toFixed(1)}" r="3.6" ${PIC_ST('var(--accent)','var(--panel)',1.2)}/>`;
+  return s}
+// the picture of an entry, or ''. size: 's' (Today) or 'l' (detail panel)
+function picSVG(n,size){if(!n.pic)return'';const{f}=picProg(n),book=n.pic==='book',vb=book?'0 0 120 76':'0 0 164 88';
+  return`<svg class="pic pic-${size}${f>=1?' pic-done':''}" viewBox="${vb}" role="img" aria-label="${esc(n.name)}: ${Math.round(f*100)}%">${book?picBook(f,n.name):picJourney(f)}</svg>`}
+// the entries with a picture on Today: open ones, and the ones finished today
+function picNodes(){const today=addDays(0);return allNodes().filter(n=>n.pic&&(!isClosed(n)||(n.hist.length&&dayKey(new Date(n.hist[n.hist.length-1].at))===today)))}
+function picCards(){const P=picNodes();if(!P.length)return'';return`<div class="piccards">${P.map(n=>{const p=picProg(n);
+  return`<div class="piccard" data-goto="${n.id}">${picSVG(n,'s')}<div class="piccap"><b>${esc(n.name)}</b><small>${esc(p.txt)} · ${Math.round(p.f*100)}%${p.f>=1?' ✓':''}</small></div></div>`}).join('')}</div>`}
 // Words today: progress since the start of the day. progDay {d, start} holds the count at the first change of
 // the day; the program keeps it the same way for changes from the CLI, MCP or scripts (ops.go).
 function todayOf(n){const p=n.prog,start=n.progDay&&n.progDay.d===addDays(0)?n.progDay.start:p.done,pc=paceOf(n);
@@ -1247,8 +1312,8 @@ function todayOf(n){const p=n.prog,start=n.progDay&&n.progDay.d===addDays(0)?n.p
 function goalNodes(){return allNodes().filter(n=>n.prog.mode==='units'&&!isClosed(n)&&n.status!=='later'&&!blocked(n)&&!kids(n).length&&n.prog.done<n.prog.total&&!(n.recur&&n.deadline&&n.deadline.slice(0,10)>addDays(0)))
   .sort((a,b)=>(a.deadline||'9')<(b.deadline||'9')?-1:(a.deadline||'9')>(b.deadline||'9')?1:a.name.localeCompare(b.name))}
 // Writing goals at the top of Today: today's amount, a bar for today's progress, and + Log
-function goalsBox(){const G=goalNodes();if(!G.length)return'';const num=x=>Math.ceil(x).toLocaleString('en');
-  return`<h2>Writing goals<small>${G.length}</small></h2>${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
+function goalsBox(){const G=goalNodes(),pc=picCards();if(!G.length&&!pc)return'';const num=x=>Math.ceil(x).toLocaleString('en');
+  return`<h2>Writing goals<small>${G.length}</small></h2>${pc}${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
     const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
     return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></span></div>
 ${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
@@ -1743,7 +1808,7 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
 
   /* ================= Writing ================= */
   const wr=P('root','Writing',{icon:'feather',color:'#8a63d2'});
-  const novel=P(wr.id,'Manuscript: The Ashen Crown',{icon:'book-open',color:'#8a63d2',tags:['novel'],deadline:addDays(150),
+  const novel=P(wr.id,'Manuscript: The Ashen Crown',{icon:'book-open',pic:'journey',color:'#8a63d2',tags:['novel'],deadline:addDays(150),
     notes:`Epic fantasy, ~90,000 words, three acts, set in [[${world.id}]].\n\nEditor: **Anna** (Hartmann Books). Manuscript due to the publisher in 5 months.`});
   const plan=T(novel.id,'Planning',{color:'#7d8596'});
   done(T(plan.id,'Outline the three acts',{tags:['novel']}),45,40);
@@ -1773,7 +1838,7 @@ function seed(){const prefs=S?.prefs;S=blank();if(prefs)S.prefs=prefs;
   T(pub.id,'Cover art: collect reference images',{kind:'idea',status:'exploring',tags:['design']});
   T(pub.id,'Announce the book on Discord and in the newsletter',{status:'later',tags:['discord']});
   T(novel.id,'Open with the villain’s point of view?',{kind:'idea',status:'raw',tags:['novel']});
-  const story=P(wr.id,'Short story: The Lantern Keeper',{status:'paused',icon:'pen',notes:'On hold until the first draft of the novel is done.'});
+  const story=P(wr.id,'Short story: The Lantern Keeper',{status:'paused',icon:'pen',pic:'book',notes:'On hold until the first draft of the novel is done.'});
   T(story.id,'Second draft',{created:t-30*D,prog:words(2100,6000)});
   T(story.id,'Find a magazine for it',{tags:['research']});
   const hab=P(wr.id,'Writing routine',{icon:'target',color:'#3fa56b'});

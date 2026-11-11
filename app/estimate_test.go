@@ -116,3 +116,14 @@ func TestProgressAddAndDay(t *testing.T) {
 		t.Errorf("add never goes above the total: %v", p["done"])
 	}
 }
+
+// the growing picture: none, book or journey
+func TestPicField(t *testing.T) {
+	a := testServer(t)
+	id := a.call(201, "POST", "/api/nodes", map[string]any{"name": "Manuscript", "kind": "project", "pic": "journey"})["id"].(string)
+	if n := a.call(200, "GET", "/api/nodes/"+id, nil); n["pic"] != "journey" {
+		t.Errorf("pic: %v", n["pic"])
+	}
+	a.call(200, "PATCH", "/api/nodes/"+id, map[string]any{"pic": ""})
+	a.call(400, "PATCH", "/api/nodes/"+id, map[string]any{"pic": "bonsai"})
+}

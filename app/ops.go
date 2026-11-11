@@ -60,7 +60,7 @@ func normURL(v string) string {
 }
 
 var fieldOrder = []string{"kind", "name", "color", "icon", "prio", "tags", "people", "location", "deadline", "reminder", "end",
-	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "after", "est", "lead", "discord", "free", "collapsed", "status"}
+	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "after", "est", "lead", "discord", "free", "collapsed", "pic", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
 	oldRem, oldEnd := n.S("reminder"), n.S("end")
@@ -147,6 +147,12 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be empty or an icon name (a-z, 0-9, -)")
 		}
 		n["icon"] = s
+	case "pic": // the growing picture for the entry's progress (Today, detail panel); "" = none
+		s, ok := v.(string)
+		if !ok || (s != "" && s != "book" && s != "journey") {
+			return errors.New("must be empty, book or journey")
+		}
+		n["pic"] = s
 	case "prio":
 		p := num(v)
 		if p < 0 || p > 4 || p != float64(int(p)) {

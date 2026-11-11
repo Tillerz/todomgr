@@ -41,6 +41,7 @@ More in [Screenshots](#screenshots).
 - **Log words in two clicks:** click *+ Log* or "words left", type `+500` (or the new total), press Enter. Scripts and other writing tools can add words through the API.
 - **Write with the timer:** the clock next to a goal starts a countdown or stopwatch for it. When it stops, the time is logged and the app asks how many words you wrote.
 - **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
+- **A picture that grows with your manuscript:** a stack of pages that becomes a bound book with your title, or a walk across a map to a castle, from 0 to 100 %.
 - **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
 - **A cheer when you reach a goal**.
 
@@ -318,6 +319,7 @@ the list.
        -d '{"prog":{"add":500}}' http://127.0.0.1:7437/api/nodes/ENTRY_ID
   ```
   The token is in Settings and in `data/config.json`; the entry id is in the detail panel (top right).
+- **Growing pictures:** detail panel → Progress → *Picture* (off by default): **Book** (an empty desk, then the pages stack up, and at 100 % a bound book with the entry's title) or **Journey** (a walk from a village past a forest, over a bridge and through the mountains to a castle, which lights up at 100 %). It grows with every word. A project counts the words of the word goals below it, for example "32,000 of 90,000 words"; without word goals, its finished sub-entries. Entries with a picture show it on *Today*, above the Writing goals, and in the detail panel. Switch it on for the few entries that matter, such as the manuscript, not for every chapter.
 - **Write with the timer:** the clock button next to a goal in the Writing goals box opens the timer for that goal (countdown or stopwatch). When it stops, the time is logged to the goal and a window asks for the words: `+600` for what you wrote now, or the new total. *Cancel* logs only the time. The same happens when you start the timer for any entry with a word goal.
 - An entry with sub-entries shows the **derived** progress of its children, as a bar in the tree.
 - Setting an entry to done fills its own bar.
