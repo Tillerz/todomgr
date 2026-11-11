@@ -167,6 +167,10 @@ check('writing goals: +500 and totals, words today from the start of the day, th
   const dl=addDays(9),n=mk('Draft the novel',{prog:{mode:'units',done:1000,total:11000,unit:'words'},deadline:dl});attach(n,'root');made.push(n);
   try{setProgress(n,1300);if(!n.progDay||n.progDay.d!==addDays(0)||n.progDay.start!==1000)bad.push('progDay: '+JSON.stringify(n.progDay));
     setProgress(n,1500);const t=todayOf(n);if(t.done!==500||t.goal!==1000)bad.push('today: '+JSON.stringify(t)+' want 500 of 1000');
+    setProgress(n,2100);const t2=todayOf(n);if(t2.after!==Math.ceil(8900/9)||t2.need!==t2.after)bad.push('after today: '+JSON.stringify(t2)+' want '+Math.ceil(8900/9));
+    if(!text(pace(n)).includes('then '+Math.ceil(8900/9).toLocaleString('en')+' words per day for 9 days'))bad.push('detail pane: '+text(pace(n)).slice(0,120));
+    renderToday();if(!el('#vToday').innerHTML.includes('then '+Math.ceil(8900/9).toLocaleString('en')+' words/day'))bad.push('Today box: then per day');
+    setProgress(n,1500);
     n.progDay={d:addDays(-1),start:200};if(todayOf(n).done!==0)bad.push('an old progDay counts as nothing today');
     ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML;
     if(!h.includes('Writing goals')||!h.includes('Draft the novel')||!h.includes('data-wlog="'+n.id+'"'))bad.push('Today box');

@@ -1302,10 +1302,6 @@ function picSVG(n,size){if(!n.pic)return'';const{f}=picProg(n),book=n.pic==='boo
 function picNodes(){const today=addDays(0);return allNodes().filter(n=>n.pic&&(!isClosed(n)||(n.hist.length&&dayKey(new Date(n.hist[n.hist.length-1].at))===today)))}
 function picCards(){const P=picNodes();if(!P.length)return'';return`<div class="piccards">${P.map(n=>{const p=picProg(n);
   return`<div class="piccard" data-goto="${n.id}">${picSVG(n,'s')}<div class="piccap"><b>${esc(n.name)}</b><small>${esc(p.txt)} · ${Math.round(p.f*100)}%${p.f>=1?' ✓':''}</small></div></div>`}).join('')}</div>`}
-// Words today: progress since the start of the day. progDay {d, start} holds the count at the first change of
-// the day; the program keeps it the same way for changes from the CLI, MCP or scripts (ops.go).
-function todayOf(n){const p=n.prog,start=n.progDay&&n.progDay.d===addDays(0)?n.progDay.start:p.done,pc=paceOf(n);
-  return{done:Math.max(0,p.done-start),goal:pc&&pc.days>0?Math.ceil(Math.max(0,p.total-start)/pc.days):0}}
 // the open word / page goals, soonest deadline first; not blocked (waiting for another entry) and not postponed.
 // A repeating goal only when it is due today or overdue: finished for today, its next round moves on, and it
 // leaves Today until then.
@@ -1317,7 +1313,7 @@ function goalsBox(){const G=goalNodes(),pc=picCards();if(!G.length&&!pc)return''
     const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
     return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></span></div>
 ${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
-<div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}
+<div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}${t.after?` · <span class="${f&&f.late>0?'late':''}" data-tip="Needed per day from tomorrow on to finish in time${f&&f.late>0?'; your speed so far is '+num(f.per)+u+' per day':''}">then ${num(t.after)}${u}/day</span>`:''}
  · <span class="goal-left" data-wlog="${n.id}" data-tip="Click to log progress">${num(left)}${u} left</span>${pc&&pc.days<=0?' · <span class="late">the deadline has passed</span>':n.deadline?` · until ${fmtWhen(n.deadline)}`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</div></div>`}).join('')}`}
 // Log progress with few clicks: "+500" adds, "-200" takes away, a plain number is the new total
 // secs: after the timer, the time it logged; the message then shows it too, also on Cancel
@@ -1359,12 +1355,24 @@ function speedOf(n){const p=n.prog,left=p.total-p.done;if(p.mode!=='units'||isCl
 const unitTxt=n=>n.prog.unit?' '+esc(n.prog.unit):'',finTxt=d=>{const w=fmtWhen(dayKey(d));return/^(Today|Tomorrow)$/.test(w)?w.toLowerCase():w};
 function forecast(n){const f=speedOf(n);if(!f)return'';const u=unitTxt(n),days=x=>x+' day'+(x>1?'s':''),w=finTxt(f.fin);
   return`<div class="note pace${f.late>0?' late':''}">At your speed so far, ${Math.round(f.per).toLocaleString('en')}${u} per day since ${f.since.getDate()} ${MON[f.since.getMonth()]}: <b>done ${/^(today|tomorrow)$/.test(w)?'':'on '}${w}</b>${f.late>0?`, ${days(f.late)} after the deadline`:f.late<0?`, ${days(-f.late)} early`:''}</div>`}
-function pace(n){const p=paceOf(n),fc=forecast(n);if(!p)return fc;const{left,days,u,num}=p;
-  return`<div class="note pace">${num(left)}${u} left · ${days>0?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, until ${fmtWhen(n.deadline)}`:'<b>the deadline has passed</b>'}</div>${fc}`}
+// Words today: progress since the start of the day. progDay {d, start} holds the count at the first change of
+// the day; the program keeps it the same way for changes from the CLI, MCP or scripts (ops.go).
+// goal: today's amount, fixed for the day (left at the start of the day over the days left, today included);
+// after: what each day from tomorrow on needs, when the rest of today's amount gets written today;
+// need: the amount to aim for now: today's while it is not reached, else the one from tomorrow on.
+function todayOf(n){const p=n.prog,start=n.progDay&&n.progDay.d===dayKey(startOfToday())?n.progDay.start:p.done,pc=paceOf(n),done=Math.max(0,p.done-start);
+  if(!pc||pc.days<=0)return{done,goal:0,after:0,need:0,days:0};
+  const goal=Math.ceil(Math.max(0,p.total-start)/pc.days),rest=Math.max(0,p.total-p.done-Math.max(0,goal-done)),after=pc.days>1?Math.ceil(rest/(pc.days-1)):0;
+  return{done,goal,after,need:done>=goal?after:goal,days:pc.days}}
+function pace(n){const p=paceOf(n),fc=forecast(n);if(!p)return fc;const{left,days,u,num}=p,t=todayOf(n),until=`until ${fmtWhen(n.deadline)}`;
+  const txt=days<=0?'<b>the deadline has passed</b>':!t.done?`<b>${num(left/days)}${u} per day</b> for ${days} day${days>1?'s':''}, ${until}`
+    :days===1?`<b>all of it today</b> (${num(t.done)} so far), ${until}`:t.done>=t.goal?`today ${num(t.done)} of ${num(t.goal)}${u} ✓ · then <b>${num(t.after)}${u} per day</b> for ${days-1} day${days>2?'s':''}, ${until}`
+    :`today <b>${num(t.goal)}${u}</b> (${num(t.done)} so far), then ${num(t.after)}${u} per day for ${days-1} day${days>2?'s':''}, ${until}`;
+  return`<div class="note pace">${num(left)}${u} left · ${txt}</div>${fc}`}
 // the same, short, after the name in the tree
 function paceTag(n){const p=paceOf(n),f=speedOf(n);if(!p&&!f)return'';const left=n.prog.total-n.prog.done,u=unitTxt(n),num=x=>Math.ceil(x).toLocaleString('en'),days=p?p.days:0;
-  const tip=(p?'Left until the deadline'+(days>0?', and how much per day (today counts)':''):'Left')+(f?'. done ~: when it is finished at your speed so far':'')+'. Click to log progress';
-  return`<span class="pace-t" data-tip="${tip}">${num(left)}${u} left${days>0?` · ${num(left/days)}${u}/day`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</span>`}
+  const tip=(p?'Left until the deadline'+(days>0?', and how much per day: today\'s amount, or once it is reached, the amount from tomorrow on':''):'Left')+(f?'. done ~: when it is finished at your speed so far':'')+'. Click to log progress';
+  return`<span class="pace-t" data-tip="${tip}">${num(left)}${u} left${days>0?` · ${num(todayOf(n).need)}${u}/day`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</span>`}
 function planBar(){const{left,tasks,events,items}=dayPlan(),plan=tasks+events;if(!plan)return'';
   const over=plan-left,w=x=>(x/Math.max(left,plan)*100).toFixed(1)+'%',d=x=>fmtDur(x*60),hm=t=>{const x=new Date(t);return pad(x.getHours())+':'+pad(x.getMinutes())},open=S.prefs.planOpen;
   const why=x=>x.ev?`event ${hm(x.ev[0])}–${hm(x.ev[1])}`:`${x.over?'overdue':'due today'} · estimate ${d(x.n.est)}${x.tr>=.5?`, ${d(x.tr)} tracked`:''}`;
