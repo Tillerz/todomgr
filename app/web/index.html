@@ -178,6 +178,8 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .piccard{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;cursor:pointer;background:var(--panel)}
 .piccap{display:flex;flex-direction:column}.piccap small{color:var(--muted)}
 .pic-s{width:120px;height:66px}.picbig{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px}.picbig small{color:var(--muted)}.pic-l{width:100%;max-width:300px}
+.pic .walk{animation:picwalk 1.2s ease-in-out both}@keyframes picwalk{from{transform:translate(var(--dx),var(--dy))}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.pic .walk,.pic-done{animation:none}}
 .pic-done{animation:picshine 1.8s ease-out 1}@keyframes picshine{0%{filter:drop-shadow(0 0 0 var(--accent))}40%{filter:drop-shadow(0 0 8px var(--accent))}100%{filter:drop-shadow(0 0 0 transparent)}}
 .goal-btns{display:flex;gap:4px;align-items:center}
 .goal-in{width:92px;padding:3px 8px;font-size:13px;border-radius:8px;text-align:right}
@@ -1123,7 +1125,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 `<div class="seg"><button data-act="pmode" data-v="percent" class="${n.prog.mode==='percent'?'on':''}" data-tip="0–100 %">Percent</button><button data-act="pmode" data-v="units" class="${n.prog.mode==='units'?'on':''}" data-tip="Count something: words written, images created, steps run…">Units</button></div>
 <div style="margin-top:8px">${n.prog.mode==='percent'?`<div class="stepper"><input type="range" data-f="pct" min="0" max="100" step="5" value="${n.prog.done}"><b id="pctv" style="width:44px;text-align:right">${n.prog.done}%</b></div>`:
 `<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div><div class="pace-slot">${pace(n)}</div>`}</div>`}
-${opt('Picture',n.pic,`<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: pages stack up to a bound book'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>`)}
+${opt('Picture',n.pic,`<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: an open book fills with lines, then it is bound'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>`)}
 ${n.pic?`<div class="picbig">${picSVG(n,'l')}<small>${esc(picProg(n).txt)} · ${Math.round(picProg(n).f*100)}%</small></div>`:''}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
@@ -1269,56 +1271,90 @@ function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.colo
 /* Growing pictures (detail panel → Progress → Picture; off by default): a picture for an entry's progress, 0 to 100 %.
    A project counts the words (or other units) of the word goals below it; without such goals, its finished
    sub-entries. Drawn here as SVG shapes, in the theme's colours; every step looks finished. */
+// f0: the progress at the start of today
 function picProg(n){const num=x=>Math.round(x).toLocaleString('en');
   if(kids(n).length){const L=[],walk=x=>kids(x).forEach(c=>{if(kids(c).length)walk(c);else if(c.prog.mode==='units'&&c.status!=='cancelled')L.push(c)});walk(n);
-    const unit=L.length?L[0].prog.unit:'',U=L.filter(c=>c.prog.unit===unit);
-    if(U.length){const done=U.reduce((a,c)=>a+(c.status==='done'?c.prog.total:c.prog.done),0),total=U.reduce((a,c)=>a+c.prog.total,0);
-      return{f:isClosed(n)?1:Math.min(1,done/(total||1)),txt:`${num(done)} of ${num(total)}${unit?' '+unit:''}`}}
-    const f=isClosed(n)?1:frac(n);return{f,txt:`${Math.round(f*100)}% of the sub-items`}}
-  if(n.prog.mode==='units'){const f=n.status==='done'?1:Math.min(1,n.prog.done/(n.prog.total||1));return{f,txt:`${num(n.prog.done)} of ${num(n.prog.total)}${n.prog.unit?' '+n.prog.unit:''}`}}
-  const f=n.status==='done'?1:frac(n);return{f,txt:`${Math.round(f*100)}%`}}
+    const sums={};L.forEach(c=>sums[c.prog.unit]=(sums[c.prog.unit]||0)+c.prog.total);// words and characters below one project: the larger goal counts
+    const unit=Object.keys(sums).sort((a,b)=>sums[b]-sums[a])[0]||'',U=L.filter(c=>c.prog.unit===unit);
+    if(U.length){const done=U.reduce((a,c)=>a+(c.status==='done'?c.prog.total:c.prog.done),0),total=U.reduce((a,c)=>a+c.prog.total,0),f=isClosed(n)?1:Math.min(1,done/(total||1));
+      return{f,f0:Math.min(f,U.reduce((a,c)=>a+dayStart(c),0)/(total||1)),txt:`${num(done)} of ${num(total)}${unit?' '+unit:''}`}}
+    const f=isClosed(n)?1:frac(n);return{f,f0:f,txt:`${Math.round(f*100)}% of the sub-items`}}
+  if(n.prog.mode==='units'){const f=n.status==='done'?1:Math.min(1,n.prog.done/(n.prog.total||1));return{f,f0:Math.min(f,dayStart(n)/(n.prog.total||1)),txt:`${num(n.prog.done)} of ${num(n.prog.total)}${n.prog.unit?' '+n.prog.unit:''}`}}
+  const f=n.status==='done'?1:frac(n);return{f,f0:f,txt:`${Math.round(f*100)}%`}}
+// the count of a goal at the start of today (see todayOf); today's part of a picture is drawn in colour
+const dayStart=n=>n.progDay&&n.progDay.d===addDays(0)?n.progDay.start:n.status==='done'?n.prog.total:n.prog.done;
 const PIC_ST=(fill,stroke,w)=>`style="fill:${fill};stroke:${stroke||'none'};stroke-width:${w||1}"`;
 // sparkles around a finished picture
 const picStars=pts=>pts.map(([x,y,r])=>`<path d="M${x} ${y-r}L${x+r*.3} ${y-r*.3}L${x+r} ${y}L${x+r*.3} ${y+r*.3}L${x} ${y+r}L${x-r*.3} ${y+r*.3}L${x-r} ${y}L${x-r*.3} ${y-r*.3}Z" ${PIC_ST('var(--accent)')}/>`).join('');
-// The book: an empty desk; pages stack up; the back cover comes in; at 100 % the bound book with the title.
-function picBook(f,title){const desk=66,w=56,x=22,H=2+f*30,top=desk-H;let s='';
-  s+=`<rect x="4" y="${desk}" width="112" height="5" rx="2" ${PIC_ST('var(--line)')}/>`;
-  s+=`<rect x="95" y="${desk-9}" width="11" height="9" rx="2" ${PIC_ST('var(--ink)')}/><path d="M100 ${desk-9}L112 ${desk-38}L108 ${desk-36}Z" ${PIC_ST('var(--muted)')}/>`;// ink pot and quill
-  if(f>=1){const t=esc((title||'').slice(0,18));
-    s+=`<rect x="${x-3}" y="${top-3}" width="${w+6}" height="${H+3}" rx="3" ${PIC_ST('var(--accent)')}/><rect x="${x-3}" y="${top-3}" width="6" height="${H+3}" rx="2" ${PIC_ST('var(--ink)')} opacity=".25"/>`
-      +`<rect x="${x+8}" y="${top+H/2-8}" width="${w-14}" height="14" rx="2" ${PIC_ST('var(--panel)')}/><text x="${x+w/2+1}" y="${top+H/2+2}" text-anchor="middle" style="font-size:6px;font-weight:700;fill:var(--ink)">${t}</text>`
-      +picStars([[12,top-2,4],[88,top-8,3],[96,14,2.5]]);}
-  else{if(f>=.8)s+=`<rect x="${x-3}" y="${desk-3}" width="${w+6}" height="3" rx="1" ${PIC_ST('var(--accent)')} opacity="${Math.min(1,(f-.8)/.15).toFixed(2)}"/>`;// the back cover comes in
-    s+=`<rect x="${x}" y="${top}" width="${w}" height="${H}" rx="1" ${PIC_ST('var(--panel)','var(--muted)',.8)}/>`;
-    for(let y=top+2;y<desk-.5;y+=2)s+=`<line x1="${x+1}" y1="${y}" x2="${x+w-1}" y2="${y}" ${PIC_ST('none','var(--line)',.5)}/>`;
-    const ly=(x0,y0)=>`${x0} ${(y0-(x0-x)*.07).toFixed(1)}`;// the page being written, on top, a little tilted
-    s+=`<path d="M${ly(x+8,top-1)}L${ly(x+48,top-1)}L${ly(x+48,top-8)}L${ly(x+8,top-8)}Z" ${PIC_ST('var(--panel)','var(--muted)',.6)}/>`
-      +`<path d="M${ly(x+11,top-6)}L${ly(x+42,top-6)}M${ly(x+11,top-3.5)}L${ly(x+24+f*18,top-3.5)}" ${PIC_ST('none','var(--muted)',.7)}/>`;}
+// fixed colours of the pictures: mid tones that read on light and on dark themes
+const PIC_C={green:'#4f9d69',water:'#4a9fd8',wood:'#b07a45',warm:'#e8a33d',roof:'#c8553d',stone:'#9aa3b5'};
+// The book: an open book. Lines of text fill the left page, then the right one; today's lines are in colour and
+// the quill stands where the text ends. A ribbon comes at the half. At 100 % the bound book with the title.
+// o.f0: the progress at the start of today; o.col: the colour of the cover and of today's lines
+function picBook(f,title,o={}){const col=o.col||'var(--accent)',f0=Math.min(f,o.f0??f),desk=68;let s='';
+  s+=`<rect x="4" y="${desk}" width="112" height="4" rx="2" ${PIC_ST('var(--line)')}/>`;
+  if(f>=1){const t=esc((title||'').slice(0,18)),x=18,w=80,top=24,H=desk-top;
+    s+=`<rect x="${x+3}" y="${top+4}" width="${w}" height="${H-4}" rx="2" ${PIC_ST('var(--panel)','var(--muted)',.7)}/>`// the pages
+      +`<rect x="${x}" y="${top}" width="${w}" height="${H-3}" rx="3" ${PIC_ST(col)}/><rect x="${x}" y="${top}" width="7" height="${H-3}" rx="2" ${PIC_ST('#000')} opacity=".22"/>`
+      +`<rect x="${x+11}" y="${top+10}" width="${w-15}" height="15" rx="2" ${PIC_ST('var(--panel)')}/><text x="${x+w/2+3.5}" y="${top+20}" text-anchor="middle" style="font-size:6px;font-weight:700;fill:var(--ink)">${t}</text>`
+      +`<path d="M${x+w-12} ${top+H-3}v9l3-2.5l3 2.5v-9Z" ${PIC_ST(PIC_C.roof)}/>`+picStars([[10,18,4],[108,14,3],[112,40,2.5]]);
+    return s}
+  const cx=60,pw=44,top=22,bot=desk-5,rows=9,gap=(bot-top-8)/(rows-1),all=rows*2,n=f*all,n0=f0*all;
+  s+=`<path d="M${cx-pw-3} ${bot+2}h${2*pw+6}v3h-${2*pw+6}Z" ${PIC_ST(col)}/>`;// the cover below the pages
+  for(let k=0;k<3;k++)s+=`<path d="M${cx-pw} ${bot-k*1.2}h${pw*2}" ${PIC_ST('none','var(--muted)',.6)} opacity=".6"/>`;// the edge of the pages
+  const page=d=>`<path d="M${cx} ${top+3}Q${cx+d*pw*.5} ${top-3} ${cx+d*pw} ${top+1}V${bot-2}Q${cx+d*pw*.5} ${bot-6} ${cx} ${bot}Z" ${PIC_ST('var(--panel)','var(--muted)',.8)}/>`;
+  s+=page(-1)+page(1)+`<path d="M${cx} ${top+3}V${bot}" ${PIC_ST('none','var(--muted)',.8)}/>`;
+  let quill=null;
+  for(let k=0;k<Math.ceil(n-1e-9);k++){const right=k>=rows,r=k%rows,part=Math.min(1,n-k),x0=right?cx+5:cx-pw+5,len=(pw-10)*(r===rows-1?.6:1)*part,y=top+6+r*gap-(right?1:-1)*0+0;
+    const today=k+1>n0+1e-9,from=today&&k<n0?(pw-10)*(n0-k):0;// a line begun before today: its first part stays grey
+    if(from>0)s+=`<path d="M${x0} ${y}h${Math.min(from,len).toFixed(1)}" ${PIC_ST('none','var(--muted)',1.3)} stroke-linecap="round"/>`;
+    if(len>from)s+=`<path d="M${(x0+from).toFixed(1)} ${y}h${(len-from).toFixed(1)}" ${PIC_ST('none',today?col:'var(--muted)',today?1.7:1.3)} stroke-linecap="round"/>`;
+    quill=[x0+len,y]}
+  if(f>=.5)s+=`<path d="M${cx-2} ${bot-1}v10l2-2l2 2v-10Z" ${PIC_ST(PIC_C.roof)}/>`;// the ribbon: half of the book is written
+  const[qx,qy]=quill||[cx-pw+5,top+6];// the quill, its tip where the text ends
+  s+=`<path d="M${qx.toFixed(1)} ${qy}l9 -15q4 -2 4 2l-10 12Z" ${PIC_ST(PIC_C.warm,'var(--ink)',.5)}/><path d="M${qx.toFixed(1)} ${qy}l10 -14" ${PIC_ST('none','var(--ink)',.6)}/>`;
+  s+=`<rect x="103" y="${desk-9}" width="10" height="9" rx="2" ${PIC_ST('var(--ink)')} opacity=".8"/><rect x="105" y="${desk-11}" width="6" height="2.5" rx="1" ${PIC_ST('var(--muted)')}/>`;// ink pot
   return s}
-// The journey: a marker walks from the village past a forest, over a bridge and through the mountains to a castle.
+// The journey: a walker goes from the village past a forest, over a bridge and through the mountains to a castle.
+// What the walker has passed gets its colours; a camp, the bridge and a banner mark the quarters. Today's
+// stretch of the way is drawn thick and in the entry's colour.
 const PIC_PATH=[[14,76],[30,71],[44,62],[60,63],[74,55],[86,54],[100,44],[114,40],[126,30],[140,24]];
 function picAt(f){const P=PIC_PATH,len=[0];for(let i=1;i<P.length;i++)len.push(len[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
   const tgt=f*len[len.length-1];let i=1;while(i<P.length-1&&len[i]<tgt)i++;const t=(tgt-len[i-1])/((len[i]-len[i-1])||1);
   return{pt:[P[i-1][0]+(P[i][0]-P[i-1][0])*t,P[i-1][1]+(P[i][1]-P[i-1][1])*t],i}}
-function picJourney(f){const P=PIC_PATH,{pt,i}=picAt(f),done=f>=1,pts=a=>a.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');let s='';
-  const tree=(x,y)=>`<path d="M${x} ${y-9}L${x+5} ${y}L${x-5} ${y}Z" ${PIC_ST('var(--muted)')} opacity=".7"/><rect x="${x-.8}" y="${y}" width="1.6" height="3" ${PIC_ST('var(--muted)')}/>`;
-  s+=`<path d="M92 58L106 32L120 58Z" ${PIC_ST('var(--line)')}/><path d="M106 58L120 26L134 58Z" ${PIC_ST('var(--line)')}/><path d="M117 33L120 26L123 33Z" ${PIC_ST('var(--panel)')}/>`;// mountains
-  s+=[[36,56],[44,52],[50,57],[56,53]].map(([x,y])=>tree(x,y)).join('');// forest
-  s+=`<path d="M70 86C74 74 66 66 72 58C77 51 72 46 76 40" ${PIC_ST('none','var(--accent)',2.2)} opacity=".35"/>`;// river
-  s+=`<rect x="70" y="53.5" width="9" height="3" rx="1" ${PIC_ST('var(--ink)')} opacity=".5"/>`;// bridge
-  s+=`<rect x="6" y="70" width="8" height="7" ${PIC_ST('var(--muted)')}/><path d="M5 70L10 65L15 70Z" ${PIC_ST('var(--ink)')} opacity=".6"/><rect x="16" y="73" width="6" height="5" ${PIC_ST('var(--muted)')}/>`;// village
-  const lit=done?'var(--accent)':'var(--panel)';// the castle: towers left and right, a gate, windows (lit at the end)
-  s+=`<g><rect x="134" y="10" width="7" height="16" ${PIC_ST('var(--ink)')} opacity=".75"/><rect x="153" y="10" width="7" height="16" ${PIC_ST('var(--ink)')} opacity=".75"/><rect x="139" y="15" width="16" height="11" ${PIC_ST('var(--ink)')} opacity=".75"/>`
-    +`<path d="M133 10L137.5 4L142 10Z M152 10L156.5 4L161 10Z M138 15L147 8L156 15Z" ${PIC_ST('var(--ink)')}/>`
-    +`<path d="M144 26V21Q147 18 150 21V26Z" ${PIC_ST('var(--panel)')}/><rect x="136" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="155" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="145.5" y="16.5" width="3" height="2.5" ${PIC_ST(lit)}/></g>`;
-  if(done)s+=`<line x1="147" y1="8" x2="147" y2="0.5" ${PIC_ST('none','var(--ink)',.8)}/><path d="M147 1L153 2.5L147 4Z" ${PIC_ST('var(--accent)')}/>`+picStars([[128,8,3],[160,34,2.5],[120,18,2]]);
-  s+=`<polyline points="${pts(P)}" ${PIC_ST('none','var(--muted)',1.2)} stroke-dasharray="2 2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-  s+=`<polyline points="${pts([...P.slice(0,i),pt])}" ${PIC_ST('none','var(--accent)',2.4)} stroke-linecap="round" stroke-linejoin="round"/>`;
-  if(!done)s+=`<circle cx="${pt[0].toFixed(1)}" cy="${pt[1].toFixed(1)}" r="3.6" ${PIC_ST('var(--accent)','var(--panel)',1.2)}/>`;
+function picJourney(f,o={}){const P=PIC_PATH,C=PIC_C,col=o.col||'var(--accent)',f0=Math.min(f,o.f0??f),{pt,i}=picAt(f),A=picAt(f0),done=f>=1;let s='';
+  const pts=a=>a.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' '),was=x=>pt[0]>=x,c=(x,colour,grey)=>was(x)?colour:grey||'var(--muted)';
+  if(!done){const a=Math.PI*f;s+=`<ellipse cx="${(18+f*96).toFixed(1)}" cy="${(30-Math.sin(a)*20).toFixed(1)}" rx="5" ry="5" ${PIC_ST(C.warm)} opacity=".85"/>`}// the sun moves over the day
+  s+=`<path d="M88 60L105 16L122 60Z" ${PIC_ST(c(105,C.stone))} opacity="${was(105)?1:.45}"/><path d="M106 60L123 7L140 60Z" ${PIC_ST(c(123,C.stone))} opacity="${was(123)?1:.45}"/><path d="M101.9 24L105 16L108.1 24L105 22Z M119.8 17L123 7L126.2 17L123 14.5Z" ${PIC_ST('#fff')} opacity=".9"/>`;// mountains, behind the land
+  s+=`<path d="M0 88V80L14 76L30 71L44 62L60 63L74 55L86 54L100 44L114 40L126 30L140 24L164 22V88Z" ${PIC_ST('var(--line)')}/>`;// the land
+  s+=`<path d="M0 88V80L${pts([...P.slice(0,i),pt]).replace(/ /g,'L')}V88Z" ${PIC_ST(C.green)} opacity=".28"/>`;// green where the walker has been
+  const tree=(x,y)=>`<path d="M${x} ${y-10}L${x+5} ${y}L${x-5} ${y}Z" ${PIC_ST(c(x,C.green))} opacity="${was(x)?1:.6}"/><rect x="${x-.8}" y="${y}" width="1.6" height="3" ${PIC_ST(c(x,C.wood))}/>`;
+  s+=[[34,57],[42,52],[49,58],[56,54]].map(([x,y])=>tree(x,y)).join('');// forest
+  s+=`<path d="M70 88C74 76 66 68 72 60C77 53 72 47 76 40" ${PIC_ST('none',c(72,C.water),2.6)} opacity="${was(72)?.9:.4}"/>`;// river
+  s+=`<rect x="68.5" y="53.6" width="11" height="3" rx="1" ${PIC_ST(c(74,C.wood,'var(--muted)'))}/><path d="M69 53.6v-3M79 53.6v-3M69 51h10" ${PIC_ST('none',c(74,C.wood,'var(--muted)'),.8)}/>`;// bridge
+  s+=`<rect x="5" y="70" width="9" height="7" ${PIC_ST(C.stone)}/><path d="M3.5 70L9.5 64L15.5 70Z" ${PIC_ST(C.roof)}/><rect x="16" y="73" width="6" height="5" ${PIC_ST(C.stone)}/><path d="M15 73L19 69.5L23 73Z" ${PIC_ST(C.roof)}/>`;// village
+  if(f>=.25){const[x,y]=picAt(.25).pt;s+=`<path d="M${x+1} ${y+12}L${x+6} ${y+4}L${x+11} ${y+12}Z" ${PIC_ST(col)}/><path d="M${x+6} ${y+4}V${y+12}" ${PIC_ST('none','#000',.6)} opacity=".3"/><path d="M${x+15} ${y+7.5}q2.4 3 0 4.5q-2.4 -1.5 0 -4.5Z" ${PIC_ST(C.warm)}/>`}// a quarter: the camp
+  if(f>=.75){const[x,y]=picAt(.75).pt;s+=`<path d="M${x} ${y}V${y-11}" ${PIC_ST('none','var(--ink)',.8)}/><path d="M${x} ${y-11}h7l-2 2l2 2h-7Z" ${PIC_ST(col)}/>`}// three quarters: a banner on the pass
+  const lit=done?C.warm:'var(--panel)',wall=done?C.stone:'var(--muted)',roof=done?C.roof:'var(--ink)';// the castle: its colours and its lights come at the end
+  s+=`<g><rect x="134" y="10" width="7" height="16" ${PIC_ST(wall)}/><rect x="153" y="10" width="7" height="16" ${PIC_ST(wall)}/><rect x="139" y="15" width="16" height="11" ${PIC_ST(wall)}/>`
+    +`<path d="M133 10L137.5 4L142 10Z M152 10L156.5 4L161 10Z M138 15L147 8L156 15Z" ${PIC_ST(roof)}/>`
+    +`<path d="M144 26V21Q147 18 150 21V26Z" ${PIC_ST(done?C.wood:'var(--panel)')}/><rect x="136" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="155" y="13" width="3" height="3" ${PIC_ST(lit)}/><rect x="145.5" y="16.5" width="3" height="2.5" ${PIC_ST(lit)}/></g>`;
+  if(done)s+=`<line x1="147" y1="8" x2="147" y2="0.5" ${PIC_ST('none','var(--ink)',.8)}/><path d="M147 1L153 2.5L147 4Z" ${PIC_ST(col)}/>`+picStars([[126,8,3],[162,36,2.5],[118,16,2],[20,14,3],[60,10,2]]);
+  s+=`<polyline points="${pts(P)}" ${PIC_ST('none','var(--muted)',1.2)} stroke-dasharray="2 2.5" stroke-linecap="round" stroke-linejoin="round"/>`;// the way ahead
+  s+=`<polyline points="${pts([...P.slice(0,A.i),A.pt])}" ${PIC_ST('none','var(--ink)',2)} opacity=".55" stroke-linecap="round" stroke-linejoin="round"/>`;// walked before today
+  if(f>f0)s+=`<polyline points="${pts([A.pt,...P.slice(A.i,i),pt])}" ${PIC_ST('none',col,3.2)} stroke-linecap="round" stroke-linejoin="round"/>`;// walked today
+  if(!done){const[x,y]=pt.map(v=>+v.toFixed(1));// the walker: stick, legs, body, pack, head
+    s+=`<g transform="translate(${x} ${y})"><g${o.from?` class="walk" style="--dx:${(o.from[0]-x).toFixed(1)}px;--dy:${(o.from[1]-y).toFixed(1)}px;animation-delay:-${Math.round(o.at||0)}ms"`:''}>`
+      +`<path d="M3.2 -7.5L4.6 0" ${PIC_ST('none',C.wood,.9)}/><path d="M-1.6 0L0 -4L1.8 0" ${PIC_ST('none','var(--ink)',1.3)} stroke-linecap="round" stroke-linejoin="round"/><path d="M0 -4V-8" ${PIC_ST('none','var(--ink)',1.9)} stroke-linecap="round"/>`
+      +`<rect x="-3.2" y="-8.3" width="2.6" height="3.6" rx=".8" ${PIC_ST(col)}/><circle cx="0.2" cy="-10.2" r="1.9" ${PIC_ST('var(--ink)')}/></g></g>`}
   return s}
 // the picture of an entry, or ''. size: 's' (Today) or 'l' (detail panel)
-function picSVG(n,size){if(!n.pic)return'';const{f}=picProg(n),book=n.pic==='book',vb=book?'0 0 120 76':'0 0 164 88';
-  return`<svg class="pic pic-${size}${f>=1?' pic-done':''}" viewBox="${vb}" role="img" aria-label="${esc(n.name)}: ${Math.round(f*100)}%">${book?picBook(f,n.name):picJourney(f)}</svg>`}
+// After new progress the walker of the journey walks from its old place to the new one (picWalk remembers
+// the old place per picture, and when the walk began, so a page that is drawn again does not start it again).
+const picWalk={};
+function picSVG(n,size){if(!n.pic)return'';const{f,f0}=picProg(n),book=n.pic==='book',vb=book?'0 0 120 76':'0 0 164 88',o={f0,col:n.color||undefined};
+  if(!book){const k=n.id+size,w=picWalk[k]||(picWalk[k]={f});if(w.f!==f){w.from=picAt(w.f).pt;w.t0=now();w.f=f}if(w.t0&&now()-w.t0<1300){o.from=w.from;o.at=now()-w.t0}}
+  return`<svg class="pic pic-${size}${f>=1?' pic-done':''}" viewBox="${vb}" role="img" aria-label="${esc(n.name)}: ${Math.round(f*100)}%">${book?picBook(f,n.name,o):picJourney(f,o)}</svg>`}
 // the entries with a picture on Today: open ones, and the ones finished today
 function picNodes(){const today=addDays(0);return allNodes().filter(n=>n.pic&&(!isClosed(n)||(n.hist.length&&dayKey(new Date(n.hist[n.hist.length-1].at))===today)))}
 function picCards(){const P=picNodes();if(!P.length)return'';return`<div class="piccards">${P.map(n=>{const p=picProg(n);

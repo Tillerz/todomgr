@@ -208,6 +208,13 @@ check('growing pictures: a project counts the words of its goals; book and journ
     if(picJourney(.3)===picJourney(.31))bad.push('the journey must change with every step');
     const b1=picBook(1,'The <Crown>');if(!b1.includes('The &lt;Crown&gt;')||picBook(.5,'x').includes('text-anchor'))bad.push('book: the title only on the finished book, escaped');
     if(picBook(.4,'x')===picBook(.41,'x'))bad.push('the book must change with every step');
+    // the part of today is drawn in the colour of the entry
+    if(!picJourney(.5,{f0:.3,col:'#123456'}).includes('stroke:#123456;stroke-width:3.2')||picJourney(.5,{f0:.5,col:'#123456'}).includes('stroke-width:3.2'))bad.push('journey: the stretch of today only when there is one');
+    if(picJourney(.2)===picJourney(.2,{f0:.1})||picBook(.4,'x')===picBook(.4,'x',{f0:.1}))bad.push('the part of today must show in both pictures');
+    if(!picJourney(.3,{from:[14,76],at:200}).includes('class="walk"')||picJourney(.3).includes('class="walk"'))bad.push('journey: the walker walks only after new progress');
+    // words and characters below one project: the larger goal is the one that counts
+    const m=T('Pic mixed',{kind:'project',status:'active',pic:'book'});T('Cast',{prog:{mode:'units',done:2,total:3,unit:'characters'}},m.id);T('Draft',{prog:{mode:'units',done:1000,total:5000,unit:'words'}},m.id);
+    if(picProg(m).txt!=='1,000 of 5,000 words')bad.push('project with two units: '+picProg(m).txt);
     ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML;if(!h.includes('class="piccard" data-goto="'+p.id+'"')||!h.includes('7,000 of 8,000 words · 88%'))bad.push('Today card');
     if(h.includes('data-goto="'+made[3].id+'"')&&h.includes('Plot notes'))bad.push('only entries with a picture');
     ui.sel=p.id;ui.panel=true;ui.prevFor=null;renderDetail();const d=el('#detail').innerHTML;
