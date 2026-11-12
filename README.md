@@ -546,9 +546,13 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 ## Screenshots
 
-### The detail panel of a todo
+### The detail pane of a project
 
-<img alt="The detail panel of a todo" src="docs/detail-pane.png" width=400px>
+<img alt="The detail pane of a project" src="docs/detail-pane.png" width=400px>
+
+### The Quick Add window (hotkey: n)
+
+<img alt="The Quick Add window (hotkey: n)" src="docs/quick-add.png" width=400px>
 
 ### The help window with all keyboard shortcuts (hotkey: ?)
 
@@ -556,23 +560,27 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 ### The Today view with reminders, sci-fi theme
 
-<img alt="The Today view with reminders, sci-fi theme" src="docs/today.png" width=65%>
+<img alt="The Today view with reminders, sci-fi theme" src="docs/today.png">
 
 ### Next 7 days: the week ahead, day by day
 
-<img alt="Next 7 days: the week ahead, day by day" src="docs/today-next-7-days.png" width=65%>
+<img alt="Next 7 days: the week ahead, day by day" src="docs/today-next-7-days.png">
+
+### The Project view
+
+<img alt="The Project view" src="docs/project.png">
 
 ### The writing/work timer
 
-<img alt="The writing/work timer" src="docs/timer.png" width=300px>
+<img alt="The writing/work timer" src="docs/timer.png" width=400px>
 
 ### The writing/work timer: finished
 
-<img alt="The writing/work timer" src="docs/timer-finished.png" width=300px>
+<img alt="The writing/work timer" src="docs/timer-finished.png" width=400px>
 
 ### The writing/work timer: logging words
 
-<img alt="The writing/work timer" src="docs/timer-log.png" width=300px>
+<img alt="The writing/work timer" src="docs/timer-log.png" width=400px>
 
 ### Notes in BBCode (hotkey: Alt-Enter to open the notes of the current entry)
 
@@ -596,23 +604,24 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 ### The printable list
 
-<img alt="The printable list" src="docs/print-list.png" width=450px>
+<img alt="The printable list" src="docs/print-list.png" width=650px>
 
 ### Context Menu (right-click)
 
-<img alt="Context Menu (right-click)" src="docs/context-menu.png" width=350px>
+<img alt="Context Menu (right-click)" src="docs/context-menu.png" width=300px>
 
 ### The tree with the detail panel, light mode, pastel theme
 
 ![The tree with the detail panel, light mode, pastel theme](docs/tree.png)
 
+### Tree view, light mode, Fantasy (parchment)
+
+<img alt="Theme: Fantasy (parchment)" src="docs/theme-fantasy.png">
+
 ### The narrow layout
 
 <img alt="The narrow layout" src="docs/narrow.png" width=350px>
 
-### Tree view, light mode, Fantasy (parchment)
-
-<img alt="Theme: Fantasy (parchment)" src="docs/theme-fantasy.png">
 
 ---
 
