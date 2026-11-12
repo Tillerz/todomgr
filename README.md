@@ -80,7 +80,7 @@ See [Progress](#progress) for the details.
 
 ### Works with your other tools
 
-- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel: drop the files onto Quick add and pick the entries you want. Import an updated file again and you only get the new entries.
+- Import from Outlook, Google, Apple or Thunderbird calendar files, and from CSV or Excel: drop the files onto the **+ Add** button and pick the entries you want. Import an updated file again and you only get the new entries.
 - Subscribe to your TodoMgr dates in Apple Calendar, Outlook or Thunderbird: they update by themselves, without copies.
 - Export to CSV, a calendar file, Markdown, or a printed list.
 - A command line (`todo add "…"`), an API, and an MCP server, so AI assistants such as Claude can read and update your list.
@@ -212,7 +212,7 @@ Press **?** in the app to see this list.
 |---|---|
 | **Anywhere** | |
 | `Ctrl+K` | Command palette: every action, and jump to an entry |
-| `N` | Quick add |
+| `N` | Quick add window (on every page) |
 | `/` | Search |
 | `1` `2` `3` | Tree / Today / Stats |
 | `T` | Timer |
@@ -254,11 +254,13 @@ Press **?** in the app to see this list.
 
 ### Quick add
 
-The field above the tree adds to the **Inbox** and understands a small syntax. The Inbox is a normal top-level entry. The app makes it the first time you add something here.
+The **+ Add** button in the header (a round **+** at the bottom right on a narrow screen) or the key `N` opens the Quick add window, on every page. Its field understands a small syntax; start the line with `p:` for a new project or `r:` for a reminder. The Inbox is a normal top-level entry. A new, empty data folder starts with it, and the app makes it again when you add something and it is gone.
+
+**Where it goes:** the list *To* in the window says where the entry goes: the Inbox, the selected entry, or one of your projects. The choice stays until you load the page again. The page you are on stays as it is; the message has *Show* to jump to the new entry.
 
 **Normal words work too**, in English and German: `Dentist tomorrow at 3pm`, `remind me on Friday to call Anna`, `Zahnarzt morgen um 15 Uhr`, `Finish the draft in 3 days`. Simple rules read days (today, tomorrow, the day after tomorrow, weekdays, next week, in 3 days, dates such as 20.12.) and times (15:00, 3pm, um 15 Uhr, noon / Mittag = 12:00, midnight / Mitternacht = 23:59, the end of that day), and "remind me" makes a reminder; those words leave the name. A short message shows how it was read, with *Keep as typed*. A weekday only counts after "on", "next", "by", "am"… or at the start or end, so `Watch Friday Night Lights` stays as typed. **Shift+Enter** always adds exactly as typed.
 
-With [AI](#ai-on-this-computer-optional) on, text with time words the rules cannot read (`at the end of the month`, `half past nine`) goes to the AI, and so does **Ctrl+Enter** or text dropped onto the field. The AI writes a Quick add line, and the app reads the dates from it as always; a preview shows the result to check or change, with *Add*, *Add as typed* or *Cancel*. Dropped text with several lines is kept **whole and unchanged** as the notes; the AI only reads the start of a very long text, to find the name and the date.
+With [AI](#ai-on-this-computer-optional) on, text with time words the rules cannot read (`at the end of the month`, `half past nine`) goes to the AI, and so does **Ctrl+Enter** or text dropped onto the **+ Add** button. The AI writes a Quick add line, and the app reads the dates from it as always; a preview shows the result to check or change, with *Add*, *Add as typed* or *Cancel*. Dropped text with several lines is kept **whole and unchanged** as the notes; the AI only reads the start of a very long text, to find the name and the date.
 
 **Drop files on it to import them:** calendar files (`.ics`) and CSV files, one or more at once. A preview lists the entries first, see [Export and import](#export-and-import).
 
@@ -384,7 +386,7 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 
 **Import JSON** reads this app's export and replaces everything after taking a backup.
 
-**Import CSV / calendar** (⋯ → *Import CSV / calendar…*, drop one or more files onto the **Quick add** field, or `todo import FILE.csv`) only **adds** entries. In the app, a preview lists the entries first: untick the ones you do not want, then click *Import*. Past events are listed too, but not ticked. Untick *Put them into a new project* to add them to the Inbox instead. They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an updated file again and only get the new entries. Entries without any date are always added. Events that this app exported carry the entry id (`UID:<id>@todomgr`) and are recognised by it, even after the entry was renamed or moved, so a round trip never adds a copy.
+**Import CSV / calendar** (⋯ → *Import CSV / calendar…*, drop one or more files onto the **+ Add** button, or `todo import FILE.csv`) only **adds** entries. In the app, a preview lists the entries first: untick the ones you do not want, then click *Import*. Past events are listed too, but not ticked. Untick *Put them into a new project* to add them to the Inbox instead. They go into a new project "Import: file name, date"; nothing that exists is changed. An entry that is already there (same kind, name, start, end and deadline, not in the trash) is skipped, so you can import an updated file again and only get the new entries. Entries without any date are always added. Events that this app exported carry the entry id (`UID:<id>@todomgr`) and are recognised by it, even after the entry was renamed or moved, so a round trip never adds a copy.
 
 **Calendar subscription** (Settings → Calendar subscription, off by default): a link such as `http://localhost:7437/cal/<key>.ics` with your open entries that have a date – the same content as the calendar export. Apple Calendar, Outlook or Thunderbird subscribe to it once and then refresh it by themselves, so changes show up there without copies (each event keeps the entry id).
 

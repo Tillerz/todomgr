@@ -89,8 +89,7 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke
 header{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.2px;margin-right:8px}
 .brand small{font-size:11px;font-weight:600;color:var(--muted);background:var(--hover);padding:1px 6px;border-radius:99px}
-.hint{display:none;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:0 2px 10px}
-.toolbar:has(#quick:focus)+.hint{display:flex}/* the Quick add words show only while you type there */
+.hint{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:0 2px 10px}
 .viewmenu{position:relative}.viewmenu summary{list-style:none;cursor:pointer}.viewmenu summary::-webkit-details-marker{display:none}
 .viewmenu summary:hover{color:var(--ink)}.viewmenu:has(.vm-pop .chip.on) summary{background:var(--accent);color:var(--accent-ink)}
 .vm-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:30;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -100,6 +99,11 @@ header{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(-
 .tabs button{padding:5px 12px;border-radius:7px;color:var(--muted);font-weight:600}
 .tabs button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .sp{flex:1}
+.addbtn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;margin-left:4px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;flex:none}
+.addbtn:hover{filter:brightness(1.1)}
+.qp-hint{margin:8px 2px 0}
+#quickPop{width:100%;padding:9px 12px;font-size:14px;border-radius:9px}
+.qp-to{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);min-width:0}.qp-to select{max-width:min(280px,50vw)}
 .ib{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--muted);position:relative}
 .ib:hover{background:var(--hover);color:var(--ink)}
 .ib[disabled]{opacity:.35;pointer-events:none}
@@ -119,8 +123,6 @@ body[data-view=stats] #detail,body[data-view=stats] #resizer{display:none}
 .view{overflow:auto;min-height:0}
 .treewrap{max-width:980px;margin:0 auto;padding:14px 16px 90px}
 .wide .treewrap,.wide .page{max-width:none}
-.toolbar{display:flex;gap:8px;margin-bottom:8px}
-.toolbar input{flex:1;padding:9px 12px;font-size:14px;border-radius:9px}
 .filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .filters .search{position:relative;flex:1 1 180px;max-width:320px}
 .filters .search input{width:100%;padding-left:28px}
@@ -154,7 +156,7 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .row.multi{box-shadow:inset 0 0 0 2px var(--accent)}
 .row.closed .name{color:var(--muted);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
 .row.blocked .name{color:var(--muted)}
-.row.drop-hot,#quick.drop-hot{outline:2px dashed var(--accent)}
+.row.drop-hot{outline:2px dashed var(--accent)}#btnAdd.drop-hot{outline:2px dashed var(--accent);outline-offset:3px}
 .implist{max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 0}
 .improw{display:flex;gap:8px;align-items:baseline;padding:5px 10px;cursor:pointer}
 .improw.sub{padding-left:32px}
@@ -419,6 +421,9 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   .badges .tag,.badges .ppl,.badges .loc{display:none}
   .prog .bar{width:36px}
   header{padding:6px 8px}
+  /* no room in the header: the Quick add button floats at the bottom right */
+  .addbtn{position:fixed;right:16px;bottom:16px;z-index:25;width:54px;height:54px;padding:0;margin:0;border-radius:50%;justify-content:center;box-shadow:var(--shadow)}
+  .addbtn span{display:none}
   .tabs button{padding:5px 9px}
   .grid2{grid-template-columns:1fr}
   .treewrap{padding:10px 8px 90px}
@@ -440,6 +445,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
     <button data-view="today" data-tip="What needs attention now (key: 2)">Today</button>
     <button data-view="stats" data-tip="Activity statistics (key: 3)">Stats</button>
   </nav>
+  <button class="addbtn" id="btnAdd" aria-label="Quick add" data-tip="Quick add: a new todo, idea, project or reminder, from every page (key: N). Drop a CSV or calendar file here to import it"></button>
   <span id="conn" class="chip" hidden style="background:var(--danger);color:#fff" data-tip="No connection to the server. Retrying — your changes are kept and sent as soon as it is back.">Offline</span>
   <div class="sp"></div>
   <button class="ib" id="btnTimer" data-tip="Timer and time tracking (key: T)"></button>
@@ -452,8 +458,6 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
 <main>
   <section id="vTree" class="view">
     <div class="treewrap">
-      <div class="toolbar"><input id="quick" autocomplete="off" placeholder="Quick add to Inbox — type a name and press Enter  (↑ ↓ = history)" data-tip="Normal words work too: “Dentist tomorrow at 3pm”. Shift+Enter adds exactly as typed; with AI on, Ctrl+Enter asks the AI"><button class="btn" id="newProj" data-tip="Create a new top-level project">+ Project</button><button class="btn" id="newRem" data-tip="Create a reminder (pops up at a set time, no status)">+ Reminder</button></div>
-      <div class="hint"><span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span>at the start: <b>i:</b> or <b>?</b> idea · <b>p:</b> project · <b>r:</b> reminder · <b>t:</b> todo</span></div>
       <div class="filters">
         <div class="search"><span id="ico-search"></span><input id="q" placeholder="Search / filter" autocomplete="off" data-tip="Text, #tag, @person, !high, is:open|done|blocked|overdue|idea (key: /)"></div>
         <details class="viewmenu" id="viewMenu"><summary class="chip" data-tip="Collapse or expand all, hide done entries, tags">View ▾</summary><div class="vm-pop">
@@ -816,7 +820,6 @@ function urlSec(n){const pr=n.kind==='project',su=safeUrl(n.url),hook=!pr&&proje
   return`<h4>${pr?'Project URL':'URL'}</h4><div class="stepper"><input type="text" data-f="url" value="${esc(n.url||'')}" placeholder="${pr?'e.g. the project website, wiki or repository':(n.kind==='reminder'?'e.g. link to the stream or meeting':'e.g. link to an article')}" style="flex:1">${su?`<a class="btn" target="_blank" rel="noopener" href="${esc(su)}" data-tip="Open in browser">${ic('globe',14)}</a>`:''}</div>`
   +(pr?`<h4>Discord webhook <span class="bd" data-tip="Channel settings → Integrations → Webhooks → Copy URL">?</span></h4><div class="stepper"><input type="password" autocomplete="off" data-f="webhook" value="${esc(n.webhook||'')}" placeholder="https://discord.com/api/webhooks/…" style="flex:1"><button class="btn" data-act="whtest" data-tip="Post a test message to the channel">${ic('send',14)} Test</button></div><div style="font-size:12px;color:var(--muted);margin-top:4px">When a todo below this project is set to done, you can announce it in this channel. The URL is a secret — it is included in JSON exports.</div>`:'')
   +(hook?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${ic('send',12)} Marking this done offers a Discord post to “${esc(hook.name)}”.</div>`:'')}
-function newProject(){setView('tree');const n=addNode('root',null,'',{kind:'project',status:'planning',color:'#4a7de0'});ui.sel=n.id;ui.panel=true;renderTree();renderDetail();rename(n.id,true)}
 
 /* ---- operations ---- */
 const U={undo:[],redo:[]};
@@ -1583,7 +1586,6 @@ ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="check
 <div style="font-size:12px;color:var(--muted);margin-top:6px">${n.reminder?`Pops up ${lead?(l?l[1].toLowerCase():lead+' min before')+' and ':''}at the time${n.recur?`, then moves on to the next date (${recurText(n.recur)})`:' (once)'}. There is no status to set.`:'Pick a date and time to activate this reminder.'}</div>`}
 function forKind(html,n){if(n.kind!=='reminder')return html;
   return html.split('<h4>').map((p,i)=>!i?p:p.startsWith('Status & priority')?remSec(n):/^(Progress|Dates|Depends on|Time)/.test(p)?'':'<h4>'+p).join('')}
-function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
 function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick','aisum','wlog'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
 
@@ -1606,7 +1608,7 @@ document.addEventListener('scroll',()=>tip.classList.remove('show'),true);
 function toggleNotesMax(){ui.panel=true;ui.notesMax=!ui.notesMax;if(ui.notesMax){ui.prevFor=ui.sel;ui.mdPrev=false}renderDetail();
   const ta=ui.notesMax&&$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}
 function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f()},sel=S.nodes[ui.sel],sn=sel&&!sel.trashed?' “'+sel.name+'”':'';
-  const cmds=[['New item in Inbox',tree(()=>$('#quick').focus()),'N'],['New idea in Inbox',tree(()=>newAndRename(inboxId(),null,{kind:'idea',status:'raw'}))],['New project',newProject],['New reminder',newReminder],
+  const cmds=[['Quick add…',openQuick,'N'],['New idea in Inbox',tree(()=>newAndRename(inboxId(),null,{kind:'idea',status:'raw'}))],
    ['Go to Tree',()=>setView('tree'),'1'],['Go to Today',()=>setView('today'),'2'],['Go to Stats',()=>setView('stats'),'3'],['Go to Inbox',()=>reveal(inboxId())],
    ...(S.prefs.views||[]).map(v=>['View: '+v.name,tree(()=>setQuery(v.q))]),
    ...(sn?[['Edit notes of'+sn,toggleNotesMax,'Alt+Enter'],['Print list of'+sn,()=>printList(sel.id)],['Copy ID of'+sn,()=>copyText(sel.id)]]:[]),
@@ -1632,7 +1634,7 @@ const KEYS=[['Anywhere',[['Ctrl+K','Command palette: every action, and jump to a
     ['Alt+↑ / Alt+↓','Move up / down'],['Delete','Move to the trash'],['Shift+F10 / Menu key','Actions menu (as right-click)']]],
   ['While renaming',[['Enter','Save (a new entry: save and start the next one)'],['Esc','Cancel']]],
   ['Notes',[['Alt+Enter','Edit the notes in a large window (Esc closes it)'],['[[','Pick an entry to link to']]],
-  ['Quick add',[['Enter','Add to the Inbox'],['↑ / ↓','Earlier entries'],['# / @','Pick a tag / person']]],
+  ['Quick add',[['N','Open the Quick add window, on every page'],['Enter','Add to the Inbox, or to the entry chosen in the window'],['↑ / ↓','Earlier entries'],['# / @','Pick a tag / person']]],
   ['Pick lists and menus',[['↑ / ↓','Choose'],['Enter / Tab','Take it (menus: Enter / Space)'],['→ / ←','Open / close a sub-menu'],['Esc','Close']]],
   ['Mouse',[['Ctrl+click','Select several entries'],['Shift+click','Select a range'],['Right-click / Long-press','Actions menu']]]];
 function showHelp(){
@@ -1998,7 +2000,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
   $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
   $('#dReset').onclick=async()=>{if(!confirm('Remove ALL entries and statistics and start with empty data?\n\nThe current data is saved as a backup first, so you can restore it from Settings.'))return;
-    try{await Store.sync();await Store.api('POST','/api/reset',{});closeModal();await Store.refresh();toast('Started with empty data — the previous data is in data/backups')}catch(err){toast('Reset failed: '+err.message,{ms:9000})}};
+    try{await Store.sync();await Store.api('POST','/api/reset',{});closeModal();await Store.refresh();inboxId();persist();renderTree();toast('Started with empty data — the previous data is in data/backups')}catch(err){toast('Reset failed: '+err.message,{ms:9000})}};
   // unused attachments: the button shows how many there are, and its tip lists them
   const kb=b=>b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(1)+' MB';
   (async()=>{let u;try{await Store.sync();u=await Store.api('GET','/api/files/unused')}catch{return}const b=$('#dUnused');if(!b)return;
@@ -2110,33 +2112,52 @@ function linkAc(ta){const c=ta.selectionStart,m=ta.value.slice(0,c).match(/\[\[(
   const items=allNodes().filter(x=>x.id!==ui.sel&&(x.name.toLowerCase().includes(typed)||x.id.startsWith(typed)))
     .sort((a,b)=>rank(b)-rank(a)||b.updated-a.updated).slice(0,40);
   qacShow(ta,c-m[1].length-2,c,/^[^\s\]]*(\]\])?/,items.map(x=>({html:`${esc(x.name)}<small>${x.id}</small>`,ins:`[[${x.id}]]`})),...caretXY(ta))}
-$('#quick').addEventListener('input',e=>tagAc(e.target));
-$('#quick').addEventListener('blur',qacClose);
-$('#quick').addEventListener('keydown',qacKey);
 $('#detail').addEventListener('input',e=>{if(e.target.matches('textarea[data-f=notes]')){if(S.nodes[ui.sel])Drafts.keep(ui.sel,e.target.value);linkAc(e.target)}});
 $('#detail').addEventListener('keydown',qacKey);
 $('#detail').addEventListener('focusout',e=>{if(e.target===qac.inp)qacClose()});
 document.addEventListener('mousedown',e=>{const it=e.target.closest?.('[data-qac]');if(it){e.preventDefault();qacPick(+it.dataset.qac)}},true);
-$('#quick').addEventListener('keydown',e=>{const H=S.prefs.quickHist||(S.prefs.quickHist=[]);
+// the words Quick add understands, shown in the Quick add window
+const QUICK_HINT='<span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span>at the start: <b>i:</b> or <b>?</b> idea · <b>p:</b> project · <b>r:</b> reminder · <b>t:</b> todo</span>';
+// Keys of the field of the Quick add window (#quickPop)
+function quickKey(e){const H=S.prefs.quickHist||(S.prefs.quickHist=[]);
   if(e.key==='ArrowUp'||e.key==='ArrowDown'){if(!H.length)return;e.preventDefault();
     if(e.key==='ArrowUp'){if(qh===-1)qDraft=e.target.value;if(qh<H.length-1)qh++}else if(qh>-1)qh--;
     e.target.value=qh===-1?qDraft:H[qh];const l=e.target.value.length;e.target.setSelectionRange(l,l);return}
-  if(e.key!=='Enter')return;
-  const raw=e.target.value.trim();if(raw){S.prefs.quickHist=[raw,...H.filter(x=>x!==raw)].slice(0,50);qh=-1;qDraft='';persist()}
-  if(!raw)return;e.preventDefault();
+  if(e.key!=='Enter'||!e.target.value.trim())return;
+  e.preventDefault();quickSubmit(e.target,{ai:e.ctrlKey||e.metaKey,asTyped:e.shiftKey})}
+// qTo: where the line of the Quick add window goes ({id}, '' = Inbox); null for text dropped on + Add with AI on (Inbox)
+let qTo=null;
+function quickSubmit(inp,{ai=false,asTyped=false}={}){const H=S.prefs.quickHist||(S.prefs.quickHist=[]),raw=inp.value.trim();if(!raw)return;
+  S.prefs.quickHist=[raw,...H.filter(x=>x!==raw)].slice(0,50);qh=-1;qDraft='';persist();
+  qTo={id:$('#qpTo').value};closeModal();
   // Ctrl+Enter: with AI; Shift+Enter: exactly as typed; Enter: normal words are read by rules, and by the AI
   // (when on) if time words are left that the rules cannot read; text with Quick add marks as always
-  if((e.ctrlKey||e.metaKey)&&APP.ai)return aiQuick(raw);
-  if(!e.shiftKey&&!/(^|\s)(due:|at:|repeat:|[#@!~]\S)|^\s*(?:[tipr]:|\?)/i.test(raw)){const w=quickWords(raw);
+  if(ai&&APP.ai)return aiQuick(raw);
+  if(!asTyped&&!/(^|\s)(due:|at:|repeat:|[#@!~]\S)|^\s*(?:[tipr]:|\?)/i.test(raw)){const w=quickWords(raw);
     if(w.hint&&APP.ai)return aiQuick(raw);
     if(w.quick)return quickAdd(w.quick,'',raw)}
-  quickAdd(raw)});
+  quickAdd(raw)}
+// The Quick add window (key N, the + Add button, the command palette): one line adds an entry, from every page,
+// with a choice where it goes. The choice stays until the page is loaded again. text: typed in already (dropped text).
+function openQuick(text){const sel=S.nodes[ui.sel],opts=[['','Inbox']];
+  if(sel&&!inTrash(sel)&&sel.name!=='Inbox')opts.push([sel.id,'Selected: '+sel.name]);
+  allNodes().filter(n=>n.kind==='project'&&!isClosed(n)&&n!==sel).forEach(n=>opts.push([n.id,(path(n)?path(n)+' › ':'')+n.name]));
+  const cur=opts.some(o=>o[0]===ui.quickTo)?ui.quickTo:'';
+  openModal(`<h3 style="margin-top:0">Quick add</h3><input id="quickPop" autocomplete="off" placeholder="Type a name and press Enter  (↑ ↓ = history)" data-tip="Normal words work too: “Dentist tomorrow at 3pm”. Shift+Enter adds exactly as typed; with AI on, Ctrl+Enter asks the AI">
+<div class="hint qp-hint">${QUICK_HINT}</div>
+<div class="row-between" style="margin-top:12px;gap:8px"><label class="qp-to" data-tip="Where the new entry goes. A new project (p:) always goes to the top level">To <select id="qpTo">${opts.map(([v,l])=>`<option value="${v}" ${v===cur?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
+<span style="white-space:nowrap"><button class="btn" data-qpno>Cancel</button> <button class="btn pri" data-qpok>Add</button></span></div>`,{kind:'quick'});
+  const inp=$('#quickPop');inp.addEventListener('input',e=>tagAc(e.target));inp.addEventListener('blur',qacClose);inp.addEventListener('keydown',qacKey);inp.addEventListener('keydown',quickKey);
+  $('#qpTo').onchange=e=>{ui.quickTo=e.target.value;inp.focus()};
+  $('#modal [data-qpno]').onclick=closeModal;$('#modal [data-qpok]').onclick=()=>quickSubmit(inp);if(typeof text==='string')inp.value=text;inp.focus()}
 // Adds a Quick add line. typed: the text as it was typed, when rules or the AI read it; the message then
 // shows how it was read, with "Keep as typed".
 function quickAdd(line,notes='',typed=null){const{name,props}=parseQuick(line);if(!name)return null;if(notes)props.notes=notes;
-  const pr=props.kind==='project',n=addNode(pr?'root':inboxId(),null,name,props);$('#quick').value='';ui.sel=n.id;renderTree();renderDetail();
+  // from the Quick add window: into the chosen entry, and the page stays as it is (the message has "Show")
+  const pr=props.kind==='project',tn=!pr&&qTo&&S.nodes[qTo.id],to=tn&&!inTrash(tn)?tn:null,n=addNode(pr?'root':to?to.id:inboxId(),null,name,props);
+  if(qTo)renderAll();else{ui.sel=n.id;renderTree();renderDetail()}
   const read=typed!==null&&quickRead(n);
-  toast((pr?'New project: ':'Added to Inbox: ')+name+(read?' · '+read:''),typed!==null&&read?{action:{label:'Keep as typed',fn:()=>{undo();quickAdd(typed)}},ms:9000}:undefined);
+  toast((pr?'New project: ':`Added to ${to?'“'+to.name+'”':'Inbox'}: `)+name+(read?' · '+read:''),typed!==null&&read?{action:{label:'Keep as typed',fn:()=>{undo();quickAdd(typed)}},ms:9000}:qTo?{action:{label:'Show',fn:()=>reveal(n.id)}}:undefined);
   return n}
 const whenTxt=s=>{const d=pd(s);return d?d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+(s.includes('T')?' '+s.split('T')[1]:''):''};
 function quickRead(n){const p=[];if(n.kind!=='todo')p.push(KL[n.kind]||n.kind);const w=n.reminder||n.deadline;if(w)p.push(whenTxt(w));
@@ -2178,12 +2199,12 @@ $('#vToday').addEventListener('click',e=>{if(e.target.closest('.goal-in'))return
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
 $('#btnTimer').onclick=()=>S.timer&&S.timer.alarmed?showAlarm():openTimer();
 $('#btnPal').innerHTML=ic('cmd');$('#btnPal').onclick=openPalette;
+$('#btnAdd').innerHTML=ic('plus',16)+'<span>Add</span>';$('#btnAdd').onclick=()=>openQuick();
 $('#btnUndo').innerHTML=ic('undo');$('#btnUndo').onclick=undo;$('#btnRedo').innerHTML=ic('redo');$('#btnRedo').onclick=redo;
 $('#btnTheme').onclick=toggleTheme;$('#btnMenu').innerHTML=ic('menu');$('#ico-search').innerHTML=ic('search',14);
 const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp]];
 $('#btnMenu').onclick=()=>openModal(`<div class="list">${MENU.map(([l],i)=>`<button class="btn" data-m="${i}" style="text-align:left">${l}</button>`).join('')}</div><div style="margin-top:10px;color:var(--muted);font-size:12px;text-align:center">${APP.name} ${APP.version}</div>`,{cls:'pop-right',kind:'menu'});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&modalKind==='menu'){const f=MENU[+b.dataset.m][1];closeModal();f()}});
-$('#newProj').onclick=newProject;$('#newRem').onclick=newReminder;
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b||modalKind!=='remind')return;const it=remQ[0],a=b.dataset.rm;
   if(it){ackd.add(it.key);
     Store.api('POST','/api/alerts/ack',{id:it.id,action:a==='snooze'?'snooze':'ok'}).then(()=>{if(a==='snooze')toast('Snoozed for 10 minutes')}).catch(err=>toast('Could not dismiss: '+err.message));
@@ -2260,13 +2281,13 @@ async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
     :(hd?`<div class="fvhd">${hd}${v.attachments?.length?`<b>Attached</b><span>${v.attachments.map(esc).join(', ')}</span>`:''}</div>`:'')+`<pre class="fvtext">${esc(v.text||'(no text)')}</pre>`}
 const extDrag=e=>!ui.dragging&&e.dataTransfer&&[...e.dataTransfer.types].some(t=>t==='Files'||t==='text/uri-list'||t==='text/plain');
 let hot;const unhot=()=>{hot?.classList.remove('drop-hot');hot=null};
-// a file dropped on Quick add is imported (CSV or calendar); text dropped there is typed in, as before
-const quickText=e=>e.target.id==='quick'&&![...e.dataTransfer.types].includes('Files')&&!APP.ai;// with AI on, dropped text goes to the AI
-document.addEventListener('dragover',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
+// a file dropped on the + Add button is imported (CSV or calendar); text dropped there opens Quick add with it,
+// or goes to the AI when that is on
+document.addEventListener('dragover',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#btnAdd');if(!tgt){unhot();return}e.dataTransfer.dropEffect='copy';if(hot!==tgt){unhot();hot=tgt;tgt.classList.add('drop-hot')}});
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)unhot()});
-document.addEventListener('drop',e=>{if(!extDrag(e)||quickText(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#quick');unhot();if(!tgt)return;
-  if(tgt.id==='quick'&&![...e.dataTransfer.types].includes('Files')){const tx=e.dataTransfer.getData('text/plain');return tx.trim()?aiQuick(tx):undefined}
-  if(tgt.id==='quick'){const fs=[...e.dataTransfer.files].filter(f=>/\.(ics|ical|csv)$/i.test(f.name));return fs.length?importEntries(fs):toast('Drop calendar files (.ics) or CSV files here to import them')}
+document.addEventListener('drop',e=>{if(!extDrag(e))return;e.preventDefault();const tgt=e.target.closest?.('.row,#detail,#btnAdd');unhot();if(!tgt)return;
+  if(tgt.id==='btnAdd'&&![...e.dataTransfer.types].includes('Files')){const tx=e.dataTransfer.getData('text/plain').trim();qTo=null;return!tx?undefined:APP.ai?aiQuick(tx):openQuick(tx.split('\n')[0].trim())}
+  if(tgt.id==='btnAdd'){const fs=[...e.dataTransfer.files].filter(f=>/\.(ics|ical|csv)$/i.test(f.name));return fs.length?importEntries(fs):toast('Drop calendar files (.ics) or CSV files here to import them')}
   const id=tgt.id==='detail'?ui.sel:tgt.closest('.node').dataset.id;const links=dropLinks(e);if(!id)return toast('Select an item first');if(!links.length)return toast('Nothing linkable in that drop');
   if(links.some(l=>l.f))toast('Keeping a copy…');uploadDropped(links).then(ls=>addLinks(id,ls))});
 
@@ -2284,7 +2305,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='/'){e.preventDefault();setView('tree');$('#q').focus();return}
   if(e.key==='?'){showHelp();return}
   if(e.key.toLowerCase()==='t'){openTimer();return}
-  if(e.key.toLowerCase()==='n'){e.preventDefault();setView('tree');$('#quick').focus();return}
+  if(e.key.toLowerCase()==='n'){e.preventDefault();openQuick();return}
   if(ui.view!=='tree')return;
   if((e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey))&&ui.sel){e.preventDefault();const r=$(`.node[data-id="${ui.sel}"]>.row`)?.getBoundingClientRect();if(r)openRowMenu(ui.sel,r.left+60,r.bottom);return}
   const rows=$$('#tree .node'),ids=rows.map(r=>r.dataset.id),i=ids.indexOf(ui.sel),n=S.nodes[ui.sel];
@@ -2428,7 +2449,7 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-reload]'))locat
   // installable as an app; browsers only allow this on localhost or https, not on a LAN address
   if('serviceWorker'in navigator&&isSecureContext)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   if(S.timer&&S.timer.alarmed)showAlarm();
-  if(Object.keys(S.nodes).length<=1&&!S.prefs.welcomed){S.prefs.welcomed=true;persist();setTimeout(()=>toast('Welcome! Type in the quick-add field above, or open ⋯ → Settings → Load demo data for an example.',{ms:14000}),700)}
+  if(Object.keys(S.nodes).length<=1&&!S.prefs.welcomed){S.prefs.welcomed=true;inboxId();/* a new data folder starts with its Inbox */persist();renderTree();setTimeout(()=>toast('Welcome! Click + Add or press N to add your first entry, or open ⋯ → Settings → Load demo data for an example.',{ms:14000}),700)}
 })();
 </script>
 </body>

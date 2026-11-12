@@ -40,7 +40,7 @@ func TestLANAccess(t *testing.T) {
 		t.Fatalf("right token: status %d, cookie %q", w.Code, w.Header().Get("Set-Cookie"))
 	}
 	cookie := []string{"Cookie", a.s.cookieName() + "=" + a.token}
-	if w := a.do("GET", "/", nil, dev("192.168.1.50", cookie...)...); w.Code != 200 || !strings.Contains(w.Body.String(), `id="quick"`) {
+	if w := a.do("GET", "/", nil, dev("192.168.1.50", cookie...)...); w.Code != 200 || !strings.Contains(w.Body.String(), `id="btnAdd"`) {
 		t.Errorf("logged in: status %d, want the app page", w.Code)
 	}
 	if w := a.do("GET", "/api/info", nil, dev("192.168.1.50", cookie...)...); w.Code != 200 {
