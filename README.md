@@ -19,7 +19,7 @@ More in [Screenshots](#screenshots).
 
 - Everything runs on your own computer: no account, no cloud, no tracking, and no internet connection needed.
 - The program never goes online by itself. The only exception is a Discord announcement, and only when you set up a webhook for a project and send one.
-- The optional AI also runs on your computer. Your entries and notes never leave it.
+- The optional AI also runs on your computer. Your entries and notes never leave it. **Note**: it is disabled and not installed. If you want AI, you need to download it manually and switch it on.
 
 ### Capture in seconds
 
@@ -435,13 +435,12 @@ The calendar file is a snapshot, not a subscription: export it again after chang
 
 ### AI on this computer (optional)
 
-A small AI that runs on your own computer, without an account and without the internet. Off by default.
+A small AI that runs on your own computer, without an account and without the internet. Off by default. **Note**: the tool is AI-free by default. If you want to use AI, you need to download it manually and enable it in the settings. The AI buttons only show when AI is switched on and set up. AI will not do your writing work! This is what it can do for you:
 
+- **Where the app has no answer of its own:** [Suggest estimate](#time-tracking-and-the-timer), [Suggest tags](#the-tree) and [Quick add in normal words](#quick-add) ask the AI only when the app's own rules find nothing.
 - **Suggest sub-tasks:** in the detail panel (*Actions*) or the right-click menu. An entry without sub-items is split into steps; an entry with sub-items gets the ones that are still missing. A list shows the suggestions first: untick what you do not want, change the names, then *Add*.
 - **Rewrite notes:** the *Rewrite* button above the notes offers two choices. **Tidy up** fixes spelling, turns items into lists and open tasks into tick boxes, and groups what belongs together; it adds nothing and keeps every fact and link. **Expand** adds next steps, things to prepare, open questions and tips below your notes, from the notes and the entry's name, so it also works on an entry without notes. You see the old and the new text side by side and choose. Notes of up to 8,000 characters.
 - **Summarize an attachment:** the robot button next to an attached mail, text, Word (`.docx`) or LibreOffice (`.odt`) file, or *Summarize* in its viewer. You get a summary, key points, dates and to-dos, and choose *Add to notes* and/or *Add the ticked to-dos as sub-tasks*. Files of up to 20,000 characters (about 8 pages, see [Memory and speed](#memory-and-speed)).
-- **Where the app has no answer of its own:** [Suggest estimate](#time-tracking-and-the-timer), [Suggest tags](#the-tree) and [Quick add in normal words](#quick-add) ask the AI only when the app's own rules find nothing.
-- The AI buttons only show when AI is switched on and set up.
 
 #### Set it up
 
@@ -568,7 +567,7 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 <img alt="The help window with all keyboard shortcuts" src="docs/help-window.png" width=450px>
 
-### The Today view with reminders, sci-fi theme
+### The Today view with reminders, sci-fi theme (hotkey: 2)
 
 <img alt="The Today view with reminders, sci-fi theme" src="docs/today.png">
 
@@ -576,7 +575,7 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 <img alt="Next 7 days: the week ahead, day by day" src="docs/today-next-7-days.png">
 
-### The Project view
+### The Project view (hotkey: 4)
 
 <img alt="The Project view" src="docs/project.png">
 
@@ -608,9 +607,9 @@ Go (standard library only) is the only requirement to build. `./test.sh` also ne
 
 <img alt="The menu" src="docs/menu.png" width=350px>
 
-### The activity heatmap
+### The statistics page with the activity heatmap (hotkey: 3)
 
-<img alt="The statistics page with the heatmap" src="docs/stats.png" width=70%>
+<img alt="The statistics page with the activity heatmap" src="docs/stats.png" width=70%>
 
 ### The printable list
 
