@@ -131,3 +131,32 @@ func TestSyncAfterRestartMustRefresh(t *testing.T) {
 		t.Errorf("a page that is up to date can write: %v", err)
 	}
 }
+
+// "todo mcp" answers a request also when the server refuses or is gone, so the AI tool does not wait.
+func TestBridgeAnswer(t *testing.T) {
+	req := []byte(`{"jsonrpc":"2.0","id":7,"method":"tools/list"}`)
+	if got := string(bridgeAnswer(req, 200, []byte(" {\"ok\":1}\n"), nil)); got != `{"ok":1}` {
+		t.Errorf("the server's answer must pass through: %q", got)
+	}
+	if got := bridgeAnswer(req, 202, nil, nil); got != nil {
+		t.Errorf("no answer for an accepted notification: %q", got)
+	}
+	got := string(bridgeAnswer(req, 503, []byte(`{"error":"the MCP server is switched off"}`), nil))
+	if !strings.Contains(got, `"id":7`) || !strings.Contains(got, "switched off") || !strings.Contains(got, `"code":-32000`) {
+		t.Errorf("a refused request must get an error with its id: %s", got)
+	}
+	if got := string(bridgeAnswer(req, 0, nil, errors.New("connection refused"))); !strings.Contains(got, `"id":7`) || !strings.Contains(got, "cannot be reached") {
+		t.Errorf("an unreachable server must give an error with the id: %s", got)
+	}
+	if got := bridgeAnswer([]byte(`{"jsonrpc":"2.0","method":"notifications/initialized"}`), 503, nil, nil); got != nil {
+		t.Errorf("a notification gets no answer: %q", got)
+	}
+}
+
+// An upload that is not JSON is a bad request, not "too large".
+func TestUploadErrors(t *testing.T) {
+	a := testServer(t)
+	if res := a.do("POST", "/api/files", "not an object"); res.Code != 400 {
+		t.Errorf("a wrong body: status %d, want 400: %s", res.Code, res.Body)
+	}
+}

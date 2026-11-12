@@ -38,6 +38,7 @@ const (
 //	rowH       row height in the tree, in px (28–64)
 //	detailW    width of the detail panel, in px (300–760)
 //	wide       true: the tree and the pages use the whole window; false: at most about 1000 px wide
+//	detailFull true: the detail panel always shows all fields; false: fields without a value are behind "More fields"
 //	workDay    the work day that Today's day plan compares with, "HH:MM"
 //	tagIcons   tag → icon shown before the name; icon names as in Settings → Tag icons
 const uiDefaultsJSON = `{
@@ -48,6 +49,7 @@ const uiDefaultsJSON = `{
   "rowH": 36,
   "detailW": 420,
   "wide": false,
+  "detailFull": false,
   "cheer": true,
   "workDay": {"from": "09:00", "to": "17:00"},
   "tagIcons": {"meeting": "users", "stream": "video", "nsfw": "adult", "call": "phone", "mail": "mail",

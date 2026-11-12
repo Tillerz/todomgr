@@ -36,7 +36,11 @@ func (s *Server) filesDir() string { return filepath.Join(s.st.dir, "files") }
 func (s *Server) hFileUpload(w http.ResponseWriter, r *http.Request) {
 	var req struct{ Name, Data string }
 	if err := readBody(r, &req, maxAttachment*4/3+4096); err != nil {
-		jerr(w, http.StatusRequestEntityTooLarge, errors.New("the file is larger than 10 MB"))
+		if err.Error() == "request too large" {
+			jerr(w, http.StatusRequestEntityTooLarge, errors.New("the file is larger than 10 MB"))
+		} else {
+			fail(w, err) // not JSON
+		}
 		return
 	}
 	data, err := base64.StdEncoding.DecodeString(req.Data)

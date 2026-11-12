@@ -455,6 +455,7 @@ The program starts the helper at the first AI click (a few seconds up to a minut
 ### Settings (⋯ → Settings)
 
 - **Theme**, **font**, **font size**, **row height** and **full page width** (use the whole window on wide screens). The font list only shows fonts that are installed on the computer that opens the page.
+- **Always show all fields in the detail panel** (off by default): when off, the panel shows only the fields that have a value, and a **More fields** button below the notes opens the rest (color, picture, after an event, in charge, location, depends on, time, links) for that entry.
 - **Cheer me on** (on by default): a friendly message with a small picture when you start or finish something, when all sub-items of an entry are done, when everything due today is done, and when you reach a word or page goal.
 - **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
 - **Tag icons** (behind *Show tag icons*): which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.
@@ -523,7 +524,7 @@ go test ./...
 
 All program code is in `app/`: the Go files and the web page (`app/web/`), which is built into the program. GitHub runs `./build.sh` and `./test.sh` on every push (`.github/workflows/test.yml`, the *tests* badge at the top), with the Go version from `go.mod`.
 
-**Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port, backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme, light/dark, font, font size, row height, panel width, full page width, cheer me on, work day and default tag icons, and the longest attachment the AI reads. Change them there and run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings. The version number stays in `app/main.go`, where the build and release scripts read it.
+**Your own defaults:** all defaults for a new install are in [`app/defaults.go`](app/defaults.go): port, backup interval, LAN access, MCP and calendar subscription (all off by default), and the page's theme, light/dark, font, font size, row height, panel width, full page width, all fields in the detail panel, cheer me on, work day and default tag icons, and the longest attachment the AI reads. Change them there and run `./build.sh`. They only apply where nothing is saved yet, so existing data folders keep their settings. The version number stays in `app/main.go`, where the build and release scripts read it.
 
 Go (standard library only) is the only requirement to build. `./test.sh` also needs Node.js for the notes preview tests (`node app/notes_test.js`) and the page smoke test (`node app/page_check.js`), which draws the main views of the page with the demo data. Give it a data file to check your own data, read only: `node app/page_check.js test/data/database.json`.
 

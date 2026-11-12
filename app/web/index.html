@@ -281,6 +281,10 @@ body.notags .bd.tag,body.notags #tagbar{display:none}
 .detail .hd{display:flex;align-items:center;gap:8px;margin:-14px -16px 10px;padding:14px 16px 8px;position:sticky;top:0;z-index:5;background:var(--panel)}/* stays at the top while the panel scrolls */
 .detail h4{margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;display:flex;gap:6px;align-items:center}
 .detail input[data-f=name]{width:100%;font-size:17px;font-weight:600;padding:8px 10px}
+.detail .morebtn{margin-top:16px;white-space:normal;text-align:left;padding:5px 10px}
+.detail .morebtn.hasmore{width:100%;border-radius:8px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--bg));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 55%,var(--bg))}
+.detail .morebtn.hasmore:hover{background:color-mix(in srgb,var(--accent) 22%,var(--bg));color:var(--accent)}
+.detail .morebtn svg{flex:none}
 .seg{display:inline-flex;background:var(--hover);padding:2px;border-radius:8px;gap:2px}
 .seg button{padding:4px 10px;border-radius:6px;color:var(--muted);font-size:13px}
 .seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15);font-weight:600}
@@ -1089,11 +1093,14 @@ function renderDetail(){
   document.body.dataset.panel=ui.panel?'1':'0';
   el.classList.toggle('open',ui.panel);
   if(!n||n.trashed){el.innerHTML=`<div class="hd"><span class="sp"></span><button class="ib close-panel" data-act="closepanel">${ic('x')}</button></div><div class="empty">Select an item to see and edit its details.<br><br><small>Tip: double-click a name to rename it.<br>Drag URLs or files onto an item to attach them.</small></div>`;return}
-  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim();ui.notesMax=false;ui.tagSug=null}// a newly opened entry: preview if it has notes, else edit
+  if(ui.prevFor!==n.id){ui.prevFor=n.id;ui.mdPrev=!!n.notes.trim();ui.notesMax=false;ui.tagSug=null;ui.more=false}// a newly opened entry: preview if it has notes, else edit
   const k=kids(n),tr=treeTime(n),own=n.time.reduce((a,t)=>a+t.secs,0);
   const depNames=S.nodes;
   const blocking=allNodes().filter(x=>x.deps.includes(n.id));
   const f=frac(n);
+  // The short panel: a field without a value is left out until "More fields" is clicked (Settings → Always show all fields).
+  // opt keeps a whole section together; hid collects the names that are left out, for the button.
+  const allF=!!(S.prefs.detailFull??DEF.detailFull),hid=[],opt=(label,has,h)=>n.kind==='reminder'&&/^(Picture|Depends on|Time)$/.test(label)?'':has||allF||ui.more?h:(hid.push(label),'');
   let html=`
 <div class="hd"><div class="seg"><button data-act="kind" data-v="todo" class="${n.kind==='todo'?'on':''}" data-tip="Something to do">Todo</button><button data-act="kind" data-v="idea" class="${n.kind==='idea'?'on':''}" data-tip="An idea to explore — can be promoted to a todo">Idea</button><button data-act="kind" data-v="project" class="${n.kind==='project'?'on':''}" data-tip="A project groups todos and ideas; can have a project URL and a Discord webhook">Project</button><button data-act="kind" data-v="reminder" class="${n.kind==='reminder'?'on':''}" data-tip="Just a reminder: pops up before and at the set time. No status to manage; can repeat.">Reminder</button></div>
 <span class="sp"></span><span class="bd copyid" data-act="copyid" data-tip="Item id (used by CLI/API) — click to copy">${n.id}</span><button class="ib close-panel" data-act="closepanel" data-tip="Close sidebar (Esc)">${ic('x')}</button></div>
@@ -1105,41 +1112,42 @@ ${ui.icPick===n.id?`<div class="tipick"><input class="icq" placeholder="Filter i
 <div class="grid2"><select data-f="status" data-tip="Status — every change is dated in the history below">${KS[n.kind].map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${STAT[s]}${s==='later'?' (postponed)':''}</option>`).join('')}</select>
 ${n.kind==='idea'?`<button class="btn pri" data-act="promote" data-tip="Turn this idea into a todo">Promote to todo →</button>`:`<span></span>`}</div>
 <div class="seg" style="margin-top:8px">${PRIO.map((p,i)=>`<button data-act="prio" data-v="${i}" class="${n.prio===i?'on':''}" data-tip="Priority: ${p}">${i?ic('flag',12)+' ':''}${p}</button>`).join('')}</div>
-<h4>Color</h4>
-<div class="swatches"><button class="sw none ${!n.color?'on':''}" data-act="color" data-v="" data-tip="No color"></button>${COLORS.map(c=>`<button class="sw ${n.color===c?'on':''}" style="--c:${c}" data-act="color" data-v="${c}" data-tip="Color the item's stripe"></button>`).join('')}</div>
+${opt('Color',n.color,`<h4>Color</h4>
+<div class="swatches"><button class="sw none ${!n.color?'on':''}" data-act="color" data-v="" data-tip="No color"></button>${COLORS.map(c=>`<button class="sw ${n.color===c?'on':''}" style="--c:${c}" data-act="color" data-v="${c}" data-tip="Color the item's stripe"></button>`).join('')}</div>`)}
 <h4>Progress</h4>
 ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div><div style="margin-top:4px;color:var(--muted);font-size:12px">${k.filter(c=>c.status==='done').length} of ${k.length} sub-items done · derived from sub-items (${Math.round(f*100)}%)</div>`:
 `<div class="seg"><button data-act="pmode" data-v="percent" class="${n.prog.mode==='percent'?'on':''}" data-tip="0–100 %">Percent</button><button data-act="pmode" data-v="units" class="${n.prog.mode==='units'?'on':''}" data-tip="Count something: words written, images created, steps run…">Units</button></div>
 <div style="margin-top:8px">${n.prog.mode==='percent'?`<div class="stepper"><input type="range" data-f="pct" min="0" max="100" step="5" value="${n.prog.done}"><b id="pctv" style="width:44px;text-align:right">${n.prog.done}%</b></div>`:
 `<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div><div class="pace-slot">${pace(n)}</div>`}</div>`}
-<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: pages stack up to a bound book'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>
+${opt('Picture',n.pic,`<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: pages stack up to a bound book'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>`)}
 ${n.pic?`<div class="picbig">${picSVG(n,'l')}<small>${esc(picProg(n).txt)} · ${Math.round(picProg(n).f*100)}%</small></div>`:''}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
 <div class="grid2" style="margin-top:8px">${recurHTML(n,'When marked done, the item reopens with the next deadline')}
-<label class="field"><span>Estimate (minutes)${n.kind==='todo'?` <button class="chip" data-act="estsuggest" data-tip="Suggest an estimate from your finished todos with tracked time">${ic('clock',12)} Suggest</button>`:''}</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?afterHTML(n):''}
+<label class="field"><span>Estimate (minutes)${n.kind==='todo'?` <button class="chip" data-act="estsuggest" data-tip="Suggest an estimate from your finished todos with tracked time">${ic('clock',12)} Suggest</button>`:''}</span><input type="number" min="0" data-f="est" value="${n.est||''}" placeholder="e.g. 90"></label></div>${recurEditor(n)}${n.kind==='todo'?opt('After an event',n.after,afterHTML(n)):''}
 <h4>Tags <button class="chip" data-act="tagsuggest" data-tip="Suggest tags from your existing tags that appear in the name or notes">${ic('tag',12)} Suggest</button></h4>${chipsHTML(n.tags.map(t=>'#'+t),'rmtag')}${tagSugHTML(n)}<input data-f="tagadd" list="dl-tags" placeholder="Add tag, press Enter" data-tip="Enter or comma to add">
-<h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">
-<h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>
-<h4>Depends on <span class="bd" data-tip="This item is blocked until all of these are done">?</span></h4>
+${opt('In charge',n.people.length,`<h4>In charge</h4>${chipsHTML(n.people,'rmperson','user')}<input data-f="peopleadd" list="dl-people" placeholder="Add person, press Enter">`)}
+${opt('Location',n.location,`<h4>Location</h4><div class="stepper"><input type="text" data-f="location" value="${esc(n.location)}" placeholder="Where?" style="flex:1">${n.location?`<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(n.location)}" data-tip="Open in OpenStreetMap">${ic('pin',14)}</a>`:''}</div>`)}
+${opt('Depends on',n.deps.length||blocking.length,`<h4>Depends on <span class="bd" data-tip="This item is blocked until all of these are done">?</span></h4>
 <div class="list">${n.deps.map((d,i)=>{const x=S.nodes[d];return x&&!inTrash(x)?`<div class="li"><span class="chk st-${x.status}" style="width:14px;height:14px;border-width:2px;flex:none"></span><span class="t lnk" data-act="goto" data-id="${x.id}">${esc(x.name)}</span><button data-act="rmdep" data-i="${i}" data-tip="Remove dependency">${ic('x',12)}</button></div>`:''}).join('')}</div>
 <input data-f="depadd" list="dl-nodes" placeholder="Type to find an item to depend on…" style="margin-top:5px">
-${blocking.length?`<div style="margin-top:6px;font-size:12px;color:var(--muted)">Blocking: ${blocking.map(x=>`<a class="lnk" style="color:var(--accent);cursor:pointer" data-act="goto" data-id="${x.id}">${esc(x.name)}</a>`).join(', ')}</div>`:''}
-<h4>Time</h4>
+${blocking.length?`<div style="margin-top:6px;font-size:12px;color:var(--muted)">Blocking: ${blocking.map(x=>`<a class="lnk" style="color:var(--accent);cursor:pointer" data-act="goto" data-id="${x.id}">${esc(x.name)}</a>`).join(', ')}</div>`:''}`)}
+${opt('Time',own||tr,`<h4>Time</h4>
 <div class="row-between"><span>${own||tr?`<b>${fmtDur(own)}</b> tracked${tr>own?` · <b>${fmtDur(tr)}</b> incl. sub-items`:''}${n.est?` · est. ${fmtDur(n.est*60)}`:''}`:`<span style="color:var(--muted)">Nothing tracked yet${n.est?` · est. ${fmtDur(n.est*60)}`:''}</span>`}</span>
 <button class="btn" data-act="timer" data-tip="Open the timer for this item">${ic('play',12)} Timer</button></div>
 ${n.est&&own?`<div class="bigbar" style="margin-top:6px"><i style="width:${Math.min(100,own/(n.est*60)*100)}%;background:${own>n.est*60?'var(--danger)':'var(--accent)'}"></i></div>`:''}
 <div class="list" style="margin-top:6px">${n.time.slice(-4).reverse().map((t,i,a)=>`<div class="li"><span class="t">${fmtFull(t.at)}</span><b>${fmtDur(t.secs)}</b><button data-act="rmtime" data-at="${t.at}" data-tip="Delete this entry">${ic('x',12)}</button></div>`).join('')}</div>
-<div class="stepper" style="margin-top:6px"><input type="number" min="1" data-f="mintime" placeholder="minutes" style="width:100px"><button class="btn" data-act="addtime" data-tip="Add a manual time entry">Log time</button></div>
-<h4>Links & attachments</h4>
+<div class="stepper" style="margin-top:6px"><input type="number" min="1" data-f="mintime" placeholder="minutes" style="width:100px"><button class="btn" data-act="addtime" data-tip="Add a manual time entry">Log time</button></div>`)}
+${opt('Links & attachments',n.links.length,`<h4>Links & attachments</h4>
 <div class="list">${n.links.map((l,i)=>{const kd=/^mailto:|^mid:|^message:|^outlook:|^mailbox:|^imap:|\.(eml|msg)$/i.test(l.file?l.title:l.uri)?'mail':/^https?:/i.test(l.uri)?'globe':'file';
   return`<div class="li">${ic(kd,14)}<span class="t"><a data-act="openlink" data-i="${i}" data-tip="${esc(l.file?'Click to view the copy kept in data/files'+(l.uri?'\n'+l.uri:''):l.uri||'Path unknown — browsers do not expose the full path of dropped files')}">${esc(l.title)}</a>${APP.ai&&l.file&&AI_READ.test(l.file)?` <button class="ib" data-act="aisum" data-i="${i}" data-tip="Summarize with the AI: summary, key points, to-dos and dates">${ic('bot',13)}</button>`:''}${l.uri||l.file?'':' <small style="color:var(--muted)">(no path)</small>'}</span><button data-act="rmlink" data-i="${i}" data-tip="Remove link">${ic('x',12)}</button></div>`}).join('')}</div>
 <input data-f="linkadd" placeholder="Paste a URL / path / mail link, press Enter" style="margin-top:5px">
-<div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>
+<div class="dropzone">Drop links, mails or files here (or onto any item in the tree)</div>`)}
 <div class="notesbox${ui.notesMax?' max':''}"><h4>Notes <button class="chip" data-act="notesmax" data-tip="${ui.notesMax?'Back to the sidebar (Esc)':'Edit the notes in a large window (Alt+Enter)'}">${ui.notesMax?'Close':'Expand'}</button> ${APP.ai?'<button class="chip" data-act="airewrite" data-tip="Tidy up or expand the notes with the AI. You see the old and the new text first.">'+ic('bot',12)+' Rewrite</button> ':''}<button class="chip" data-act="fmttoggle" data-tip="${n.notesFormat==='bbcode'?'BBCode: [b]bold[/b], [i]italic[/i], [h1]…[/h1], [ul] - item [/ul], [quote]…|Author[/quote], [spoiler]…[/spoiler], [url:https://…]text[/url], [icon:star]. Click for Markdown':'GitHub Markdown: **bold**, *italic*, \`code\`, lists, # headings, links, tables, > [!NOTE] boxes. Click for BBCode'}">${n.notesFormat==='bbcode'?'BBCode':'Markdown'}</button>${ui.notesMax||ui.mdPrev?`<span class="maxhint">${[ui.mdPrev?'Double-click to edit':'',ui.notesMax?'Alt+Enter or Esc to close':''].filter(Boolean).join(' · ')}</span>`:''}</h4>
 ${ui.mdPrev?`<div class="md" data-tip="Double-click to edit">${(n.notesFormat==='bbcode'?bb:md)(n.notes)||'<span style="color:var(--muted)">No notes</span>'}</div>`:`<textarea data-f="notes" placeholder="Notes, comments, context… (markdown)">${esc(n.notes)}</textarea>`}</div>
 ${(()=>{const re=new RegExp(`\\[\\[${n.id}[\\]|]`),b=allNodes().filter(x=>x.id!==n.id&&re.test(x.notes||''));
   return b.length?`<h4>Linked from</h4><div class="list">${b.map(x=>`<div class="li"><span class="t"><a class="elink" data-act="goto" data-v="${x.id}">${esc(x.name)}</a></span></div>`).join('')}</div>`:''})()}
+${!allF&&(hid.length||ui.more)?`<button class="chip morebtn${ui.more?'':' hasmore'}" data-act="more" data-tip="${ui.more?'Show only the fields that have a value':'Show the fields without a value too. Settings → Always show all fields keeps them open'}">${ui.more?ic('x',13)+' Fewer fields':ic('eye',14)+' <span>More fields: '+hid.join(', ')+'</span>'}</button>`:''}
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
@@ -1232,6 +1240,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'seticon':ui.icPick=null;m(()=>n.icon=v);break;
     case'end1h':{if(!n.reminder){toast('Set the date & time first');break}const d=pd(n.reminder);d.setHours(d.getHours()+1);
       m(()=>n.end=n.reminder.includes('T')?dayKey(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()):n.reminder);break}
+    case'more':ui.more=!ui.more;renderDetail();break;
     case'notesmax':toggleNotesMax();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
@@ -1568,7 +1577,7 @@ ${recurHTML(n,'After the reminder fires it simply moves to the next occurrence')
 ${projectOf(n)?`<label class="chk-row" style="margin-top:8px"><input type="checkbox" data-f="discord" ${n.discord?'checked':''}> Also post it to the Discord channel of “${esc(projectOf(n).name)}” at the time <small style="color:var(--muted)">(works even when no window is open)</small></label>`:''}
 <div style="font-size:12px;color:var(--muted);margin-top:6px">${n.reminder?`Pops up ${lead?(l?l[1].toLowerCase():lead+' min before')+' and ':''}at the time${n.recur?`, then moves on to the next date (${recurText(n.recur)})`:' (once)'}. There is no status to set.`:'Pick a date and time to activate this reminder.'}</div>`}
 function forKind(html,n){if(n.kind!=='reminder')return html;
-  return html.split('<h4>').map((p,i)=>!i?p:/^(Status & priority|Progress|Dates|Depends on|Time)/.test(p)?'':(p.startsWith('Color')?remSec(n):'')+'<h4>'+p).join('')}
+  return html.split('<h4>').map((p,i)=>!i?p:p.startsWith('Status & priority')?remSec(n):/^(Progress|Dates|Depends on|Time)/.test(p)?'':'<h4>'+p).join('')}
 function newReminder(){setView('tree');newAndRename(inboxId(),null,{kind:'reminder',status:'set',lead:15,reminder:defaultRemTime()})}
 function tick(){const T=S.timer;if(T){if(T.end&&!T.alarmed&&now()>=T.end){T.alarmed=true;persist();ring()}renderTimerBtn();if(modalKind==='timer')updateClock()}tc++;Drafts.beat();if(remQ.length&&!['alarm','ann','remind','draft','import','ai','aisub','airew','aimode','est','aiquick','aisum','wlog'].includes(modalKind))showRem();
   if(!titleIv){const t=pageTitle();if(document.title!==t)document.title=t}}
@@ -1913,6 +1922,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   <label class="field"><span>Font size: <b id="fsv">${fsz?fsz+'px':'theme default'}</b> <button class="chip" id="fsReset" ${'fontSize' in S.prefs?'':'hidden'}>reset</button></span><input type="range" id="fs" min="11" max="20" step="1" value="${fsz||parseInt(getComputedStyle(document.body).fontSize)}" data-tip="Text size of the tree, lists and panel. Some small labels keep their size."></label>
   <label class="field"><span>Row height: <b id="rhv">${v}px</b></span><input type="range" id="rh" min="28" max="64" step="2" value="${v}" data-tip="Space around each entry"></label>
   <label class="chk-row"><input type="checkbox" id="wideOn" ${(S.prefs.wide??DEF.wide)?'checked':''}> Full page width <small style="color:var(--muted)">(the tree and the pages use the whole window)</small></label>
+  <label class="chk-row"><input type="checkbox" id="detailFullOn" ${(S.prefs.detailFull??DEF.detailFull)?'checked':''}> Always show all fields in the detail panel <small style="color:var(--muted)">(off: fields without a value are behind “More fields”)</small></label>
   <label class="chk-row"><input type="checkbox" id="cheerOn" ${(S.prefs.cheer??DEF.cheer)?'checked':''}> Cheer me on <small style="color:var(--muted)">(a friendly message when you start or finish something)</small></label>
   <div class="sh">Work day <span class="bd" data-tip="Today compares the time left in your work day with your plan: the estimates of todos due today or overdue, and timed events">?</span></div>
   <label class="field row2" style="align-items:center;gap:8px"><span>From</span><input type="time" id="wdFrom" value="${esc(wd.from)}"><span>to</span><input type="time" id="wdTo" value="${esc(wd.to)}"></label>
@@ -1957,6 +1967,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   const fold=(btn,box,key,label)=>{$(btn).onclick=e=>{ui[key]=!ui[key];$(box).hidden=!ui[key];e.target.textContent=(ui[key]?'Hide ':'Show ')+label}};
   fold('#tiShow','#tagIcs','showTi','tag icons');fold('#bkShow','#bkBox','showBk','backups');
   $('#wideOn').onchange=e=>{S.prefs.wide=e.target.checked;applyPrefs();persist()};
+  $('#detailFullOn').onchange=e=>{S.prefs.detailFull=e.target.checked;persist();renderDetail()};
   $('#cheerOn').onchange=e=>{S.prefs.cheer=e.target.checked;persist()};
   $('#styleSel').onchange=e=>setStyle(e.target.value);
   $('#fontSel').onchange=e=>{S.prefs.font=e.target.value;applyPrefs();persist()};

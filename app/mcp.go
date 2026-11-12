@@ -324,6 +324,33 @@ func (s *Server) hMCP(w http.ResponseWriter, r *http.Request) {
 	jout(w, 200, resp)
 }
 
+// bridgeAnswer is the line "todo mcp" writes for one request line: the server's answer, or, when the
+// server cannot be reached or refuses (MCP switched off, wrong token), an error with the request's id,
+// so the AI tool does not wait for an answer that never comes. nil: nothing to write (a notification).
+func bridgeAnswer(line []byte, status int, body []byte, herr error) []byte {
+	if body = bytes.TrimSpace(body); herr == nil && status < 400 {
+		if status == 200 && len(body) > 0 {
+			return body
+		}
+		return nil
+	}
+	var q struct {
+		ID json.RawMessage `json:"id"`
+	}
+	if json.Unmarshal(line, &q) != nil || len(q.ID) == 0 {
+		return nil
+	}
+	msg := fmt.Sprintf("the Todo Mgr server answered %d", status)
+	var e struct{ Error string }
+	if herr != nil {
+		msg = "the Todo Mgr server cannot be reached (is it running?)"
+	} else if json.Unmarshal(body, &e) == nil && e.Error != "" {
+		msg = e.Error
+	}
+	ans, _ := json.Marshal(rpcErr(q.ID, -32000, msg))
+	return ans
+}
+
 // runMCPStdio is "todo mcp": a stdio bridge for MCP clients that cannot speak
 // HTTP. It forwards every JSON-RPC line to the running daemon and refuses to
 // start while the MCP server is switched off.
@@ -349,18 +376,21 @@ func runMCPStdio(args []string) error {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+c.token)
 			resp, herr := (&http.Client{Timeout: 60 * time.Second}).Do(req)
+			status, b := 0, []byte(nil)
 			if herr != nil {
 				fmt.Fprintln(os.Stderr, "todo mcp:", herr)
 			} else {
-				b, _ := io.ReadAll(resp.Body)
+				b, _ = io.ReadAll(resp.Body)
 				resp.Body.Close()
-				if resp.StatusCode == 200 && len(bytes.TrimSpace(b)) > 0 {
-					out.Write(bytes.TrimSpace(b))
-					out.WriteByte('\n')
-					out.Flush()
-				} else if resp.StatusCode >= 400 {
-					fmt.Fprintf(os.Stderr, "todo mcp: server answered %d: %s\n", resp.StatusCode, bytes.TrimSpace(b))
+				status = resp.StatusCode
+				if status >= 400 {
+					fmt.Fprintf(os.Stderr, "todo mcp: server answered %d: %s\n", status, bytes.TrimSpace(b))
 				}
+			}
+			if ans := bridgeAnswer(line, status, b, herr); ans != nil {
+				out.Write(ans)
+				out.WriteByte('\n')
+				out.Flush()
 			}
 		}
 		if err != nil {
