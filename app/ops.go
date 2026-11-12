@@ -733,7 +733,13 @@ func parseQuick(text string, now time.Time) (string, map[string]any) {
 				f["reminder"] = date
 			}
 		}
-	} else if date != "" {
+	} else if date != "" || tm != "" {
+		if date == "" { // a time alone: today, or tomorrow when that time has passed
+			date = now.Format("2006-01-02")
+			if d, ok := parseWhen(date+"T"+tm, now.Location()); ok && !d.After(now) {
+				date = now.AddDate(0, 0, 1).Format("2006-01-02")
+			}
+		}
 		if tm != "" {
 			f["deadline"] = date + "T" + tm
 		} else {

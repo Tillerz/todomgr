@@ -89,7 +89,11 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke
 header{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.2px;margin-right:8px}
 .brand small{font-size:11px;font-weight:600;color:var(--muted);background:var(--hover);padding:1px 6px;border-radius:99px}
-.hint{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:0 2px 10px}
+.hint{display:none;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:0 2px 10px}
+.toolbar:has(#quick:focus)+.hint{display:flex}/* the Quick add words show only while you type there */
+.viewmenu{position:relative}.viewmenu summary{list-style:none;cursor:pointer}.viewmenu summary::-webkit-details-marker{display:none}
+.viewmenu summary:hover{color:var(--ink)}.viewmenu:has(.vm-pop .chip.on) summary{background:var(--accent);color:var(--accent-ink)}
+.vm-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:30;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .hint b{color:var(--accent);font-weight:700}
 .brand i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#9b6bff);display:grid;place-items:center;color:#fff;font-style:normal;font-size:13px}
 .tabs{display:flex;gap:2px;background:var(--hover);padding:3px;border-radius:9px}
@@ -174,6 +178,7 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .pic-s{width:120px;height:66px}.picbig{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px}.picbig small{color:var(--muted)}.pic-l{width:100%;max-width:300px}
 .pic-done{animation:picshine 1.8s ease-out 1}@keyframes picshine{0%{filter:drop-shadow(0 0 0 var(--accent))}40%{filter:drop-shadow(0 0 8px var(--accent))}100%{filter:drop-shadow(0 0 0 transparent)}}
 .goal-btns{display:flex;gap:4px;align-items:center}
+.goal-in{width:92px;padding:3px 8px;font-size:13px;border-radius:8px;text-align:right}
 .goal-left{cursor:pointer;text-decoration:underline dotted}
 .goal-txt{font-size:13px;color:var(--muted);margin-top:4px}.goal-txt b{color:var(--ink)}.goal-txt .late{color:var(--danger)}
 .gbar{height:8px;border-radius:4px;background:var(--line);margin-top:6px;overflow:hidden}.gbar i{display:block;height:100%;background:var(--accent)}.gbar.met i{background:var(--ok,#3fae5a)}
@@ -446,11 +451,13 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
       <div class="hint"><span><b>#</b>tag</span><span><b>@</b>person</span><span><b>!</b>low|med|high|urgent</span><span><b>due:</b>today|tomorrow|fri|+3d|2026-12-24</span><span><b>~</b>30m|2h estimate</span><span><b>at:</b>19:00</span><span><b>repeat:</b>weekly</span><span>at the start: <b>i:</b> or <b>?</b> idea · <b>p:</b> project · <b>r:</b> reminder · <b>t:</b> todo</span></div>
       <div class="filters">
         <div class="search"><span id="ico-search"></span><input id="q" placeholder="Search / filter" autocomplete="off" data-tip="Text, #tag, @person, !high, is:open|done|blocked|overdue|idea (key: /)"></div>
-        <button class="chip" id="collapseAll" data-tip="Collapse every entry">Collapse all</button>
-        <button class="chip" id="expandAll" data-tip="Expand every entry">Expand all</button>
-        <button class="chip" id="hideDone" data-tip="Hide completed items">Hide done</button>
-        <button class="chip" id="hideTags" data-tip="Hide or show all tags in the list">Hide tags</button>
-        <button class="chip" id="projTags">Project tags</button>
+        <details class="viewmenu" id="viewMenu"><summary class="chip" data-tip="Collapse or expand all, hide done entries, tags">View ▾</summary><div class="vm-pop">
+          <button class="chip" id="collapseAll" data-tip="Collapse every entry">Collapse all</button>
+          <button class="chip" id="expandAll" data-tip="Expand every entry">Expand all</button>
+          <button class="chip" id="hideDone" data-tip="Hide completed items">Hide done</button>
+          <button class="chip" id="hideTags" data-tip="Hide or show all tags in the list">Hide tags</button>
+          <button class="chip" id="projTags">Project tags</button>
+        </div></details>
         <button class="chip" id="saveView" data-tip="Save the current search as a quick view">+ Save view</button>
         <div class="scrollx" id="views"></div>
       </div>
@@ -919,7 +926,8 @@ function parseQuick(txt){const o={tags:[],people:[]},k=txt.match(/^(?:([tipr]):|
     else if(k==='repeat:'){const r=normRecur(v);if(r)o.recur=r;else return m}else return m;return sp});
   if(o.kind==='reminder'){let d=o.deadline;const tm=o.time;delete o.deadline;delete o.time;
     if(!d&&!tm)o.reminder=defaultRemTime();else{if(!d){d=addDays(0);if(tm&&pd(d+'T'+tm)<=new Date())d=addDays(1)}o.reminder=tm?d+'T'+tm:d}}
-  else if(o.time&&o.deadline){o.deadline+='T'+o.time;delete o.time}else delete o.time;
+  else if(o.time){let d=o.deadline;if(!d){d=addDays(0);if(pd(d+'T'+o.time)<=new Date())d=addDays(1)}// a time alone: today, or tomorrow when it has passed
+    o.deadline=d+'T'+o.time;delete o.time}
   return{name:txt.replace(/\s+/g,' ').trim(),props:o}}
 
 /* Quick add in normal words, without AI (English and German): a few rules turn day and time words into
@@ -1307,14 +1315,18 @@ function picCards(){const P=picNodes();if(!P.length)return'';return`<div class="
 // leaves Today until then.
 function goalNodes(){return allNodes().filter(n=>n.prog.mode==='units'&&!isClosed(n)&&n.status!=='later'&&!blocked(n)&&!kids(n).length&&n.prog.done<n.prog.total&&!(n.recur&&n.deadline&&n.deadline.slice(0,10)>addDays(0)))
   .sort((a,b)=>(a.deadline||'9')<(b.deadline||'9')?-1:(a.deadline||'9')>(b.deadline||'9')?1:a.name.localeCompare(b.name))}
-// Writing goals at the top of Today: today's amount, a bar for today's progress, and + Log
+// Writing goals at the top of Today: today's amount, a bar for today's progress, and a field to log progress
 function goalsBox(){const G=goalNodes(),pc=picCards();if(!G.length&&!pc)return'';const num=x=>Math.ceil(x).toLocaleString('en');
   return`<h2>Writing goals<small>${G.length}</small></h2>${pc}${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
     const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
-    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><button class="chip" data-wlog="${n.id}" data-tip="Log progress: +500 adds, a number sets the new total">+ Log</button></span></div>
+    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><input class="goal-in" data-wlin="${n.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(n.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter"></span></div>
 ${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
 <div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}${t.after?` · <span class="${f&&f.late>0?'late':''}" data-tip="Needed per day from tomorrow on to finish in time${f&&f.late>0?'; your speed so far is '+num(f.per)+u+' per day':''}">then ${num(t.after)}${u}/day</span>`:''}
  · <span class="goal-left" data-wlog="${n.id}" data-tip="Click to log progress">${num(left)}${u} left</span>${pc&&pc.days<=0?' · <span class="late">the deadline has passed</span>':n.deadline?` · until ${fmtWhen(n.deadline)}`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</div></div>`}).join('')}`}
+// wordLogApply logs what was typed ("+500" or a new total) on an entry and shows the result with Undo; false when it is not a number
+function wordLogApply(id,raw,secs=0){const x=S.nodes[id];if(!x)return false;const v=wordLogValue(raw,x.prog.done);if(v===null){toast('Type +500 to add, or the new total');return false}
+  const u=unitTxt(x),num=y=>Math.round(y).toLocaleString('en'),before=x.prog.done;mutate(()=>setProgress(x,v),{panel:true});const d=x.prog.done-before;
+  toast(`${secs?fmtDur(secs)+' · ':''}${d>=0?'+':''}${num(d)}${u} · ${num(todayOf(x).done)}${u} today`,{action:{label:'Undo',fn:undo}});return true}
 // Log progress with few clicks: "+500" adds, "-200" takes away, a plain number is the new total
 // secs: after the timer, the time it logged; the message then shows it too, also on Cancel
 function wordLog(id,secs=0){const n=S.nodes[id];if(!n)return;const u=unitTxt(n),t=todayOf(n),num=x=>Math.round(x).toLocaleString('en'),unit=n.prog.unit||'units';
@@ -1322,9 +1334,7 @@ function wordLog(id,secs=0){const n=S.nodes[id];if(!n)return;const u=unitTxt(n),
 <label class="field"><span>Type <b>+600</b> to add what you wrote now, or <b>${num(n.prog.done+600)}</b> for the new total</span><input id="wlIn" inputmode="numeric" autocomplete="off" placeholder="+600"></label>
 <p class="note">Now: ${num(n.prog.done)} of ${num(n.prog.total)}${u} · ${num(t.done)}${u} today</p>
 <div style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button class="btn" data-wlno>Cancel</button><button class="btn pri" data-wlok>Log</button></div>`,{kind:'wlog'});
-  const go=()=>{const v=wordLogValue($('#wlIn').value,S.nodes[id].prog.done);if(v===null)return toast('Type +500 to add, or the new total');const x=S.nodes[id];closeModal();
-    const before=x.prog.done;mutate(()=>setProgress(x,v),{panel:true});const d=x.prog.done-before;
-    toast(`${secs?fmtDur(secs)+' · ':''}${d>=0?'+':''}${num(d)}${u} · ${num(todayOf(x).done)}${u} today`,{action:{label:'Undo',fn:undo}})};
+  const go=()=>{const raw=$('#wlIn').value;if(wordLogValue(raw,S.nodes[id].prog.done)===null)return toast('Type +500 to add, or the new total');closeModal();wordLogApply(id,raw,secs)};
   $('#modal [data-wlno]').onclick=()=>{closeModal();if(secs)toast(`Logged ${fmtDur(secs)} on “${n.name}”`)};$('#modal [data-wlok]').onclick=go;
   $('#wlIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}};$('#wlIn').focus()}
 // "+500" → done + 500, "-200" → done − 200, "12,500" → 12500; null when it is not a number
@@ -1392,7 +1402,7 @@ function weekDays(){const t0=startOfToday(),days=[...Array(7)].map((_,i)=>{const
   days.forEach(x=>x.items.sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0));return days}
 function renderWeek(){return weekDays().map(({d,items})=>`<h2>${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}<small>${items.length||'nothing planned'}</small></h2>${items.map(([at,n,daily])=>trow(n,daily?'':at)).join('')}`).join('')}
 function renderToday(){
-  const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'&&!waits(n)),used=new Set();
+  const A=allNodes().filter(n=>!isClosed(n)&&n.kind==='todo'&&n.status!=='later'&&!waits(n)),used=new Set(goalNodes().map(n=>n.id));// a writing goal has its card at the top, so it is not in the lists below again
   const sec=(title,list,hint)=>{list=list.filter(n=>!used.has(n.id));list.forEach(n=>used.add(n.id));return list.length?`<h2>${title}<small>${list.length}${hint?' · '+hint:''}</small></h2>${list.map(n=>trow(n)).join('')}`:''};
   const rem=A.filter(n=>n.reminder&&remAt(n)<=now());
   const wk=startOfToday().getTime()+7*864e5,evAll=allNodes().filter(n=>n.kind==='reminder'&&n.reminder&&(n.end?evEnd(n)>startOfToday():remAt(n)>=startOfToday())&&remAt(n).getTime()<wk).sort((a,b)=>remAt(a)-remAt(b));
@@ -1531,7 +1541,8 @@ function nextOcc(s,r){const d=pd(s),m=RE_RECUR.exec(r||'');if(!d||!m)return s;
         if(day&&new Date(y,mo,day,d.getHours(),d.getMinutes())>d&&(!best||day<best))best=day});
       if(best)return out(new Date(y,mo,best,d.getHours(),d.getMinutes()))}
     return s}
-  const n=+(m[1]||1);if(m[2]==='d')d.setDate(d.getDate()+n);else if(m[2]==='w')d.setDate(d.getDate()+7*n);else if(m[2]==='m')d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);
+  const n=+(m[1]||1);if(m[2]==='d')d.setDate(d.getDate()+n);else if(m[2]==='w')d.setDate(d.getDate()+7*n);else{// months and years stay in their month: a day it does not have (the 31st, 29 February) becomes its last day
+    const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+(m[2]==='m'?n:12*n));d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()))}
   return out(d)}
 let remQ=[];const ackd=new Set();
 /* The server's scheduler marks an entry with alert={when,at}; every open window shows it until somebody dismisses or snoozes it. */
@@ -2136,7 +2147,9 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
   else if(a==='tag'){const t=prompt('Tag to add:');if(t)mutate(()=>ids.forEach(id=>{const n=S.nodes[id],tg=t.replace(/^#/,'').trim();if(tg&&!n.tags.includes(tg))n.tags.push(tg)}),{panel:true})}
   if(a!=='trash'){ui.multi.clear();renderTree()}});
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
-$('#vToday').addEventListener('click',e=>{const wl=e.target.closest('[data-wlog]');if(wl){wordLog(wl.dataset.wlog);return}const wt=e.target.closest('[data-wtimer]');if(wt){openTimer(wt.dataset.wtimer);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
+$('#vToday').addEventListener('keydown',e=>{const i=e.target.closest('.goal-in');if(i&&e.key==='Enter'){e.preventDefault();wordLogApply(i.dataset.wlin,i.value)}});
+$('#vToday').addEventListener('click',e=>{if(e.target.closest('.goal-in'))return;// typing in a goal's field must not open the entry
+  const wl=e.target.closest('[data-wlog]');if(wl){const i=wl.closest('.goal')?.querySelector('.goal-in');if(i)i.focus();else wordLog(wl.dataset.wlog);return}const wt=e.target.closest('[data-wtimer]');if(wt){openTimer(wt.dataset.wtimer);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
   const tv=e.target.closest('[data-tv]');if(tv){ui.todayWeek=!!tv.dataset.tv;renderToday();return}
   if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
@@ -2163,6 +2176,7 @@ $('#modal').addEventListener('keydown',e=>{if(e.key==='Enter'&&modalKind==='ann'
 $('#hideTags').onclick=()=>{S.prefs.hideTags=!S.prefs.hideTags;persist();applyPrefs()};
 $('#projTags').onclick=()=>{S.prefs.projTags=!S.prefs.projTags;persist();renderTags()};
 $('#collapseAll').onclick=()=>setAllCollapsed(true);$('#expandAll').onclick=()=>setAllCollapsed(false);
+document.addEventListener('click',e=>{const v=$('#viewMenu');if(v.open&&!v.contains(e.target))v.open=false});// a click elsewhere closes the View menu
 (function(){const r=$('#resizer');let on=false;
   r.addEventListener('pointerdown',e=>{on=true;r.classList.add('drag');r.setPointerCapture(e.pointerId);document.body.style.userSelect='none';e.preventDefault()});
   r.addEventListener('pointermove',e=>{if(on)setDetailW(innerWidth-e.clientX)});

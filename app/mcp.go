@@ -111,6 +111,15 @@ func argMap(a map[string]any, k string) map[string]any {
 	}
 	return m
 }
+
+// mcpFields: the fields an AI tool may set. Not the Discord webhook: it decides where posts go.
+func mcpFields(a map[string]any) (map[string]any, error) {
+	f := argMap(a, "fields")
+	if _, has := f["webhook"]; has {
+		return nil, errors.New("the Discord webhook can only be set in the app")
+	}
+	return f, nil
+}
 func csv(v string) []string {
 	var out []string
 	for _, p := range strings.Split(v, ",") {
@@ -152,12 +161,20 @@ var mcpTools = []mcpTool{
 			if t := argStr(a, "text"); t != "" {
 				return s.Quick("mcp", t, argStr(a, "parent"))
 			}
-			return s.Create("mcp", argStr(a, "name"), argStr(a, "parent"), argInt(a, "index", -1), argMap(a, "fields"))
+			f, err := mcpFields(a)
+			if err != nil {
+				return nil, err
+			}
+			return s.Create("mcp", argStr(a, "name"), argStr(a, "parent"), argInt(a, "index", -1), f)
 		}},
 	{Name: "update_entry", Write: true, Desc: "Change fields of an entry (same field names as create_entry, plus name and status).",
 		Schema: obj(map[string]any{"id": tStr, "fields": tObj}, "id", "fields"),
 		Run: func(s *Store, a map[string]any) (any, error) {
-			return s.Patch("mcp", argStr(a, "id"), argMap(a, "fields"))
+			f, err := mcpFields(a)
+			if err != nil {
+				return nil, err
+			}
+			return s.Patch("mcp", argStr(a, "id"), f)
 		}},
 	{Name: "set_status", Write: true, Desc: "Set the status of an entry (marking a recurring todo done reopens it with the next date).",
 		Schema: obj(map[string]any{"id": tStr, "status": tStr}, "id", "status"),

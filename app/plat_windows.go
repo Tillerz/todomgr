@@ -20,6 +20,8 @@ func processAlive(pid int) bool {
 	return code == 259 // STILL_ACTIVE
 }
 
+func bootID() string { return "" }
+
 func syncDir(dir string) {}
 
 func openBrowser(url string) {

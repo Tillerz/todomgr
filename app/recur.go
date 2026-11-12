@@ -105,11 +105,19 @@ func nextOcc(s, r string, loc *time.Location) string {
 	case "w":
 		d = d.AddDate(0, 0, 7*n)
 	case "m":
-		d = d.AddDate(0, n, 0)
+		d = addMonths(d, n)
 	default:
-		d = d.AddDate(n, 0, 0)
+		d = addMonths(d, 12*n)
 	}
 	return d.Format(layout)
+}
+
+// addMonths moves d by n months and stays in that month: a day the month does not have (the 31st,
+// or 29 February) becomes its last day. time.AddDate would run over into the next month.
+func addMonths(d time.Time, n int) time.Time {
+	first := time.Date(d.Year(), d.Month()+time.Month(n), 1, d.Hour(), d.Minute(), 0, 0, d.Location())
+	last := time.Date(first.Year(), first.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
+	return first.AddDate(0, 0, min(d.Day(), last)-1)
 }
 
 // afterDone gives the new deadline and reminder of an entry with a "+" rule that is done today

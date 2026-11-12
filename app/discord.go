@@ -94,6 +94,9 @@ func (s *Store) Announce(id, title, url string) error {
 	if hook == "" {
 		return errors.New("no Discord webhook is set for the project of this entry")
 	}
+	if !reHook.MatchString(hook) { // the page's sync and the JSON import save entries as they are
+		return errors.New("the webhook of the project is not a Discord webhook URL")
+	}
 	content := title
 	if u != "" {
 		content += "\n" + u

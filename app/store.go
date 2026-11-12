@@ -69,6 +69,8 @@ func OpenStore(dir string, cfg *Config) (*Store, error) {
 		lk.release()
 		return nil, err
 	}
+	// which entry changed when is only kept in memory: a page that is behind after a restart must refresh
+	s.floorRev = s.db.Rev
 	s.loadActivity()
 	s.lastSnap = time.Now()
 	go s.snapshotLoop()
@@ -435,10 +437,16 @@ type fileLock struct{ path string }
 func acquireLock(dir string) (*fileLock, error) {
 	p := filepath.Join(dir, "todomgr.lock")
 	host, _ := os.Hostname()
+	boot := bootID()
 	for attempt := 0; attempt < 2; attempt++ {
 		f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 		if err == nil {
-			fmt.Fprintf(f, "%d\n%s\n%s\n", os.Getpid(), host, runtime.GOOS)
+			// pid@boot: the boot id tells a restart of the computer (or of WSL) since the lock was written
+			who := fmt.Sprint(os.Getpid())
+			if boot != "" {
+				who += "@" + boot
+			}
+			fmt.Fprintf(f, "%s\n%s\n%s\n", who, host, runtime.GOOS)
 			f.Close()
 			return &fileLock{p}, nil
 		}
@@ -447,9 +455,10 @@ func acquireLock(dir string) (*fileLock, error) {
 		}
 		b, _ := os.ReadFile(p)
 		parts := strings.Fields(string(b))
-		pid := 0
+		pid, lockBoot := 0, ""
 		if len(parts) > 0 {
 			fmt.Sscanf(parts[0], "%d", &pid)
+			_, lockBoot, _ = strings.Cut(parts[0], "@")
 		}
 		lockHost, lockOS := "", runtime.GOOS // a lock of an older version has no OS line
 		if len(parts) > 1 {
@@ -460,7 +469,9 @@ func acquireLock(dir string) (*fileLock, error) {
 		}
 		// only a lock of this host and this OS can be checked: Windows cannot see the processes of WSL
 		// (same host name), and the other way round, so such a lock must never count as stale
-		if lockHost == host && lockOS == runtime.GOOS && pid > 0 && pid != os.Getpid() && !processAlive(pid) {
+		// a lock from before the last restart is stale even when its process number is in use again
+		rebooted := lockBoot != "" && boot != "" && lockBoot != boot
+		if lockHost == host && lockOS == runtime.GOOS && pid > 0 && (rebooted || pid != os.Getpid() && !processAlive(pid)) {
 			_ = os.Remove(p) // stale lock of a crashed instance
 			continue
 		}

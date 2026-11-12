@@ -16,6 +16,12 @@ func processAlive(pid int) bool {
 	return err == nil || errors.Is(err, syscall.EPERM)
 }
 
+// bootID changes with every start of the system (Linux, also WSL); "" where it is not known.
+func bootID() string {
+	b, _ := os.ReadFile("/proc/sys/kernel/random/boot_id")
+	return strings.TrimSpace(string(b))
+}
+
 func syncDir(dir string) {
 	if d, err := os.Open(dir); err == nil {
 		_ = d.Sync()
