@@ -300,8 +300,8 @@ func TestOngoing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if inbox := nodeOf(st, q["parent"].(string)); inbox.S("name") != "Inbox" || inbox["ongoing"] != true {
-		t.Errorf("a new Inbox is ongoing: %v", inbox)
+	if inbox := nodeOf(st, q["parent"].(string)); inbox.S("name") != "Inbox" || inbox["ongoing"] != true || inbox.S("icon") != "inbox" || inbox.S("kind") != "project" {
+		t.Errorf("a new Inbox is an ongoing project with the inbox icon: %v", inbox)
 	}
 }
 

@@ -41,9 +41,10 @@ More in [Screenshots](#screenshots).
 - **Log words right where you are:** each goal on *Today* and on the *Project* page has a small field. Type `+500` (or the new total) and press Enter. Scripts and other writing tools can add words through the API.
 - **Write with the timer:** the clock next to a goal starts a countdown or stopwatch for it. When it stops, the time is logged and the app asks how many words you wrote.
 - **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
-- **A picture that grows with your manuscript:** an open book that fills with lines and becomes a bound book with your title, or a walk across a map to a castle, from 0 to 100 %. What you wrote today shows in colour.
 - **Your book on one page:** the *Project* page shows the words done and left, the words of today, what each day needs, your speed, the words of the last 14 days as bars, and every chapter with a tick box and its word count.
+- **Stages from outline to polished:** give a manuscript a list of stages (Outline → First draft → Revision → Beta readers → Polished, or your own). Each chapter shows its stage as a coloured chip, and the Project page counts the chapters at each stage. A chapter with all its words is not finished: the app offers the next stage, and the last stage sets it to done. See [Stages](#stages-for-writing).
 - **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
+- **Select a picture that grows with your manuscript:** as your workcount progresses towards 100%, an open book fills with lines and becomes a bound book with your title, or a figure walk across a map to a castle, a night sky completes to a constellation, or a sapling grows into a tree. What you wrote today shows in colour.
 - **A cheer when you reach a goal**.
 
 See [Progress](#progress) for the details.
@@ -478,7 +479,7 @@ The program starts the helper at the first AI click (a few seconds up to a minut
 ### Settings (⋯ → Settings)
 
 - **Theme**, **font**, **font size**, **row height** and **full page width** (use the whole window on wide screens). The font list only shows fonts that are installed on the computer that opens the page.
-- **Always show all fields in the detail panel** (off by default): when off, the panel shows only the fields that have a value, and a **More fields** button below the notes opens the rest (color, picture, after an event, in charge, location, depends on, time, links) for that entry.
+- **Always show all fields in the detail panel** (off by default): when off, the panel shows only the fields that have a value, and a **More fields** button below the notes opens the rest (color, picture, after an event, in charge, location, depends on, time, URL, a project's stages and Discord webhook, links) for that entry. The URL and the webhook sit low in the panel, above *Links & attachments*, because they are set once and then left alone.
 - **Cheer me on** (on by default): a friendly message with a small picture when you start or finish something, when all sub-items of an entry are done, when everything due today is done, and when you reach a word or page goal.
 - **Notifications:** shows if desktop notifications are allowed, with a button to allow them.
 - **Tag icons** (behind *Show tag icons*): which tag shows which icon. Click an icon to choose another one; *Reset* restores the default list.

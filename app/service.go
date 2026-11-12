@@ -40,6 +40,12 @@ func (s *Store) Quick(actor, text, parent string) (map[string]any, error) {
 	return s.Create(actor, name, parent, -1, f)
 }
 
+// inboxFields: the Inbox the program makes is a project (so it shows its icon) that is never finished.
+// The page makes it the same way (inboxId in index.html).
+func inboxFields() map[string]any {
+	return map[string]any{"kind": "project", "status": "active", "ongoing": true, "icon": "inbox"}
+}
+
 // inboxID finds (or creates) the top-level "Inbox" entry.
 func (s *Store) inboxID(actor string) (string, error) {
 	s.mu.RLock()
@@ -50,7 +56,7 @@ func (s *Store) inboxID(actor string) (string, error) {
 		}
 	}
 	s.mu.RUnlock()
-	n, err := s.Create(actor, "Inbox", "root", 0, map[string]any{"ongoing": true})
+	n, err := s.Create(actor, "Inbox", "root", 0, inboxFields())
 	if err != nil {
 		return "", err
 	}
