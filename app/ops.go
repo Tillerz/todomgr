@@ -60,7 +60,7 @@ func normURL(v string) string {
 }
 
 var fieldOrder = []string{"kind", "name", "color", "icon", "prio", "tags", "people", "location", "deadline", "reminder", "end",
-	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "after", "est", "lead", "discord", "free", "collapsed", "pic", "status"}
+	"deps", "notes", "notesFormat", "links", "url", "webhook", "prog", "recur", "after", "est", "lead", "discord", "free", "ongoing", "stages", "stage", "collapsed", "pic", "status"}
 
 func (t *Tx) applyFields(n Node, f map[string]any, creating bool) error {
 	oldRem, oldEnd := n.S("reminder"), n.S("end")
@@ -147,10 +147,38 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be empty or an icon name (a-z, 0-9, -)")
 		}
 		n["icon"] = s
+	case "stages": // a project's list of stages for the entries below it (Outline → Polished); the page has the rules
+		l, err := cleanList(v, "")
+		if err != nil {
+			return err
+		}
+		if len(l) > 12 {
+			return errors.New("at most 12 stages")
+		}
+		for _, x := range strs(l) {
+			if len([]rune(x)) > 40 {
+				return errors.New("a stage name has at most 40 characters")
+			}
+		}
+		if len(l) == 0 {
+			delete(n, "stages")
+			break
+		}
+		n["stages"] = l
+	case "stage": // the stage of an entry: a name from the list of the project above it, or "" for none
+		s, ok := v.(string)
+		if s = strings.TrimSpace(s); !ok || len([]rune(s)) > 40 {
+			return errors.New("must be a stage name (at most 40 characters) or empty")
+		}
+		if s == "" {
+			delete(n, "stage")
+			break
+		}
+		n["stage"] = s
 	case "pic": // the growing picture for the entry's progress (Today, detail panel); "" = none
 		s, ok := v.(string)
-		if !ok || (s != "" && s != "book" && s != "journey") {
-			return errors.New("must be empty, book or journey")
+		if !ok || (s != "" && s != "book" && s != "journey" && s != "tree" && s != "sky") {
+			return errors.New("must be empty, book, journey, tree or sky")
 		}
 		n["pic"] = s
 	case "prio":
@@ -338,10 +366,14 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 			return errors.New("must be >= 0")
 		}
 		n[k] = x
-	case "collapsed", "discord", "free": // free: an event that does not block time in the day plan
+	case "collapsed", "discord", "free", "ongoing": // free: an event that does not block time in the day plan
 		b, ok := v.(bool)
 		if !ok {
 			return errors.New("must be true or false")
+		}
+		if k == "ongoing" && !b { // ongoing: never finished (Inbox, Personal); the page then never offers to mark it done
+			delete(n, k)
+			break
 		}
 		n[k] = b
 	case "status":

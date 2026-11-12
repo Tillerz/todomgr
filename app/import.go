@@ -169,7 +169,7 @@ func (s *Store) ImportSelected(actor, format, file string, data []byte, only []i
 				}
 			}
 			if pid == "" {
-				p, err := tx.create("Inbox", "root", 0, nil)
+				p, err := tx.create("Inbox", "root", 0, map[string]any{"ongoing": true})
 				if err != nil {
 					return err
 				}

@@ -279,3 +279,67 @@ func TestProgressHistory(t *testing.T) {
 		t.Errorf("today must hold the 500 words of today: %v", h)
 	}
 }
+
+// "ongoing" marks a place that is never finished; the Inbox the program makes is one.
+func TestOngoing(t *testing.T) {
+	st, _ := testStore(t)
+	id := mustCreate(t, st, "Personal", "", map[string]any{"kind": "project", "ongoing": true})
+	if n := nodeOf(st, id); n["ongoing"] != true {
+		t.Fatalf("ongoing not kept: %v", n["ongoing"])
+	}
+	if _, err := st.Patch("test", id, map[string]any{"ongoing": false}); err != nil {
+		t.Fatal(err)
+	}
+	if _, has := nodeOf(st, id)["ongoing"]; has {
+		t.Error("ongoing: false must remove the mark")
+	}
+	if _, err := st.Patch("test", id, map[string]any{"ongoing": "yes"}); err == nil {
+		t.Error("ongoing must be true or false")
+	}
+	q, err := st.Quick("test", "Buy milk", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inbox := nodeOf(st, q["parent"].(string)); inbox.S("name") != "Inbox" || inbox["ongoing"] != true {
+		t.Errorf("a new Inbox is ongoing: %v", inbox)
+	}
+}
+
+// The new growing pictures are known to the server.
+func TestNewPictures(t *testing.T) {
+	st, _ := testStore(t)
+	id := mustCreate(t, st, "Chapter", "", nil)
+	for _, pic := range []string{"tree", "sky", "book", "journey", ""} {
+		if _, err := st.Patch("test", id, map[string]any{"pic": pic}); err != nil {
+			t.Errorf("pic %q: %v", pic, err)
+		}
+	}
+}
+
+// Stages: a project has the list, an entry below it has one of them.
+func TestStages(t *testing.T) {
+	st, _ := testStore(t)
+	pid := mustCreate(t, st, "Novel", "", map[string]any{"kind": "project", "stages": []any{"Outline", " First draft ", "Outline", "Polished"}})
+	if got := strs(nodeOf(st, pid)["stages"]); strings.Join(got, "|") != "Outline|First draft|Polished" {
+		t.Errorf("stages are trimmed and listed once: %v", got)
+	}
+	ch := mustCreate(t, st, "Chapter 1", pid, map[string]any{"stage": "First draft"})
+	if n := nodeOf(st, ch); n["stage"] != "First draft" {
+		t.Errorf("stage: %v", n["stage"])
+	}
+	if _, err := st.Patch("test", ch, map[string]any{"stage": ""}); err != nil {
+		t.Fatal(err)
+	}
+	if _, has := nodeOf(st, ch)["stage"]; has {
+		t.Error("an empty stage removes it")
+	}
+	if _, err := st.Patch("test", pid, map[string]any{"stages": []any{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}}); err == nil {
+		t.Error("more than 12 stages must be refused")
+	}
+	if _, err := st.Patch("test", pid, map[string]any{"stages": []any{}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, has := nodeOf(st, pid)["stages"]; has {
+		t.Error("an empty list removes the stages")
+	}
+}

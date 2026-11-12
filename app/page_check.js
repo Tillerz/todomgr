@@ -214,8 +214,23 @@ check('sub-items: cancelling the last open one offers to finish the parent',()=>
     if(run(()=>setStatus(a,'done')).length)bad.push('one of three done: no offer yet');
     if(run(()=>setStatus(b,'cancelled')).length)bad.push('one still open: no offer yet');
     const r=run(()=>setStatus(c,'cancelled'));if(r.length!==1||!r[0].button)bad.push('the last open one cancelled: '+JSON.stringify(r));
-    if(run(()=>setStatus(a,'cancelled')).length)bad.push('all cancelled: nothing is done, no offer')}
+    if(run(()=>setStatus(a,'cancelled')).length)bad.push('all cancelled: nothing is done, no offer')
+    const o=T('Ongoing parent',{ongoing:true}),x=T('Ongoing a',{},o.id);if(run(()=>setStatus(x,'done')).length)bad.push('an ongoing parent gets no offer')}
   finally{toast=realToast;made.reverse().forEach(n=>{detach(n);delete S.nodes[n.id]})}
+  return bad.join('; ')});
+check('stages: a chip, a full count ends the stage and not the entry, the last stage means done',()=>{const bad=[],made=[],realToast=toast,realTimeout=setTimeout,shown=[];
+  toast=(msg,o={})=>shown.push({msg,o});const later=[];setTimeout=fn=>later.push(fn);
+  const T=(name,props,parent='root')=>{const x=mk(name,props);attach(x,parent);made.push(x);return x};
+  try{const p=T('Stage novel',{kind:'project',status:'active',stages:['Outline','First draft','Polished']}),c=T('Stage ch',{stage:'First draft',prog:{mode:'units',done:10,total:100,unit:'words'}},p.id),plain=T('Stage plain',{prog:{mode:'units',done:10,total:100,unit:'words'}},p.id);
+    if(stagesOf(c)!==p.stages||stageAt(c)!==1||!stageChip(c).includes('First draft')||stageChip(plain)!=='')bad.push('chip and list');
+    setProgress(c,100);later.splice(0).forEach(fn=>fn());if(c.status==='done')bad.push('a full count must not finish an entry that has stages left');
+    const offer=shown.find(x=>x.o.action&&x.o.action.label==='Polished');if(!offer)bad.push('no offer for the next stage: '+JSON.stringify(shown.map(x=>x.msg)));
+    setProgress(plain,100);if(plain.status!=='done')bad.push('without a stage a full count finishes the entry, as before');
+    setStage(c,'Polished');if(c.status!=='done'||c.stage!=='Polished')bad.push('the last stage means done');
+    setStage(c,'Outline');if(c.status==='done')bad.push('back from the last stage opens the entry again');
+    setStage(c,'Nonsense');if(c.stage!=='Outline')bad.push('a stage that is not in the list is refused');
+    S.prefs.projPage=p.id;renderProject();if(!el('#vProject').innerHTML.includes('Outline <b>1</b>'))bad.push('the Project page counts the stages')}
+  finally{toast=realToast;setTimeout=realTimeout;made.reverse().forEach(n=>{detach(n);delete S.nodes[n.id]})}
   return bad.join('; ')});
 check('growing pictures: a project counts the words of its goals; book and journey grow; Today and the detail panel',()=>{const bad=[],made=[];
   const T=(name,props,parent='root')=>{const x=mk(name,props);attach(x,parent);made.push(x);return x};
@@ -227,6 +242,11 @@ check('growing pictures: a project counts the words of its goals; book and journ
     if(picJourney(.3)===picJourney(.31))bad.push('the journey must change with every step');
     const b1=picBook(1,'The <Crown>');if(!b1.includes('The &lt;Crown&gt;')||picBook(.5,'x').includes('text-anchor'))bad.push('book: the title only on the finished book, escaped');
     if(picBook(.4,'x')===picBook(.41,'x'))bad.push('the book must change with every step');
+    for(const[k,v]of Object.entries(PICS)){const d=(f,o)=>v[0](f,'x',o||{});if(k==='journey')continue;
+      if(d(.4)===d(.41)||d(.9)===d(.91)||d(.02)===d(.03))bad.push(k+': must change with every step');
+      if(d(.5,{f0:.3,col:'#123456'})===d(.5,{col:'#123456'}))bad.push(k+': the part of today must show');
+      if(!d(1).includes('class="star"')||d(.99).includes('class="star"'))bad.push(k+': stars only on the finished picture')}
+    const pt=T('Pic tree',{pic:'tree',prog:{mode:'units',done:10,total:100,unit:'pages'}});if(!picSVG(pt,'s').includes('viewBox="0 0 164 88"')||picSVG(T('Pic none',{pic:'bonsai'}),'s')!=='')bad.push('picSVG: every known picture, nothing for an unknown one');
     // the part of today is drawn in the colour of the entry
     if(!picJourney(.5,{f0:.3,col:'#123456'}).includes('stroke:#123456;stroke-width:3.2')||picJourney(.5,{f0:.5,col:'#123456'}).includes('stroke-width:3.2'))bad.push('journey: the stretch of today only when there is one');
     if(picJourney(.2)===picJourney(.2,{f0:.1})||picBook(.4,'x')===picBook(.4,'x',{f0:.1}))bad.push('the part of today must show in both pictures');

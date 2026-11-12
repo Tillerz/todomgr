@@ -50,7 +50,7 @@ func (s *Store) inboxID(actor string) (string, error) {
 		}
 	}
 	s.mu.RUnlock()
-	n, err := s.Create(actor, "Inbox", "root", 0, nil)
+	n, err := s.Create(actor, "Inbox", "root", 0, map[string]any{"ongoing": true})
 	if err != nil {
 		return "", err
 	}

@@ -179,7 +179,8 @@ button.chip.tagchip:hover{background:color-mix(in srgb,var(--accent) 24%,var(--b
 .piccap{display:flex;flex-direction:column}.piccap small{color:var(--muted)}
 .pic-s{width:120px;height:66px}.picbig{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px}.picbig small{color:var(--muted)}.pic-l{width:100%;max-width:300px}
 .pic .walk{animation:picwalk 1.2s ease-in-out both}@keyframes picwalk{from{transform:translate(var(--dx),var(--dy))}to{transform:none}}
-@media (prefers-reduced-motion:reduce){.pic .walk,.pic-done{animation:none}}
+.pic .star{transform-box:fill-box;transform-origin:center;animation:pictwinkle 1.5s ease-in-out infinite}
+@keyframes pictwinkle{0%,100%{transform:scale(.35) rotate(0deg);opacity:.35}50%{transform:scale(1.25) rotate(45deg);opacity:1}}
 .pic-done{animation:picshine 1.8s ease-out 1}@keyframes picshine{0%{filter:drop-shadow(0 0 0 var(--accent))}40%{filter:drop-shadow(0 0 8px var(--accent))}100%{filter:drop-shadow(0 0 0 transparent)}}
 .goal-btns{display:flex;gap:4px;align-items:center}
 .goal-in{width:92px;padding:3px 8px;font-size:13px;border-radius:8px;text-align:right}
@@ -216,6 +217,7 @@ input.rename{flex:1;padding:3px 6px;font-weight:500}
 .badges{display:flex;gap:5px;align-items:center;flex:none}
 .bd{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--muted);padding:1px 6px;border-radius:99px;background:var(--hover);white-space:nowrap}
 .bd.over{color:#fff;background:var(--danger)}
+.bd.stage{font-weight:600;color:color-mix(in srgb,var(--c) 70%,var(--ink));background:color-mix(in srgb,var(--c) 18%,var(--bg))}
 .bd.today{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
 .bd.tag{cursor:pointer}
 .bd.tag:hover{color:var(--accent)}
@@ -230,7 +232,13 @@ input.rename{flex:1;padding:3px 6px;font-weight:500}
 .row:hover .add,.row.sel .add{opacity:1}
 .add:hover{background:var(--hover);color:var(--accent)}
 @media (pointer:coarse){.add{opacity:.7}}
-.ghost{opacity:.35}
+/* drag and drop: the place the entry goes to is a framed slot at its real indent, and the entry it goes into is marked.
+   The picture that follows the pointer hangs below and right of it (setData in renderTree), so it does not cover the slot. */
+.ghost>.row{--slot:46px;background:none;box-shadow:none}.ghost>.row>*{opacity:.5}.ghost>.row>.grip,.ghost>.row>.tw{visibility:hidden}
+.ghost>.row::before{content:'';position:absolute;top:0;bottom:0;right:0;left:var(--slot);border:2px dashed var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 16%,transparent);pointer-events:none}
+@media (pointer:coarse){.ghost>.row{--slot:54px}}
+.ghost>.children{display:none}
+body.dragging .node:has(>.children>.ghost)>.row{box-shadow:inset 4px 0 0 var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg))}
 .chosen .row{box-shadow:var(--shadow)}
 .empty{color:var(--muted);text-align:center;padding:40px 16px}
 
@@ -847,7 +855,8 @@ function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClo
   if(s==='done'){cheerNote('done');if(n.kind==='todo'&&['over','today'].includes(dueState(n)))cheerNote('due')}else if(s==='progress'&&n.status==='open')cheerNote('progress');n.status=s;n.hist.push({s,at:now()});n.updated=now();log(s==='done'?'close':'status',n.id,{s});if(s==='done'&&n.kind==='todo')ANN.push(n.id);
   if(s==='done'){if(n.prog.mode==='percent')n.prog.done=100;else n.prog.done=n.prog.total;if(n.after&&!kids(n).length&&afterNext(n))return;if(n.recur&&!kids(n).length)recurNext(n);else parentHint(n)}
   else if(wasClosed||isClosed(n))parentHint(n)}// cancelled (or rejected, archived): it leaves the count, so the others may be all done now
-function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p))return;const k=kids(p);
+// ongoing: a place for things (Inbox, Personal) is never finished, so it gets no offer
+function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p)||p.ongoing)return;const k=kids(p);
   if(k.length&&k.every(c=>c.status==='done'))cheerNote('parent',p)}
 /* Cheer me on (Settings → Appearance): a friendly toast when you start or finish something in this window.
    setStatus and setProgress note the moments; one toast per change, also for many entries at once.
@@ -906,14 +915,17 @@ function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round
  if(n.prog.mode==='units'&&n.prog.done<c&&v>=c)cheerNote('goal',n);n.prog.done=v;log('progress',n.id);n.updated=now();
   // progHist: the amount of each day (today: the count now minus the count at the start of today); 400 days are kept
   if(n.prog.mode==='units'&&n.progDay&&n.progDay.d===addDays(0)){const h=n.progHist||(n.progHist={});h[addDays(0)]=v-n.progDay.start;const ks=Object.keys(h).sort();while(ks.length>400)delete h[ks.shift()]}
-  if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
+  const L=stagesOf(n),si=stageAt(n);
+  if(v>=c&&n.status!=='done'&&n.kind==='todo'&&si>=0&&si<L.length-1){const id=n.id,next=L[si+1];// a full count ends the stage, not the entry
+    setTimeout(()=>toast(`“${n.name}” has reached its goal. Go on to the next stage?`,{action:{label:next,fn:()=>mutate(()=>setStage(S.nodes[id],next),{panel:true})},ms:10000}))}
+  else if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
   else if(v>0&&v<c&&n.status==='open')setStatus(n,'progress');
   else if(v<c&&n.status==='done')setStatus(n,'progress')}
 function toggleDone(n){if(n.kind==='idea')return setStatus(n,n.status==='raw'?'exploring':'raw');
   setStatus(n,isClosed(n)?REOPEN[n.kind]:'done')}
 function addNode(pid,idx,name,props){let n;mutate(()=>{n=mk(name,props);attach(n,pid,idx);const p=S.nodes[pid];if(p.collapsed)p.collapsed=false;log('create',n.id)});return n}
 function newAndRename(pid,idx,props){const n=addNode(pid,idx,'',props);ui.sel=n.id;renderTree();renderDetail();rename(n.id,true)}
-function inboxId(){let id=S.nodes.root.children.map(i=>S.nodes[i]).find(c=>c.name==='Inbox');if(!id){push();id=mk('Inbox');attach(id,'root',0)}return id.id}
+function inboxId(){let id=S.nodes.root.children.map(i=>S.nodes[i]).find(c=>c.name==='Inbox');if(!id){push();id=mk('Inbox',{ongoing:true});attach(id,'root',0)}return id.id}
 function trash(ids){ids=[].concat(ids);mutate(()=>ids.forEach(id=>{const n=S.nodes[id];if(!n||n.trashed)return;n.trashed=now();n.tparent=n.parent;detach(n);n.parent=null;log('trash',id)}),{panel:true});
   if(ids.includes(ui.sel))ui.sel=null;ui.multi.clear();renderAll();toast(`Moved ${ids.length} item${ids.length>1?'s':''} to trash`,{action:{label:'Undo',fn:undo}})}
 function restoreNode(id){mutate(()=>{const n=S.nodes[id];const p=S.nodes[n.tparent];delete n.trashed;attach(n,p&&!inTrash(p)?p.id:'root')},{panel:true})}
@@ -1062,7 +1074,7 @@ function liHTML(n,vis,force){
 <button class="tw ${hasKids?(open?'open':''):'none'}" data-tip="Expand / collapse">${ic('chev')}</button>
 ${n.kind==='reminder'?`<span class="rbell" data-tip="Reminder — no status to set. It pops up before and at the time.">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}${projIc(n)?' has-ic':''}" data-tip="${tip} · ${STAT[n.status]}${STAT_TIP[n.status]?' — '+STAT_TIP[n.status]:''}">${projIc(n)}</button>`}
 <span class="namewrap">${tagIc(n)}<span class="name" data-tip="${n.notes&&n.notes.trim()?esc(notesTip(n))+'\n\n':''}Double-click or F2 to rename · Alt+Enter to edit the notes">${esc(n.name)||'<i style="color:var(--muted)">Untitled</i>'}</span>${nameLink(n)}${paceTag(n)}</span>
-<span class="badges">${badge(n)}</span>${progHTML(n)}
+<span class="badges">${stageChip(n)}${badge(n)}</span>${progHTML(n)}
 <button class="add" data-tip="Add sub-item (Insert)">${ic('plus')}</button><button class="more" data-tip="More actions (or right-click)">${ic('menu')}</button></div><ul class="children" data-id="${n.id}">${kidsHtml}</ul></li>`}
 // a tag filter whose tag was just removed from every entry leaves the search; a tag being typed stays,
 // because only tags that existed at the last redraw are taken out
@@ -1077,6 +1089,7 @@ function renderTree(){dropGoneTags();
   el.innerHTML=`<ul class="children root" data-id="root" style="padding-left:0!important">${html}</ul>`+((!html)?`<div class="empty">${filtering()?'Nothing matches this filter.':'Nothing here yet — type above to add your first item.'}</div>`:'');
   $$('.children',el).forEach(ul=>sortables.push(new Sortable(ul,{group:'tree',animation:130,handle:'.grip',ghostClass:'ghost',chosenClass:'chosen',fallbackOnBody:true,swapThreshold:.65,emptyInsertThreshold:16,
     delay:150,delayOnTouchOnly:true,touchStartThreshold:4,disabled:filtering(),
+    setData(dt,el){dt.setData('Text',el.textContent);const r=el.querySelector('.row');if(r&&dt.setDragImage)dt.setDragImage(r,-18,-12)},// only the row, beside the pointer
     onStart(){ui.dragging=true;document.body.classList.add('dragging')},
     onEnd(e){ui.dragging=false;document.body.classList.remove('dragging');
       if(e.from===e.to&&e.oldIndex===e.newIndex)return;
@@ -1130,6 +1143,10 @@ ${ui.icPick===n.id?`<div class="tipick"><input class="icq" placeholder="Filter i
 <h4>Status & priority</h4>
 <div class="grid2"><select data-f="status" data-tip="Status — every change is dated in the history below">${KS[n.kind].map(s=>`<option value="${s}" ${s===n.status?'selected':''}>${STAT[s]}${s==='later'?' (postponed)':''}</option>`).join('')}</select>
 ${n.kind==='idea'?`<button class="btn pri" data-act="promote" data-tip="Turn this idea into a todo">Promote to todo →</button>`:`<span></span>`}</div>
+${k.length||n.kind==='project'||n.ongoing?`<label class="chk-row" style="margin-top:8px" data-tip="For a place that is never finished, such as Inbox or Personal: the app does not offer to mark it done when all its sub-items are done"><input type="checkbox" data-f="ongoing" ${n.ongoing?'checked':''}> Ongoing <small style="color:var(--muted)">(never finished)</small></label>`:''}
+${n.kind!=='project'&&stagesOf(n)?`<label class="field" style="margin-top:8px"><span>Stage <span class="bd" data-tip="Where this entry is on its way. The last stage sets it to done; a full word count only ends its stage. The list comes from the project above (its detail panel → Stages)">?</span></span><select data-f="stage"><option value="">—</option>${stagesOf(n).map(x=>`<option ${x===n.stage?'selected':''}>${esc(x)}</option>`).join('')}</select></label>`:''}
+${n.kind==='project'?opt('Stages',n.stages&&n.stages.length,`<label class="field" style="margin-top:8px"><span>Stages <span class="bd" data-tip="A list of stages for the entries below this project, such as Outline → First draft → Polished. Each entry then gets a Stage menu and a coloured chip">?</span></span><select data-f="stageset">${(()=>{const cur=(n.stages||[]).join('|'),name=Object.keys(STAGE_SETS).find(k=>STAGE_SETS[k].join('|')===cur);
+  return[['','None'],...Object.keys(STAGE_SETS).map(k=>[k,k+': '+STAGE_SETS[k].join(' → ')]),['custom','My own list']].map(([v,l])=>`<option value="${v}" ${(name||(cur?'custom':''))===v?'selected':''}>${esc(l)}</option>`).join('')})()}</select></label>${n.stages&&n.stages.length?`<input type="text" data-f="stages" value="${esc(n.stages.join(', '))}" style="margin-top:6px;width:100%" data-tip="The stages in order, with commas between them. The last one means done">`:''}`):''}
 <div class="seg" style="margin-top:8px">${PRIO.map((p,i)=>`<button data-act="prio" data-v="${i}" class="${n.prio===i?'on':''}" data-tip="Priority: ${p}">${i?ic('flag',12)+' ':''}${p}</button>`).join('')}</div>
 ${opt('Color',n.color,`<h4>Color</h4>
 <div class="swatches"><button class="sw none ${!n.color?'on':''}" data-act="color" data-v="" data-tip="No color"></button>${COLORS.map(c=>`<button class="sw ${n.color===c?'on':''}" style="--c:${c}" data-act="color" data-v="${c}" data-tip="Color the item's stripe"></button>`).join('')}</div>`)}
@@ -1138,7 +1155,7 @@ ${k.length?`<div class="bigbar"><i style="width:${Math.round(f*100)}%"></i></div
 `<div class="seg"><button data-act="pmode" data-v="percent" class="${n.prog.mode==='percent'?'on':''}" data-tip="0–100 %">Percent</button><button data-act="pmode" data-v="units" class="${n.prog.mode==='units'?'on':''}" data-tip="Count something: words written, images created, steps run…">Units</button></div>
 <div style="margin-top:8px">${n.prog.mode==='percent'?`<div class="stepper"><input type="range" data-f="pct" min="0" max="100" step="5" value="${n.prog.done}"><b id="pctv" style="width:44px;text-align:right">${n.prog.done}%</b></div>`:
 `<div class="stepper"><button class="btn" data-act="pstep" data-v="-1">−</button><input type="number" data-f="pdone" min="0" value="${n.prog.done}" data-tip="Done so far"><span>of</span><input type="number" data-f="ptotal" min="1" value="${n.prog.total}" data-tip="Target"><button class="btn" data-act="pstep" data-v="1">+</button></div><div class="stepper" style="margin-top:6px"><input type="text" data-f="punit" value="${esc(n.prog.unit)}" placeholder="unit: words, images, steps…"></div><div class="bigbar" style="margin-top:8px"><i style="width:${Math.round(f*100)}%"></i></div><div class="pace-slot">${pace(n)}</div>`}</div>`}
-${opt('Picture',n.pic,`<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],['book','Book: an open book fills with lines, then it is bound'],['journey','Journey: a walk across the map to the castle']].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>`)}
+${opt('Picture',n.pic,`<label class="field" style="margin-top:10px"><span>Picture <span class="bd" data-tip="A picture that grows with the progress, 0 to 100 %. Also shown on Today. A project counts the words of the word goals below it.">?</span></span><select data-f="pic">${[['','None'],...Object.entries(PICS).map(([k,v])=>[k,v[2]])].map(([v,l])=>`<option value="${v}" ${(n.pic||'')===v?'selected':''}>${l}</option>`).join('')}</select></label>`)}
 ${n.pic?`<div class="picbig">${picSVG(n,'l')}<small>${esc(picProg(n).txt)} · ${Math.round(picProg(n).f*100)}%</small></div>`:''}
 <h4>Dates</h4>
 <div class="grid2"><div class="field"><span>Deadline</span>${dtFields('deadline',n.deadline)}</div><div class="field"><span>Reminder</span>${dtFields('reminder',n.reminder)}</div></div>
@@ -1235,7 +1252,10 @@ function onDetailChange(e){const t=e.target,f=t.dataset.f,n=S.nodes[ui.sel];if(!
     case'deadline-d':case'deadline-t':m(()=>setDT(n,'deadline'));break;
     case'reminder-d':case'reminder-t':{const old=n.reminder;m(()=>{setDT(n,'reminder');if(n.kind==='reminder')afterFollow(n,old)})}if($('[data-f=end-d]'))showEnd(n);break;// no re-render: it would break typing
     case'end-d':case'end-t':{const x=endInput(n);$$('[data-f^=end-]').forEach(i=>i.classList.toggle('bad',x.bad));if(!x.bad)m(()=>{n.end=x.end;if(n.kind==='reminder')afterFollow(n,n.reminder)});break}
-    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'busy':m(()=>n.free=!t.checked);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>{n.recur=v;if(v)delete n.after},true);break;
+    case'lead':m(()=>n.lead=+v,true);break;case'discord':m(()=>n.discord=t.checked,true);break;case'ongoing':m(()=>{if(t.checked)n.ongoing=true;else delete n.ongoing},true);break;
+    case'stage':mutate(()=>{setStage(n,v);touch(n)},{panel:true});break;
+    case'stageset':m(()=>{if(!v)delete n.stages;else if(STAGE_SETS[v])n.stages=[...STAGE_SETS[v]];else if(!(n.stages&&n.stages.length))n.stages=['Stage 1','Stage 2','Stage 3']},true);break;
+    case'stages':{const L=[...new Set(v.split(',').map(x=>x.trim().slice(0,40)).filter(Boolean))].slice(0,12);m(()=>{if(L.length)n.stages=L;else delete n.stages},true);break}case'busy':m(()=>n.free=!t.checked);break;case'recur':if(v==='custom'){ui.rcEdit=n.id;renderDetail();break}ui.rcEdit=null;m(()=>{n.recur=v;if(v)delete n.after},true);break;
     case'rc':{const r=recurFromEditor();if(r!==null)m(()=>{n.recur=r;if(r)delete n.after},true);break}
     case'afterev':m(()=>v?setAfter(n,v,n.after?n.after.days:7):delete n.after,true);break;
     case'afterdays':m(()=>setAfter(n,n.after.id,Math.max(0,Math.min(365,Math.round(+v||0)))),true);break;case'est':m(()=>n.est=Math.max(0,+v||0),true);break;
@@ -1281,6 +1301,18 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   }}
 
 /* ============================ today ============================ */
+/* Stages (for writing: Outline → Polished). A project has a list of stages; the entries below it can have one
+   of them, shown as a chip. An entry with a stage is done when it reaches the last stage, not when its count
+   is full: a chapter with all its words is at the end of "First draft", not finished. */
+const STAGE_SETS={'Long text':['Outline','First draft','Revision','Beta readers','Polished'],Article:['Idea','Draft','Edit','Published']};
+const STAGE_COL=['#8d95a9','#4a9fd8','#e8a33d','#b07ad8','#4f9d69','#c8553d','#3fa5a5','#d86a9a'];
+// the stage list that counts for an entry: the one of the nearest project above it that has one
+const stagesOf=n=>{for(let x=S.nodes[n.parent];x&&x.id!=='root';x=S.nodes[x.parent])if(x.kind==='project'&&x.stages&&x.stages.length)return x.stages;return null};
+const stageAt=n=>{const L=n.stage?stagesOf(n):null;return L?L.indexOf(n.stage):-1};
+const stageChip=n=>{const i=stageAt(n);return i<0?'':`<span class="bd stage" style="--c:${STAGE_COL[i%STAGE_COL.length]}" data-tip="Stage ${i+1} of ${stagesOf(n).length}">${esc(n.stage)}</span>`};
+// the last stage sets a todo to done; going back from it opens the todo again
+function setStage(n,v){const L=stagesOf(n)||[];if(!v){delete n.stage;n.updated=now();return}if(!L.includes(v))return;n.stage=v;n.updated=now();
+  if(v===L[L.length-1]){if(n.kind==='todo'&&n.status!=='done')setStatus(n,'done')}else if(n.status==='done')setStatus(n,'progress')}
 // the nearest project above an entry
 const projOf=n=>{for(let x=S.nodes[n.parent];x&&x.id!=='root';x=S.nodes[x.parent])if(x.kind==='project')return x;return null};
 // the label of an entry's project, for the lists: its icon and name in its colour. A click opens the Project page.
@@ -1288,7 +1320,7 @@ const projLabel=n=>{const p=projOf(n);return p?`<span class="plabel" data-proj="
 // the path of an entry below its project (the whole path when it has none)
 const subPath=n=>{const p=projOf(n);if(!p)return path(n);const a=[];for(let x=S.nodes[n.parent];x&&x!==p;x=S.nodes[x.parent])a.unshift(x.name);return a.join(' › ')};
 // noProj: on the Project page, where every row is of the same project
-function trow(n,at,noProj){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}${noProj?'':projLabel(n)}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(subPath(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+function trow(n,at,noProj){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}${noProj?'':projLabel(n)}<span>${tagIc(n)}${esc(n.name)}</span>${stageChip(n)}${paceTag(n)}<span class="crumb">${esc(subPath(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 /* Growing pictures (detail panel → Progress → Picture; off by default): a picture for an entry's progress, 0 to 100 %.
    A project counts the words (or other units) of the word goals below it; without such goals, its finished
    sub-entries. Drawn here as SVG shapes, in the theme's colours; every step looks finished. */
@@ -1306,7 +1338,7 @@ function picProg(n){const num=x=>Math.round(x).toLocaleString('en');
 const dayStart=n=>n.progDay&&n.progDay.d===addDays(0)?n.progDay.start:n.status==='done'?n.prog.total:n.prog.done;
 const PIC_ST=(fill,stroke,w)=>`style="fill:${fill};stroke:${stroke||'none'};stroke-width:${w||1}"`;
 // sparkles around a finished picture
-const picStars=pts=>pts.map(([x,y,r])=>`<path d="M${x} ${y-r}L${x+r*.3} ${y-r*.3}L${x+r} ${y}L${x+r*.3} ${y+r*.3}L${x} ${y+r}L${x-r*.3} ${y+r*.3}L${x-r} ${y}L${x-r*.3} ${y-r*.3}Z" ${PIC_ST('var(--accent)')}/>`).join('');
+const picStars=pts=>pts.map(([x,y,r],k)=>`<path class="star" style="fill:var(--accent);animation-delay:${(k*.37%1.5).toFixed(2)}s" d="M${x} ${y-r}L${x+r*.3} ${y-r*.3}L${x+r} ${y}L${x+r*.3} ${y+r*.3}L${x} ${y+r}L${x-r*.3} ${y+r*.3}L${x-r} ${y}L${x-r*.3} ${y-r*.3}Z"/>`).join('');
 // fixed colours of the pictures: mid tones that read on light and on dark themes
 const PIC_C={green:'#4f9d69',water:'#4a9fd8',wood:'#b07a45',warm:'#e8a33d',roof:'#c8553d',stone:'#9aa3b5'};
 // The book: an open book. Lines of text fill the left page, then the right one; today's lines are in colour and
@@ -1369,13 +1401,50 @@ function picJourney(f,o={}){const P=PIC_PATH,C=PIC_C,col=o.col||'var(--accent)',
       +`<path d="M3.2 -7.5L4.6 0" ${PIC_ST('none',C.wood,.9)}/><path d="M-1.6 0L0 -4L1.8 0" ${PIC_ST('none','var(--ink)',1.3)} stroke-linecap="round" stroke-linejoin="round"/><path d="M0 -4V-8" ${PIC_ST('none','var(--ink)',1.9)} stroke-linecap="round"/>`
       +`<rect x="-3.2" y="-8.3" width="2.6" height="3.6" rx=".8" ${PIC_ST(col)}/><circle cx="0.2" cy="-10.2" r="1.9" ${PIC_ST('var(--ink)')}/></g></g>`}
   return s}
+// The tree: a seed in the ground, a sprout, a trunk, then leaf after leaf; blossoms from the half, fruit from
+// three quarters. The leaves of today are in the entry's colour.
+const PIC_LEAF=[[82,44],[72,46],[92,47],[78,37],[88,38],[66,40],[98,41],[83,30],[73,31],[93,32],[62,48],[102,49],[68,25],[98,26],[83,22],[58,36],[108,37],[76,18],[91,18],[64,31],[103,31],[83,13],[71,40],[95,40]];
+function picTree(f,o={}){const C=PIC_C,col=o.col||'var(--accent)',f0=Math.min(f,o.f0??f),done=f>=1,N=PIC_LEAF.length;let s='';
+  if(!done)s+=`<ellipse cx="24" cy="18" rx="6" ry="6" ${PIC_ST(C.warm)} opacity=".85"/>`;// sun
+  s+=`<path d="M0 88V74Q40 68 82 72T164 72V88Z" ${PIC_ST('var(--line)')}/><path d="M0 88V74Q40 68 82 72T164 72V88Z" ${PIC_ST(C.green)} opacity="${(.12+f*.3).toFixed(2)}"/>`;// the ground gets greener
+  const t=Math.min(1,f/.3),h=4+t*26,w=1.2+t*4.3;// the trunk grows in the first third
+  if(f<.04)s+=`<ellipse cx="82" cy="73" rx="${(2+f*30).toFixed(1)}" ry="${(1.4+f*20).toFixed(1)}" ${PIC_ST(C.wood)}/>`;// the seed
+  else{s+=`<path d="M${(82-w).toFixed(1)} 73Q${(82-w*.5).toFixed(1)} ${(73-h/2).toFixed(1)} ${(82-w*.45).toFixed(1)} ${(73-h).toFixed(1)}H${(82+w*.45).toFixed(1)}Q${(82+w*.5).toFixed(1)} ${(73-h/2).toFixed(1)} ${(82+w).toFixed(1)} 73Z" ${PIC_ST(C.wood)}/>`;
+    if(f<.12){const y=73-h;s+=`<path d="M82 ${y.toFixed(1)}q-5 -2 -6 -6q5 0 6 6q1 -6 6 -6q-1 4 -6 6Z" ${PIC_ST(C.green)}/>`}}// the first two leaves
+  const n=Math.max(0,(f-.1)/.9*N),n0=Math.max(0,(f0-.1)/.9*N);// leaves, one after the other
+  for(let k=0;k<Math.ceil(n-1e-9);k++){const[x,y]=PIC_LEAF[k],r=(5.2+(k*7%3))*Math.min(1,n-k),now=k+1>n0+1e-9&&f>f0;
+    s+=`<ellipse cx="${x}" cy="${y}" rx="${(r*1.15).toFixed(1)}" ry="${r.toFixed(1)}" ${PIC_ST(now?col:k%3===1?'#5fae78':k%3===2?'#438a5a':C.green)}/>`}
+  for(let k=0;k<Math.ceil(n-1e-9);k++){const[x,y]=PIC_LEAF[k];// blossoms from the half, fruit from three quarters
+    if(f>=.75&&k%4===1&&k<(f-.75)/.25*N+2)s+=`<ellipse cx="${x+2}" cy="${y+2}" rx="2.3" ry="2.5" ${PIC_ST(C.roof)}/>`;
+    else if(f>=.5&&k%3===0&&k<(f-.5)/.5*N+2)s+=`<ellipse cx="${x-1.5}" cy="${y-1}" rx="1.5" ry="1.5" ${PIC_ST('#fff')} opacity=".9"/>`}
+  if(done)s+=picStars([[40,20,3.5],[126,16,3],[136,44,2.5],[30,50,2.5],[112,6,2]]);
+  return s}
+// The night sky: star after star comes out and joins to a constellation (a quill); the moon fills up.
+// The stars of today are in the entry's colour.
+const PIC_SKY=[[40,66],[52,58],[63,49],[75,41],[86,32],[99,25],[112,17],[124,12],[117,27],[104,37],[92,46],[80,54]];
+function picSky(f,o={}){const col=o.col||'var(--accent)',f0=Math.min(f,o.f0??f),done=f>=1,P=PIC_SKY,N=P.length,n=f*N,n0=f0*N;let s='';
+  s+=`<rect x="0" y="0" width="164" height="88" rx="7" ${PIC_ST('#151b36')}/>`;
+  s+=[[12,14],[30,30],[20,52],[58,16],[72,8],[96,60],[134,34],[150,18],[142,58],[110,70],[154,46],[46,40],[128,52],[84,70]].map(([x,y],k)=>`<rect x="${x}" y="${y}" width="${k%3?1:1.4}" height="${k%3?1:1.4}" ${PIC_ST('#fff')} opacity="${k%2?.35:.55}"/>`).join('');// far stars
+  const mx=142,my=20,ph=Math.min(1,f);// the moon: a thin crescent that fills up
+  s+=`<ellipse cx="${mx}" cy="${my}" rx="8" ry="8" ${PIC_ST('#f4e9c1')}/>${done?'':`<ellipse cx="${(mx-3-ph*13).toFixed(1)}" cy="${(my-1-ph*4).toFixed(1)}" rx="8" ry="8" ${PIC_ST('#151b36')}/>`}`;
+  s+=`<path d="M0 88V78Q30 70 60 77T120 76T164 74V88Z" ${PIC_ST('#0c1024')}/>`;// hills
+  for(let k=1;k<Math.ceil(n-1e-9);k++){const a=P[k-1],b=P[k],t=Math.min(1,n-k),now=k+1>n0+1e-9&&f>f0;// lines between the stars that are out
+    s+=`<path d="M${a[0]} ${a[1]}L${(a[0]+(b[0]-a[0])*t).toFixed(1)} ${(a[1]+(b[1]-a[1])*t).toFixed(1)}" ${PIC_ST('none',now?col:'#c9d2f0',now?1.3:.9)} opacity="${now?1:.7}" stroke-linecap="round"/>`}
+  if(done)s+=`<path d="M${P[N-1][0]} ${P[N-1][1]}L${P[2][0]} ${P[2][1]}M${P[8][0]} ${P[8][1]}L${P[5][0]} ${P[5][1]}M${P[9][0]} ${P[9][1]}L${P[4][0]} ${P[4][1]}M${P[10][0]} ${P[10][1]}L${P[3][0]} ${P[3][1]}" ${PIC_ST('none','#c9d2f0',.7)} opacity=".6"/>`;// the quill closes
+  for(let k=0;k<Math.ceil(n-1e-9);k++){const[x,y]=P[k],big=k%3===0,r=(big?2.6:1.8)*Math.min(1,.4+.6*Math.min(1,n-k)),now=k+1>n0+1e-9&&f>f0;
+    s+=`<path d="M${x} ${(y-r*1.6).toFixed(1)}L${(x+r*.45).toFixed(1)} ${(y-r*.45).toFixed(1)}L${(x+r*1.6).toFixed(1)} ${y}L${(x+r*.45).toFixed(1)} ${(y+r*.45).toFixed(1)}L${x} ${(y+r*1.6).toFixed(1)}L${(x-r*.45).toFixed(1)} ${(y+r*.45).toFixed(1)}L${(x-r*1.6).toFixed(1)} ${y}L${(x-r*.45).toFixed(1)} ${(y-r*.45).toFixed(1)}Z" ${PIC_ST(now?col:'#fff')}/>`}
+  if(done)s+=`<path d="M22 12L44 22" ${PIC_ST('none','#fff',1.2)} opacity=".8" stroke-linecap="round"/>`+picStars([[20,11,3],[70,24,2.5],[132,62,2.5],[30,70,2]]);// a shooting star
+  return s}
+// the pictures: name → [drawing, view box, label in the detail panel]
+const PICS={book:[picBook,'0 0 120 76','Book: an open book fills with lines, then it is bound'],journey:[picJourney,'0 0 164 88','Journey: a walk across the map to the castle'],
+  tree:[(f,t,o)=>picTree(f,o),'0 0 164 88','Tree: from a seed to a tree with fruit'],sky:[(f,t,o)=>picSky(f,o),'0 0 164 88','Night sky: stars come out and join to a constellation']};
 // the picture of an entry, or ''. size: 's' (Today) or 'l' (detail panel)
 // After new progress the walker of the journey walks from its old place to the new one (picWalk remembers
 // the old place per picture, and when the walk began, so a page that is drawn again does not start it again).
 const picWalk={};
-function picSVG(n,size){if(!n.pic)return'';const{f,f0}=picProg(n),book=n.pic==='book',vb=book?'0 0 120 76':'0 0 164 88',o={f0,col:n.color||undefined};
-  if(!book){const k=n.id+size,w=picWalk[k]||(picWalk[k]={f});if(w.f!==f){w.from=picAt(w.f).pt;w.t0=now();w.f=f}if(w.t0&&now()-w.t0<1300){o.from=w.from;o.at=now()-w.t0}}
-  return`<svg class="pic pic-${size}${f>=1?' pic-done':''}" viewBox="${vb}" role="img" aria-label="${esc(n.name)}: ${Math.round(f*100)}%">${book?picBook(f,n.name,o):picJourney(f,o)}</svg>`}
+function picSVG(n,size){const pic=PICS[n.pic];if(!pic)return'';const{f,f0}=picProg(n),o={f0,col:n.color||undefined};
+  if(n.pic==='journey'){const k=n.id+size,w=picWalk[k]||(picWalk[k]={f});if(w.f!==f){w.from=picAt(w.f).pt;w.t0=now();w.f=f}if(w.t0&&now()-w.t0<1300){o.from=w.from;o.at=now()-w.t0}}
+  return`<svg class="pic pic-${size}${f>=1?' pic-done':''}" viewBox="${pic[1]}" role="img" aria-label="${esc(n.name)}: ${Math.round(f*100)}%">${n.pic==='journey'?picJourney(f,o):pic[0](f,n.name,o)}</svg>`}
 // the entries with a picture on Today: open ones, and the ones finished today
 function picNodes(){const today=addDays(0);return allNodes().filter(n=>n.pic&&(!isClosed(n)||(n.hist.length&&dayKey(new Date(n.hist[n.hist.length-1].at))===today)))}
 function picCards(){const P=picNodes();if(!P.length)return'';return`<div class="piccards">${P.map(n=>{const p=picProg(n);
@@ -1515,10 +1584,12 @@ ${tile(need?num(need):'–','needed per day',need?'to finish in time':'')}
 ${tile(per?num(per):'–',`per day, last ${span||14} day${span===1?'':'s'}`,fin?`<span class="${late>0?'late':''}">done ~${esc(finTxt(fin))}${late>0?`, ${late} day${late>1?'s':''} late`:''}</span>`:per?'':'fills as you log progress')}</div>`;
   // the goals, under the entry they sit in; then the other open todos of the project
   let last=null;const rows=G.map(c=>{const g=subPath(c),f=c.status==='done'?1:Math.min(1,c.prog.done/(c.prog.total||1)),cu=c.prog.unit?' '+esc(c.prog.unit):'',open=!isClosed(c),head=g!==last?`<h2>${esc(g)||'Goals'}</h2>`:'';last=g;
-    return`${head}<div class="trow prow${c.status==='done'?' fin':''}" data-goto="${c.id}" style="${c.color?`--c:${c.color}`:''}"><button class="chk st-${c.status} k-${c.kind}" data-chk="${c.id}" data-tip="Toggle done"></button><span class="pname">${tagIc(c)}${esc(c.name)}</span><span class="sp"></span>${c.deadline&&open?`<span class="bd ${dueState(c)==='over'?'over':dueState(c)==='today'?'today':''}">${esc(fmtWhen(c.deadline))}</span>`:''}<span class="pbar"><i style="width:${(f*100).toFixed(1)}%"></i></span><span class="pnum">${num(c.status==='done'?c.prog.total:c.prog.done)} / ${num(c.prog.total)}${cu}</span>${open?`<input class="goal-in" data-wlin="${c.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(c.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter">`:''}</div>`}).join('');
+    return`${head}<div class="trow prow${c.status==='done'?' fin':''}" data-goto="${c.id}" style="${c.color?`--c:${c.color}`:''}"><button class="chk st-${c.status} k-${c.kind}" data-chk="${c.id}" data-tip="Toggle done"></button><span class="pname">${tagIc(c)}${esc(c.name)}</span>${stageChip(c)}<span class="sp"></span>${c.deadline&&open?`<span class="bd ${dueState(c)==='over'?'over':dueState(c)==='today'?'today':''}">${esc(fmtWhen(c.deadline))}</span>`:''}<span class="pbar"><i style="width:${(f*100).toFixed(1)}%"></i></span><span class="pnum">${num(c.status==='done'?c.prog.total:c.prog.done)} / ${num(c.prog.total)}${cu}</span>${open?`<input class="goal-in" data-wlin="${c.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(c.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter">`:''}</div>`}).join('');
   const other=[];(function walk(x){x.children.map(i=>S.nodes[i]).forEach(c=>{if(!c)return;if(c.children.length)walk(c);else if(c.kind==='todo'&&!isClosed(c)&&c.prog.mode!=='units')other.push(c)})})(p);
   el.innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px"><select id="projSel" style="float:right;max-width:50%;font-size:13px" data-tip="Which project this page shows">${all.map(x=>`<option value="${x.id}" ${x===p?'selected':''}>${esc((path(x)?path(x)+' › ':'')+x.name)}${isClosed(x)?' ('+STAT[x.status].toLowerCase()+')':''}</option>`).join('')}</select><span data-goto="${p.id}" style="cursor:pointer" data-tip="Open the project in the detail panel">${P[p.icon]?ic(p.icon,18)+' ':''}${esc(p.name)}</span> <small>${STAT[p.status]}</small></h2>
 <div class="phead">${p.pic?picSVG(p,'l'):''}${tiles}</div>
+${(()=>{const L=p.stages&&p.stages.length?p.stages:stagesOf(p);if(!L)return'';const cnt=L.map(()=>0);(function walk(x){x.children.map(i=>S.nodes[i]).forEach(c=>{if(!c)return;const i=stageAt(c);if(i>=0&&stagesOf(c)===L)cnt[i]++;walk(c)})})(p);
+  return`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><small style="color:var(--muted)">Stages</small>${L.map((s,i)=>`<span class="bd stage" style="--c:${STAGE_COL[i%STAGE_COL.length]};${cnt[i]?'':'opacity:.5'}">${esc(s)} <b>${cnt[i]}</b></span>`).join('')}</div>`})()}
 ${U.length?`<h2>${u.trim()?u.trim()[0].toUpperCase()+u.trim().slice(1):'Amount'} per day <small>last 14 days</small></h2><div class="card" style="overflow:auto">${chart}${first<0?'<div class="note">The chart fills as you log progress: the app keeps the amount of each day from now on.</div>':''}</div>`:'<div class="empty">This project has no goal that counts something yet. Give a todo below it a progress in <b>Units</b> (detail panel → Progress), for example 4,000 words.</div>'}
 ${rows}${other.length?`<h2>Other open todos<small>${other.length}</small></h2>${other.slice(0,40).map(n=>trow(n,null,true)).join('')}${other.length>40?`<div class="note">… and ${other.length-40} more in the tree</div>`:''}`:''}</div>`}
 
@@ -2528,7 +2599,7 @@ function openMoveTo(ids){moveIds=ids;
     $('#mvl').innerHTML=`<button class="btn" data-mv="root" style="text-align:left">⬆ Top level</button>`+c.map(o=>`<button class="btn" data-mv="${o.x.id}" style="text-align:left">${esc(o.l)}${o.x.kind==='project'?' <small style="color:var(--muted)">project</small>':''}</button>`).join('')};
   inp.oninput=draw;draw();inp.focus()}
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-mv]');if(!b||modalKind!=='moveto')return;const tid=b.dataset.mv,ids=moveIds.slice();closeModal();
-  mutate(()=>{ids.forEach(i=>moveNode(i,tid));if(tid!=='root')S.nodes[tid].collapsed=false},{panel:true});
+  mutate(()=>ids.forEach(i=>moveNode(i,tid)),{panel:true});// the target stays open or closed, as it was
   toast(`Moved ${ids.length} entr${ids.length>1?'ies':'y'} to ${tid==='root'?'top level':'“'+S.nodes[tid].name+'”'}`,{action:{label:'Undo',fn:undo}})});
 $('#tree').addEventListener('contextmenu',e=>{const row=e.target.closest('.row');if(!row||e.target.closest('input'))return;e.preventDefault();openRowMenu(row.parentElement.dataset.id,e.clientX,e.clientY)});
 let lpT;

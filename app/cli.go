@@ -245,7 +245,7 @@ func parseSetValue(key, val string) (string, any, error) {
 		return key, f, nil
 	case "tags", "people", "deps":
 		return key, csv(val), nil
-	case "collapsed", "discord", "free":
+	case "collapsed", "discord", "free", "ongoing":
 		return key, val == "true" || val == "1", nil
 	case "progress":
 		// 60%  |  450/1200  |  450/1200:words
