@@ -104,7 +104,35 @@ func (s *Server) hFileGet(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-// hFileView returns what the viewer shows: {kind: "mail"|"text"|"binary", text, headers, attachments}.
+// imageType: the type of a picture the viewer may show (PNG, JPEG, GIF, WebP), read from the file's
+// first bytes and not from its name; "" for everything else. SVG is left out: it can hold script.
+func imageType(data []byte) string {
+	switch ct := http.DetectContentType(data); ct {
+	case "image/png", "image/jpeg", "image/gif", "image/webp":
+		return ct
+	}
+	return ""
+}
+
+// hFileImage sends a stored picture for the viewer's <img>. Only real pictures (imageType), and with
+// a policy that lets the answer do nothing when its address is opened as a page.
+func (s *Server) hFileImage(w http.ResponseWriter, r *http.Request) {
+	data, _, ok := s.readFile(w, r)
+	if !ok {
+		return
+	}
+	ct := imageType(data)
+	if ct == "" {
+		jerr(w, http.StatusUnsupportedMediaType, errors.New("this file is not a picture the viewer can show"))
+		return
+	}
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(data)
+}
+
+// hFileView returns what the viewer shows: {kind: "mail"|"text"|"image"|"binary", text, headers, attachments}.
 func (s *Server) hFileView(w http.ResponseWriter, r *http.Request) {
 	data, key, ok := s.readFile(w, r)
 	if !ok {
@@ -122,6 +150,10 @@ func (s *Server) hFileView(w http.ResponseWriter, r *http.Request) {
 	}
 	if t, ok := asText(data); ok {
 		jout(w, 200, map[string]any{"kind": "text", "text": t})
+		return
+	}
+	if imageType(data) != "" { // the page shows it with /api/files/{key}/image
+		jout(w, 200, map[string]any{"kind": "image", "size": len(data)})
 		return
 	}
 	jout(w, 200, map[string]any{"kind": "binary", "size": len(data)})

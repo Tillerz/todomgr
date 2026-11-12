@@ -238,3 +238,26 @@ func TestContentSecurityPolicy(t *testing.T) {
 		}
 	}
 }
+
+// The file viewer shows pictures: only real ones (by their first bytes, not by their name).
+func TestViewPicture(t *testing.T) {
+	a := testServer(t)
+	up := func(name string, data []byte) string {
+		return a.call(200, "POST", "/api/files", map[string]any{"name": name, "data": base64.StdEncoding.EncodeToString(data)})["file"].(string)
+	}
+	png := up("map.png", []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"))
+	if v := a.call(200, "GET", "/api/files/"+png+"/view", nil); v["kind"] != "image" {
+		t.Errorf("a PNG must be shown as a picture: %v", v)
+	}
+	res := a.do("GET", "/api/files/"+png+"/image", nil)
+	if res.Code != 200 || res.Header().Get("Content-Type") != "image/png" || !strings.Contains(res.Header().Get("Content-Security-Policy"), "sandbox") {
+		t.Errorf("picture answer: %d %v", res.Code, res.Header())
+	}
+	fake := up("page.png", []byte("<html><script>alert(1)</script></html>"))
+	if v := a.call(200, "GET", "/api/files/"+fake+"/view", nil); v["kind"] != "text" {
+		t.Errorf("a page named .png is text, not a picture: %v", v)
+	}
+	if res := a.do("GET", "/api/files/"+fake+"/image", nil); res.Code != 415 {
+		t.Errorf("a file that is not a picture must be refused: %d", res.Code)
+	}
+}

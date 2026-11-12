@@ -116,6 +116,7 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/estimate", s.hEstimate)
 	api("GET /api/files/{key}", s.hFileGet)
 	api("GET /api/files/{key}/view", s.hFileView)
+	api("GET /api/files/{key}/image", s.hFileImage)
 	api("POST /api/alerts/ack", s.hAck)
 
 	api("GET /api/nodes", s.hList)

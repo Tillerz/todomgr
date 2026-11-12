@@ -42,7 +42,7 @@ func TestFileTextAndDownload(t *testing.T) {
 	if v := a.call(200, "GET", "/api/files/"+upload(a, "a.txt", []byte("K\xe4se"))+"/view", nil); v["text"] != "Käse" {
 		t.Errorf("latin-1 view: %v", v)
 	}
-	if v := a.call(200, "GET", "/api/files/"+upload(a, "x.png", []byte("\x89PNG\r\n\x1a\n\x00\x00"))+"/view", nil); v["kind"] != "binary" {
+	if v := a.call(200, "GET", "/api/files/"+upload(a, "x.bin", []byte("\x00\x01\x02\x03\x00\x00"))+"/view", nil); v["kind"] != "binary" {
 		t.Errorf("binary view: %v", v)
 	}
 }

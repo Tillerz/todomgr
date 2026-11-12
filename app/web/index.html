@@ -310,6 +310,7 @@ input[type=range]{width:100%;padding:0;accent-color:var(--accent);border:0;backg
 .li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .li a,.li .lnk{color:var(--accent);cursor:pointer;text-decoration:none}
 .li button{opacity:.5}.li button:hover{opacity:1}
+.fvimg{display:block;max-width:100%;max-height:70vh;margin:0 auto;border-radius:6px}
 .dropzone{border:1.5px dashed var(--line);border-radius:8px;padding:8px;text-align:center;color:var(--muted);font-size:12px;margin-top:5px}
 .dropzone.drop-hot,#detail.drop-hot .dropzone{border-color:var(--accent);color:var(--accent);background:var(--sel)}
 textarea[data-f=notes]{width:100%;min-height:110px;resize:vertical}
@@ -1461,10 +1462,14 @@ let ac,alarmIv,titleIv,tc=0;
 function ensureAudio(){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume()}catch{}}
 function beep(){if(!ac)return;const t=ac.currentTime;[0,.28,.56].forEach(d=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=d===.56?1175:880;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.35,t+d+.03);g.gain.exponentialRampToValueAtTime(.0001,t+d+.22);o.connect(g).connect(ac.destination);o.start(t+d);o.stop(t+d+.25)})}
 function notify(title,body){try{if('Notification'in window&&Notification.permission==='granted')new Notification(title,{body})}catch{}}
-// the timer's alarm: a beep every 2.2 s for one minute, then quiet; the window and the blinking tab title stay
-function ring(){ensureAudio();beep();clearInterval(alarmIv);const quiet=now()+60000;alarmIv=setInterval(()=>{if(now()>=quiet)clearInterval(alarmIv);else beep()},2200);const t0=document.title;let f=0;clearInterval(titleIv);titleIv=setInterval(()=>document.title=(f^=1)?'⏰ Time is up!':t0,800);
+// the timer's alarm: a beep every 2.2 s for one minute, then quiet; the window and the blinking tab title stay.
+// The sound also stops at the first click or key anywhere (hush), and when the timer is closed or made longer,
+// also from another window.
+function hush(){clearInterval(alarmIv);alarmIv=null}
+function ring(){ensureAudio();beep();hush();const quiet=now()+60000;alarmIv=setInterval(()=>{if(now()>=quiet||!(S.timer&&S.timer.alarmed))hush();else beep()},2200);const t0=document.title;let f=0;clearInterval(titleIv);titleIv=setInterval(()=>document.title=(f^=1)?'⏰ Time is up!':t0,800);
   const T=S.timer,n=T&&S.nodes[T.id];notify('Time is up',n?n.name:'Timer finished');showAlarm()}
-function stopAlarm(){clearInterval(alarmIv);clearInterval(titleIv);titleIv=null;document.title=pageTitle()}
+function stopAlarm(){hush();clearInterval(titleIv);titleIv=null;document.title=pageTitle()}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(alarmIv)hush()},true));
 // the browser tab shows the one most important thing: a running timer, a reminder that pops up,
 // overdue todos, or the next todo due today; else the app name
 function pageTitle(){const T=S.timer;
@@ -2249,9 +2254,9 @@ async function showFile(l){const u='/api/files/'+encodeURIComponent(l.file);
   const id=ui.sel;
   let v;try{v=await Store.api('GET',u+'/view')}catch(e){if($('#fv'))$('#fv').innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
   if(modalKind!=='file'||!$('#fv'))return;
-  if(APP.ai&&v.kind!=='binary'&&id){$('#fvAi').innerHTML=`<button class="btn" id="fvSum">${ic('bot',14)} Summarize</button>`;$('#fvSum').onclick=()=>aiSummarizeFile(l,id)}
+  if(APP.ai&&v.kind!=='binary'&&v.kind!=='image'&&id){$('#fvAi').innerHTML=`<button class="btn" id="fvSum">${ic('bot',14)} Summarize</button>`;$('#fvSum').onclick=()=>aiSummarizeFile(l,id)}
   const H=v.headers||{},hd=['From','To','Cc','Date','Subject'].filter(k=>H[k]).map(k=>`<b>${k}</b><span>${esc(H[k])}</span>`).join('');
-  $('#fv').innerHTML=v.kind==='binary'?`<div class="empty">This file type cannot be shown here (${Math.max(1,Math.round(v.size/1024))} KB). Use Download.</div>`
+  $('#fv').innerHTML=v.kind==='image'?`<img class="fvimg" src="${u}/image" alt="${esc(l.title)}">`:v.kind==='binary'?`<div class="empty">This file type cannot be shown here (${Math.max(1,Math.round(v.size/1024))} KB). Use Download.</div>`
     :(hd?`<div class="fvhd">${hd}${v.attachments?.length?`<b>Attached</b><span>${v.attachments.map(esc).join(', ')}</span>`:''}</div>`:'')+`<pre class="fvtext">${esc(v.text||'(no text)')}</pre>`}
 const extDrag=e=>!ui.dragging&&e.dataTransfer&&[...e.dataTransfer.types].some(t=>t==='Files'||t==='text/uri-list'||t==='text/plain');
 let hot;const unhot=()=>{hot?.classList.remove('drop-hot');hot=null};
