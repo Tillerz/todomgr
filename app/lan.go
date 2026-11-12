@@ -220,6 +220,7 @@ func (s *Server) serveLogin(w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Security-Policy", cspFor(b))
 	_, _ = w.Write(b)
 }
 

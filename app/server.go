@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -101,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	api("POST /api/reset", s.hReset)
 	api("POST /api/discord", s.hDiscord)
 	api("POST /api/files", s.hFileUpload)
+	api("GET /api/files/unused", s.hFilesUnused)
+	api("POST /api/files/unused", s.hFilesUnusedRemove)
 	api("GET /api/ai", s.hAIStatus)
 	api("POST /api/ai/unload", s.hAIUnload)
 	api("POST /api/ai/test", s.hAITest)
@@ -278,7 +282,30 @@ func (s *Server) serveIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Security-Policy", cspFor(b))
 	_, _ = w.Write(b)
+}
+
+var (
+	reInlineScript = regexp.MustCompile(`(?s)<script>(.*?)</script>`)
+	reNewline      = regexp.MustCompile(`\r\n?`)
+)
+
+// cspFor is the Content-Security-Policy of a page: the browser runs only the script files of this
+// program and the script written in the page itself, which is named by its fingerprint (SHA-256).
+// A script that gets into the page another way, for example through a note, does not run. So the
+// page must not use onclick="…" attributes. Styles in attributes are allowed (the page uses them),
+// and pictures in notes may come from the web.
+func cspFor(page []byte) string {
+	src := "script-src 'self'"
+	for _, m := range reInlineScript.FindAllSubmatch(page, -1) {
+		// browsers read every line end as \n before they compare the fingerprint
+		h := sha256.Sum256(reNewline.ReplaceAll(m[1], []byte("\n")))
+		src += " 'sha256-" + base64.StdEncoding.EncodeToString(h[:]) + "'"
+	}
+	return "default-src 'self'; " + src + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; " +
+		"media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; " +
+		"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 }
 
 func (s *Server) info() map[string]any {

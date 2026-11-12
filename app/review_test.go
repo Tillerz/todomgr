@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -158,5 +161,80 @@ func TestUploadErrors(t *testing.T) {
 	a := testServer(t)
 	if res := a.do("POST", "/api/files", "not an object"); res.Code != 400 {
 		t.Errorf("a wrong body: status %d, want 400: %s", res.Code, res.Body)
+	}
+}
+
+// Settings → Remove unused attachments: only files that no entry links to, the trash counts as in use,
+// and a fresh upload is left alone.
+func TestUnusedAttachments(t *testing.T) {
+	a := testServer(t)
+	up := func(name string) string {
+		return a.call(200, "POST", "/api/files", map[string]any{"name": name, "data": base64.StdEncoding.EncodeToString([]byte("hello"))})["file"].(string)
+	}
+	used, trashed, loose, fresh := up("used.txt"), up("trashed.txt"), up("loose.txt"), up("fresh.txt")
+	old := time.Now().Add(-2 * unusedMinAge)
+	for _, k := range []string{used, trashed, loose} {
+		if err := os.Chtimes(filepath.Join(a.s.filesDir(), k), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := func(k string) map[string]any {
+		return map[string]any{"links": []any{map[string]any{"title": k, "uri": "", "file": k}}}
+	}
+	mustCreate(t, a.s.st, "Keeps a file", "", link(used))
+	gone := mustCreate(t, a.s.st, "In the trash", "", link(trashed))
+	if err := a.s.st.Trash("test", gone); err != nil {
+		t.Fatal(err)
+	}
+	list := a.call(200, "GET", "/api/files/unused", nil)
+	if files := list["files"].([]any); list["count"] != 1.0 || list["bytes"] != 5.0 || files[0].(map[string]any)["file"] != loose {
+		t.Fatalf("only the loose file is unused: %v", list)
+	}
+	if res := a.call(200, "POST", "/api/files/unused", map[string]any{}); res["count"] != 1.0 {
+		t.Fatalf("removed: %v", res)
+	}
+	for k, want := range map[string]bool{used: true, trashed: true, fresh: true, loose: false} {
+		if _, err := os.Stat(filepath.Join(a.s.filesDir(), k)); (err == nil) != want {
+			t.Errorf("file %s: there = %v, want %v", k, err == nil, want)
+		}
+	}
+	if list := a.call(200, "GET", "/api/files/unused", nil); list["count"] != 0.0 {
+		t.Errorf("nothing is left to remove: %v", list)
+	}
+}
+
+// The pages come with a Content-Security-Policy that names their own script by its fingerprint,
+// and they have no script in attributes, which the policy would block.
+func TestContentSecurityPolicy(t *testing.T) {
+	a := testServer(t)
+	res := a.do("GET", "/", nil)
+	csp := res.Header().Get("Content-Security-Policy")
+	m := regexp.MustCompile(`(?s)<script>(.*?)</script>`).FindSubmatch(res.Body.Bytes())
+	if m == nil {
+		t.Fatal("the page has no script of its own")
+	}
+	h := sha256.Sum256(m[1])
+	if want := "script-src 'self' 'sha256-" + base64.StdEncoding.EncodeToString(h[:]) + "';"; !strings.Contains(csp, want) {
+		t.Errorf("policy %q lacks %q", csp, want)
+	}
+	if strings.Contains(strings.SplitN(csp, "style-src", 2)[0], "unsafe") {
+		t.Errorf("scripts must not be allowed in general: %q", csp)
+	}
+	// Windows line ends in the file give the same fingerprint as the browser works out
+	if a, b := cspFor([]byte("<script>a\r\nb</script>")), cspFor([]byte("<script>a\nb</script>")); a != b {
+		t.Error("line ends must not change the fingerprint")
+	}
+	if login := a.do("GET", "/", nil, "RemoteAddr", "192.168.1.50:50000", "Authorization", ""); !strings.Contains(login.Header().Get("Content-Security-Policy"), "'sha256-") {
+		t.Errorf("the login page needs the policy too: %v", login.Header())
+	}
+	inline := regexp.MustCompile(`\son[a-z]+\s*=\s*["']`)
+	for _, f := range []string{"index.html", "login.html"} {
+		b, err := embeddedWeb.ReadFile("web/" + f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if loc := inline.Find(b); loc != nil {
+			t.Errorf("%s has a script in an attribute (%s…): the policy blocks it, use addEventListener", f, loc)
+		}
 	}
 }

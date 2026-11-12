@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -124,6 +125,75 @@ func (s *Server) hFileView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jout(w, 200, map[string]any{"kind": "binary", "size": len(data)})
+}
+
+// Unused attachments (Settings → Data): files in data/files that no entry links to any more. The trash
+// counts as "in use", so a restored entry keeps its files. A file younger than unusedMinAge is left
+// alone: it may be uploaded already while its link is still on its way from the page.
+const unusedMinAge = time.Hour
+
+type unusedFile struct {
+	File string    `json:"file"`
+	Size int64     `json:"size"`
+	Time time.Time `json:"time"`
+}
+
+// usedFiles: the file keys that the links of any entry (also in the trash) point to.
+func (s *Store) usedFiles() map[string]bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	used := map[string]bool{}
+	for _, n := range s.db.Nodes {
+		links, _ := n["links"].([]any)
+		for _, l := range links {
+			if m, ok := l.(map[string]any); ok && str(m["file"]) != "" {
+				used[str(m["file"])] = true
+			}
+		}
+	}
+	return used
+}
+
+func (s *Server) unusedFiles(now time.Time) []unusedFile {
+	out := []unusedFile{}
+	ents, err := os.ReadDir(s.filesDir())
+	if err != nil {
+		return out // no attachments yet
+	}
+	used := s.st.usedFiles()
+	for _, e := range ents {
+		info, err := e.Info()
+		if err != nil || !info.Mode().IsRegular() || !fileKeyRE.MatchString(e.Name()) || used[e.Name()] || now.Sub(info.ModTime()) < unusedMinAge {
+			continue
+		}
+		out = append(out, unusedFile{File: e.Name(), Size: info.Size(), Time: info.ModTime()})
+	}
+	return out
+}
+
+func unusedAnswer(l []unusedFile) map[string]any {
+	var bytes int64
+	for _, f := range l {
+		bytes += f.Size
+	}
+	return map[string]any{"files": l, "count": len(l), "bytes": bytes}
+}
+
+// hFilesUnused lists the unused attachments: {files: [{file, size, time}], count, bytes}.
+func (s *Server) hFilesUnused(w http.ResponseWriter, r *http.Request) {
+	jout(w, 200, unusedAnswer(s.unusedFiles(time.Now())))
+}
+
+// hFilesUnusedRemove deletes them and answers with what it removed. The list is made again here,
+// so a file that got a link since the page asked stays.
+func (s *Server) hFilesUnusedRemove(w http.ResponseWriter, r *http.Request) {
+	removed := []unusedFile{}
+	for _, f := range s.unusedFiles(time.Now()) {
+		if os.Remove(filepath.Join(s.filesDir(), f.File)) == nil {
+			removed = append(removed, f)
+		}
+	}
+	jout(w, 200, unusedAnswer(removed))
 }
 
 // fileText: the readable text of a stored file, as the viewer shows it (a mail with its main headers),

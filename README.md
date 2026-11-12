@@ -484,6 +484,8 @@ data/files/               copies of dropped files (attachments); not part of bac
 
 > [!IMPORTANT]
 > Backups and the JSON export do **not** include the attachments in `data/files/`. To keep them, copy the whole `data/` folder.
+>
+> A file stays in `data/files/` when its link or its entry is removed. *Settings → Data → Remove unused attachments* deletes the files that no entry uses any more (entries in the trash count as in use, and files added in the last hour are left alone). The button shows how many there are, and its tooltip lists them. This cannot be undone.
 
 - A single process owns the files; a lock file stops a second one from starting on the same folder.
 - Every save is written to a temporary file, fsynced and renamed, so a crash cannot leave half a file.
