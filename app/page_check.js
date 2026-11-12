@@ -45,6 +45,14 @@ check('page: tree',()=>{ui.view='tree';renderTree();return el('#tree').innerHTML
 check('page: Today',()=>{ui.todayWeek=false;renderToday();const t=text(el('#vToday').innerHTML);return t.includes('Today')?'':'empty: '+t.slice(0,80)});
 check('page: Next 7 days',()=>{ui.todayWeek=true;renderToday();const n=(el('#vToday').innerHTML.match(/<h2>/g)||[]).length;ui.todayWeek=false;return n===7?'':n+' days, want 7'});
 check('page: stats',()=>{ui.view='stats';renderStats();return el('#vStats').innerHTML?'':'empty'});
+check('page: project (numbers, chart, goals with a field, the amount of today)',()=>{const p=allNodes().find(n=>n.kind==='project'&&projGoals(n).some(c=>!isClosed(c)&&c.prog.total-c.prog.done>1));if(!p)return'the demo data has no project with an open goal';
+  const g=projGoals(p).find(c=>!isClosed(c)&&c.prog.total-c.prog.done>1),before=g.prog.done,day=g.progDay,hist=g.progHist;
+  try{setProgress(g,before+1);const kept=(g.progHist||{})[addDays(0)];if(kept!==g.prog.done-g.progDay.start||kept<1||wordsOn(g,addDays(0))!==kept)return'the amount of today is not kept: '+JSON.stringify(g.progHist);
+    S.prefs.projPage=p.id;ui.view='project';renderProject();const h=el('#vProject').innerHTML;
+    if(!h.includes(p.name)||!h.includes('data-wlin="'+g.id+'"')||!h.includes('class="pchart"')||!h.includes('needed per day'))return'the project page lacks a part';
+    if(!trow(g).includes('data-proj="'+projOf(g).id+'"')||trow(g,null,true).includes('data-proj'))return'the project label of a list row'}
+  finally{g.prog.done=before;g.progDay=day;g.progHist=hist;ui.view='tree'}
+  return''});
 check('page: detail panel of every entry',()=>{const bad=[];ui.panel=true;
   for(const n of live){ui.sel=n.id;ui.prevFor=null;try{renderDetail();if(!el('#detail').innerHTML.includes(esc(n.name)))bad.push(n.id+' (name missing)')}catch(e){bad.push(n.id+': '+e.message)}}
   ui.sel=null;return bad.slice(0,5).join('; ')});
@@ -197,6 +205,17 @@ check('today: an event of today that is over moves from Upcoming reminders to Ea
   try{ui.todayWeek=false;renderToday();const h=el('#vToday').innerHTML,iu=h.indexOf('Upcoming reminders'),ie=h.indexOf('Earlier today'),ip=h.indexOf('Dentist past');
     if(ie<0||ip<ie)bad.push('not under Earlier today');if(iu>=0&&iu<ip&&(ie<0||ip<ie))bad.push('still under Upcoming')}
   finally{made.forEach(x=>{detach(x);delete S.nodes[x.id]})}
+  return bad.join('; ')});
+check('sub-items: cancelling the last open one offers to finish the parent',()=>{const shown=[],realToast=toast,bad=[],made=[];
+  toast=(msg,o={})=>shown.push({msg,button:!!o.action});
+  const T=(name,props,parent='root')=>{const x=mk(name,props);attach(x,parent);made.push(x);return x};
+  const run=fn=>{cheerQ=null;shown.length=0;fn();flushCheer();return shown.filter(x=>x.msg.includes('All sub-items'))};
+  try{const p=T('Cancel parent'),a=T('Cancel a',{},p.id),b=T('Cancel b',{},p.id),c=T('Cancel c',{},p.id);
+    if(run(()=>setStatus(a,'done')).length)bad.push('one of three done: no offer yet');
+    if(run(()=>setStatus(b,'cancelled')).length)bad.push('one still open: no offer yet');
+    const r=run(()=>setStatus(c,'cancelled'));if(r.length!==1||!r[0].button)bad.push('the last open one cancelled: '+JSON.stringify(r));
+    if(run(()=>setStatus(a,'cancelled')).length)bad.push('all cancelled: nothing is done, no offer')}
+  finally{toast=realToast;made.reverse().forEach(n=>{detach(n);delete S.nodes[n.id]})}
   return bad.join('; ')});
 check('growing pictures: a project counts the words of its goals; book and journey grow; Today and the detail panel',()=>{const bad=[],made=[];
   const T=(name,props,parent='root')=>{const x=mk(name,props);attach(x,parent);made.push(x);return x};

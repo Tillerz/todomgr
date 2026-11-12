@@ -261,3 +261,21 @@ func TestViewPicture(t *testing.T) {
 		t.Errorf("a file that is not a picture must be refused: %d", res.Code)
 	}
 }
+
+// The amount of each day is kept on the entry (progHist), for the chart of the Project page.
+func TestProgressHistory(t *testing.T) {
+	st, _ := testStore(t)
+	id := mustCreate(t, st, "Chapter", "", map[string]any{"prog": map[string]any{"mode": "units", "done": 1000.0, "total": 4000.0, "unit": "words"}})
+	if n := nodeOf(st, id); n["progHist"] != nil {
+		t.Fatalf("a new entry has no history yet: %v", n["progHist"])
+	}
+	for _, add := range []float64{300, 200} {
+		if _, err := st.Patch("test", id, map[string]any{"prog": map[string]any{"add": add}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	today := st.Now().Format("2006-01-02")
+	if h := nodeOf(st, id).Obj("progHist"); len(h) != 1 || h[today] != 500.0 {
+		t.Errorf("today must hold the 500 words of today: %v", h)
+	}
+}

@@ -38,10 +38,11 @@ More in [Screenshots](#screenshots).
 
 - **Word goals that keep up with you:** give a manuscript, a chapter or a short story a word goal and a deadline. The app works out how many words you need today, and when you miss a day, it spreads the rest over the days left by itself.
 - **Writing goals at the top of Today:** today's amount, a bar for what you wrote today, the words left, and when you will be done at your speed so far.
-- **Log words in two clicks:** click *+ Log* or "words left", type `+500` (or the new total), press Enter. Scripts and other writing tools can add words through the API.
+- **Log words right where you are:** each goal on *Today* and on the *Project* page has a small field. Type `+500` (or the new total) and press Enter. Scripts and other writing tools can add words through the API.
 - **Write with the timer:** the clock next to a goal starts a countdown or stopwatch for it. When it stops, the time is logged and the app asks how many words you wrote.
 - **A daily writing habit:** "Write 500 words", repeating every day, shows on Today until you have written today's words, then waits for tomorrow.
 - **A picture that grows with your manuscript:** an open book that fills with lines and becomes a bound book with your title, or a walk across a map to a castle, from 0 to 100 %. What you wrote today shows in colour.
+- **Your book on one page:** the *Project* page shows the words done and left, the words of today, what each day needs, your speed, the words of the last 14 days as bars, and every chapter with a tick box and its word count.
 - **Chapters in order:** a chapter that depends on the one before it waits until that one is done, and only then shows up as a goal.
 - **A cheer when you reach a goal**.
 
@@ -214,7 +215,7 @@ Press **?** in the app to see this list.
 | `Ctrl+K` | Command palette: every action, and jump to an entry |
 | `N` | Quick add window (on every page) |
 | `/` | Search |
-| `1` `2` `3` | Tree / Today / Stats |
+| `1` `2` `3` `4` | Tree / Today / Stats / Project |
 | `T` | Timer |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo (`Ctrl+Y` redoes too) |
 | `Esc` | Close a window or the panel, clear the search and selection |
@@ -354,6 +355,7 @@ Reminders are scheduled by the **program itself**, not by the browser page, so t
 - **Next 7 days:** the switch at the top of Today shows tomorrow and the 6 days after it, day by day, with the open todos due and the reminders on each day. A repeat shows on every day it comes up, and a todo with a daily pace (see below) shows on every day until its deadline, with the words per day.
 - **Day plan:** a bar at the top of Today adds up the estimates of the todos due today or overdue (minus the time already tracked) and the timed events in the rest of the day. It compares the sum with the time left in your work day (Settings → Work day, default 09:00–17:00) and turns red when the plan does not fit. An event that runs in the background, such as a month-long writing challenge, does not count when you untick *Blocks time in the day plan* on it. Calendar files call this "free" time. Click the bar to see which entries take the time, and why (overdue, due today, event); click an entry to open it.
 - **Browser tab title:** shows the one most important thing, so you see it from any other tab: a running timer (`⏱ 12:34 · Write chapter 4`), a reminder that pops up, the number of overdue todos, or the next todo due today.
+- **Which project:** each row of these lists starts with a label of its project, with the project's icon and colour. A click on the label opens the Project page.
 - **Search** with filters (open, done, blocked, overdue, ideas, todos, reminders, projects, later, today, tags, people) and **saved views**.
 - A command palette (Ctrl+K) for every action.
 
@@ -365,13 +367,23 @@ A project can have a **URL** (to an article, webpage, etc.) and a **Discord webh
 - There is also *Announce on Discord…* in the right-click menu, and a **Test** button next to the webhook.
 - The posting is done by the program, not by the browser: the webhook URL (which is a secret) is never used from the page, and nothing is mentioned with `@everyone`. The program only ever contacts `discord.com` webhook URLs over https.
 
+### The Project page
+
+The **Project** tab (key `4`, the label of a project in a list, or *Project page* in a project's detail panel) shows one project at a glance. The list at the top right picks the project; the app remembers the last one.
+
+- **Numbers:** done and total, the amount of today, what is left and until when, what each day needs to finish in time, and your speed with the day you will be done. The deadline is the project's own, else the last deadline of its open goals.
+- **Per day:** bars for the last 14 days. The app keeps the amount of each day from version 0.11 on, so the chart fills as you log progress.
+- **Goals:** every entry below the project that counts something (progress in *Units*: words, pages …), under the entry it sits in, with a tick box, a bar, its count and a field to log progress (`+500`, Enter). A click opens the entry in the detail panel.
+- **Other open todos** of the project are listed below.
+- With goals in different units, the numbers are for the unit with the largest goal; the other goals are still listed.
+
 ### Statistics
 
 A page with a GitHub-style **heatmap** (closed, created, activity or time), a weekday × hour grid, key numbers (open, closed this week, overdue, tracked time, streak), cycle time and a breakdown by tag. It is drawn without a chart library, from the activity log. Example see [Screenshots](#screenshots).
 
 ### Export and import
 
-Under ⋯ (and in the command palette) and in Settings → Data:
+Under ⋯ at the top right (and in the command palette):
 
 | Export | For | Contents |
 |---|---|---|

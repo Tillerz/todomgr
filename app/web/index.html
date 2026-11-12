@@ -359,6 +359,14 @@ input.bad{border-color:var(--danger);outline-color:var(--danger)}
 .trow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;background:var(--panel);margin-bottom:4px;border:1px solid var(--line);border-left:3px solid var(--c,var(--line))}
 .trow:hover{background:var(--hover)}
 .trow .crumb{color:var(--muted);font-size:12px;margin-left:6px}
+.plabel{display:inline-flex;align-items:center;gap:4px;max-width:200px;padding:1px 7px;margin-right:6px;border-radius:6px;font-size:11.5px;font-weight:600;white-space:nowrap;cursor:pointer;flex:none;vertical-align:middle;color:color-mix(in srgb,var(--c) 65%,var(--ink));background:color-mix(in srgb,var(--c) 16%,var(--bg))}
+.plabel:hover{background:color-mix(in srgb,var(--c) 28%,var(--bg))}.plabel span{overflow:hidden;text-overflow:ellipsis}.trow .plabel{margin-right:0}
+.phead{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.phead .pic-l{width:250px;flex:none}.phead .tiles{flex:1 1 380px}
+.prow{flex-wrap:wrap}.prow .pname{min-width:0}.prow.fin .pname{text-decoration:line-through;color:var(--muted)}
+.prow .pbar{width:110px;height:8px;border-radius:9px;background:var(--hover);overflow:hidden;flex:none}.prow .pbar i{display:block;height:100%;background:var(--c,var(--accent))}
+.prow .pnum{font-size:12.5px;color:var(--muted);min-width:118px;text-align:right;font-variant-numeric:tabular-nums}
+.pchart .bar{fill:color-mix(in srgb,var(--accent) 45%,var(--bg))}.pchart .bar.now{fill:var(--accent)}.pchart text{font-size:10px;fill:var(--muted)}
+.tile small{display:block;color:var(--muted);font-size:12px}.tile .late{color:var(--danger)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .tile b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
@@ -426,6 +434,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   /* no room in the header: the Quick add button floats at the bottom right */
   .addbtn{position:fixed;right:16px;bottom:16px;z-index:25;width:54px;height:54px;padding:0;margin:0;border-radius:50%;justify-content:center;box-shadow:var(--shadow)}
   .addbtn span{display:none}
+  #btnPal,#btnTheme{display:none}/* room for the tabs; both are in the ⋯ menu */
   .tabs button{padding:5px 9px}
   .grid2{grid-template-columns:1fr}
   .treewrap{padding:10px 8px 90px}
@@ -446,6 +455,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
     <button data-view="tree" data-tip="Your tree of todos and ideas (key: 1)">Tree</button>
     <button data-view="today" data-tip="What needs attention now (key: 2)">Today</button>
     <button data-view="stats" data-tip="Activity statistics (key: 3)">Stats</button>
+    <button data-view="project" data-tip="One project at a glance: words, speed and its goals (key: 4)">Project</button>
   </nav>
   <button class="addbtn" id="btnAdd" aria-label="Quick add" data-tip="Quick add: a new todo, idea, project or reminder, from every page (key: N). Drop a CSV or calendar file here to import it"></button>
   <span id="conn" class="chip" hidden style="background:var(--danger);color:#fff" data-tip="No connection to the server. Retrying — your changes are kept and sent as soon as it is back.">Offline</span>
@@ -479,6 +489,7 @@ kbd{background:var(--hover);border:1px solid var(--line);border-bottom-width:2px
   </section>
   <section id="vToday" class="view" hidden></section>
   <section id="vStats" class="view" hidden></section>
+  <section id="vProject" class="view" hidden></section>
   <div id="resizer" data-tip="Drag to resize the sidebar (double-click to reset)"></div>
   <aside id="detail" class="detail"></aside>
 </main>
@@ -835,7 +846,7 @@ function mutate(fn,o={}){push();fn();persist();renderTree();if(o.panel)renderDet
 function setStatus(n,s){if(n.kind==='reminder'||n.status===s)return;const wasClosed=isClosed(n);
   if(s==='done'){cheerNote('done');if(n.kind==='todo'&&['over','today'].includes(dueState(n)))cheerNote('due')}else if(s==='progress'&&n.status==='open')cheerNote('progress');n.status=s;n.hist.push({s,at:now()});n.updated=now();log(s==='done'?'close':'status',n.id,{s});if(s==='done'&&n.kind==='todo')ANN.push(n.id);
   if(s==='done'){if(n.prog.mode==='percent')n.prog.done=100;else n.prog.done=n.prog.total;if(n.after&&!kids(n).length&&afterNext(n))return;if(n.recur&&!kids(n).length)recurNext(n);else parentHint(n)}
-  else if(wasClosed&&n.status!=='cancelled')parentHint(n)}
+  else if(wasClosed||isClosed(n))parentHint(n)}// cancelled (or rejected, archived): it leaves the count, so the others may be all done now
 function parentHint(n){const p=S.nodes[n.parent];if(!p||p.id==='root'||isClosed(p))return;const k=kids(p);
   if(k.length&&k.every(c=>c.status==='done'))cheerNote('parent',p)}
 /* Cheer me on (Settings → Appearance): a friendly toast when you start or finish something in this window.
@@ -893,6 +904,8 @@ function recurNext(n){const step=s=>nextOcc(s,n.recur);
 function setProgress(n,v){const c=complete(n);v=Math.max(0,Math.min(c,Math.round(+v||0)));
   if(n.prog.mode==='units'&&v!==n.prog.done&&!(n.progDay&&n.progDay.d===addDays(0)))n.progDay={d:addDays(0),start:n.prog.done};// see todayOf
  if(n.prog.mode==='units'&&n.prog.done<c&&v>=c)cheerNote('goal',n);n.prog.done=v;log('progress',n.id);n.updated=now();
+  // progHist: the amount of each day (today: the count now minus the count at the start of today); 400 days are kept
+  if(n.prog.mode==='units'&&n.progDay&&n.progDay.d===addDays(0)){const h=n.progHist||(n.progHist={});h[addDays(0)]=v-n.progDay.start;const ks=Object.keys(h).sort();while(ks.length>400)delete h[ks.shift()]}
   if(v>=c&&n.status!=='done'&&n.kind==='todo')setStatus(n,'done');
   else if(v>0&&v<c&&n.status==='open')setStatus(n,'progress');
   else if(v<c&&n.status==='done')setStatus(n,'progress')}
@@ -1157,7 +1170,7 @@ ${!allF&&(hid.length||ui.more)?`<button class="chip morebtn${ui.more?'':' hasmor
 <h4>History</h4>
 <div class="hist">${n.hist.slice().reverse().map((h,i,a)=>`<span>${h===n.hist[0]?'Created':STAT[h.s]}</span><span>${fmtFull(h.at)}</span>`).join('')}<span>Last change</span><span>${fmtFull(n.updated)}</span></div>
 <h4>Actions</h4>
-<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-act="addchild">${ic('plus',14)} Sub-item</button>${APP.ai&&n.kind!=='reminder'?'<button class="btn" data-act="aisub" data-tip="The AI suggests sub-tasks. You pick which ones to add.">'+ic('bot',14)+' Suggest sub-tasks</button>':''}<button class="btn" data-act="dup" data-tip="Copy this item with all sub-items">Duplicate</button><button class="btn dng" data-act="trash" data-tip="Move to trash (can be restored)">${ic('trash',14)} Trash</button></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-act="addchild">${ic('plus',14)} Sub-item</button>${n.kind==='project'?'<button class="btn" data-act="projpage" data-tip="Words, speed and the goals of this project on one page">'+ic('chart',14)+' Project page</button>':''}${APP.ai&&n.kind!=='reminder'?'<button class="btn" data-act="aisub" data-tip="The AI suggests sub-tasks. You pick which ones to add.">'+ic('bot',14)+' Suggest sub-tasks</button>':''}<button class="btn" data-act="dup" data-tip="Copy this item with all sub-items">Duplicate</button><button class="btn dng" data-act="trash" data-tip="Move to trash (can be restored)">${ic('trash',14)} Trash</button></div>
 <datalist id="dl-tags">${[...new Set(allNodes().flatMap(x=>x.tags))].map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
 <datalist id="dl-people">${[...new Set(allNodes().flatMap(x=>x.people))].map(t=>`<option value="${esc(t)}">`).join('')}</datalist>
 <datalist id="dl-nodes">${allNodes().filter(x=>x.kind!=='reminder'&&x.id!==n.id&&!inSubtree(x.id,n.id)&&!dependsOn(x,n.id)).map(x=>`<option value="${esc(x.name)} [${x.id}]">`).join('')}</datalist>`;
@@ -1247,6 +1260,7 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
     case'end1h':{if(!n.reminder){toast('Set the date & time first');break}const d=pd(n.reminder);d.setHours(d.getHours()+1);
       m(()=>n.end=n.reminder.includes('T')?dayKey(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes()):n.reminder);break}
     case'more':ui.more=!ui.more;renderDetail();break;
+    case'projpage':openProject(n.id);break;
     case'notesmax':toggleNotesMax();break;
     case'kind':if(n.kind!==v)m(()=>{n.kind=v;if(v==='reminder'){if(!n.reminder)n.reminder=defaultRemTime();if(n.lead==null)n.lead=15}if(!KS[v].includes(n.status)){n.status=KS[v][0];n.hist.push({s:n.status,at:now()})}});break;
     case'promote':m(()=>{n.kind='todo';n.status='open';n.hist.push({s:'open',at:now()});log('status',n.id,{s:'open'})});toast('Promoted to todo');break;
@@ -1267,7 +1281,14 @@ function onDetailClick(e){const b=e.target.closest('[data-act]');if(!b)return;co
   }}
 
 /* ============================ today ============================ */
-function trow(n,at){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(path(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
+// the nearest project above an entry
+const projOf=n=>{for(let x=S.nodes[n.parent];x&&x.id!=='root';x=S.nodes[x.parent])if(x.kind==='project')return x;return null};
+// the label of an entry's project, for the lists: its icon and name in its colour. A click opens the Project page.
+const projLabel=n=>{const p=projOf(n);return p?`<span class="plabel" data-proj="${p.id}" style="--c:${p.color||'var(--accent)'}" data-tip="Project: ${esc(p.name)} (click: its Project page)">${P[p.icon]?ic(p.icon,12):''}<span>${esc(p.name)}</span></span>`:''};
+// the path of an entry below its project (the whole path when it has none)
+const subPath=n=>{const p=projOf(n);if(!p)return path(n);const a=[];for(let x=S.nodes[n.parent];x&&x!==p;x=S.nodes[x.parent])a.unshift(x.name);return a.join(' › ')};
+// noProj: on the Project page, where every row is of the same project
+function trow(n,at,noProj){return`<div class="trow" data-goto="${n.id}" style="${n.color?`--c:${n.color}`:''}">${n.kind==='reminder'?`<span class="rbell">${ic('bell',16)}</span>`:`<button class="chk st-${n.status} k-${n.kind}" data-chk="${n.id}" data-tip="Toggle done"></button>`}${noProj?'':projLabel(n)}<span>${tagIc(n)}${esc(n.name)}</span>${paceTag(n)}<span class="crumb">${esc(subPath(n))}</span><span class="sp"></span>${n.prio?`<span class="flag p${n.prio}">${ic('flag',14)}</span>`:''}${at?`<span class="bd${n.kind==='reminder'?' rem':''}">${n.kind==='reminder'?ic('bell',12):''}${at.includes('T')?at.slice(11):n.kind==='reminder'?'all day':'due'}</span>`:n.kind==='reminder'?`<span class="bd rem">${ic('bell',12)}${esc(whenRange(n))}</span>`:n.deadline?`<span class="bd ${dueState(n)==='over'?'over':dueState(n)==='today'?'today':''}">${esc(fmtWhen(n.deadline))}</span>`:''}</div>`}
 /* Growing pictures (detail panel → Progress → Picture; off by default): a picture for an entry's progress, 0 to 100 %.
    A project counts the words (or other units) of the word goals below it; without such goals, its finished
    sub-entries. Drawn here as SVG shapes, in the theme's colours; every step looks finished. */
@@ -1368,7 +1389,7 @@ function goalNodes(){return allNodes().filter(n=>n.prog.mode==='units'&&!isClose
 function goalsBox(){const G=goalNodes(),pc=picCards();if(!G.length&&!pc)return'';const num=x=>Math.ceil(x).toLocaleString('en');
   return`<h2>Writing goals<small>${G.length}</small></h2>${pc}${G.map(n=>{const t=todayOf(n),u=unitTxt(n),left=n.prog.total-n.prog.done,f=speedOf(n),pc=paceOf(n);
     const pct=t.goal?Math.min(100,t.done/t.goal*100):0,met=t.goal&&t.done>=t.goal;
-    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><b>${esc(n.name)}</b><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><input class="goal-in" data-wlin="${n.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(n.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter"></span></div>
+    return`<div class="goal" data-goto="${n.id}"><div class="goal-top"><span>${projLabel(n)}<b>${esc(n.name)}</b></span><span class="goal-btns"><button class="ib" data-wtimer="${n.id}" data-tip="Write with the timer: when it stops, the time is logged and you type the words">${ic('clock',15)}</button><input class="goal-in" data-wlin="${n.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(n.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter"></span></div>
 ${t.goal?`<div class="gbar${met?' met':''}"><i style="width:${pct.toFixed(1)}%"></i></div>`:''}
 <div class="goal-txt">${t.goal?`<b>${num(t.done)} of ${num(t.goal)}${u} today</b>${met?' ✓':` · ${num(t.goal-t.done)} to go`}`:`<b>${num(t.done)}${u} today</b>`}${t.after?` · <span class="${f&&f.late>0?'late':''}" data-tip="Needed per day from tomorrow on to finish in time${f&&f.late>0?'; your speed so far is '+num(f.per)+u+' per day':''}">then ${num(t.after)}${u}/day</span>`:''}
  · <span class="goal-left" data-wlog="${n.id}" data-tip="Click to log progress">${num(left)}${u} left</span>${pc&&pc.days<=0?' · <span class="late">the deadline has passed</span>':n.deadline?` · until ${fmtWhen(n.deadline)}`:''}${f?` · <span class="${f.late>0?'late':''}">done ~${finTxt(f.fin)}</span>`:''}</div></div>`}).join('')}`}
@@ -1462,6 +1483,44 @@ function renderToday(){
    +sec('Next up',A.filter(n=>n.prio>=3&&!blocked(n)&&!n.children.length),'high priority, not blocked');
   const wk7=ui.todayWeek,seg=`<span class="seg" style="float:right"><button data-tv="" class="${wk7?'':'on'}">Today</button><button data-tv="1" class="${wk7?'on':''}" data-tip="Tomorrow and the 6 days after it">Next 7 days</button></span>`;
   $('#vToday').innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">${seg}${wk7?'Next 7 days':`Today <small>${DOW[new Date().getDay()]} ${new Date().getDate()} ${MON[new Date().getMonth()]}</small>`}</h2>${wk7?renderWeek():planBar()+(html||'<div class="empty">Nothing urgent. Enjoy the calm — or pick something from the tree.</div>')}</div>`}
+
+/* ============================ project page ============================ */
+// One project at a glance: its numbers, the words of the last days, and its goals (the entries below it that
+// count something: chapters with words, pages …) with a tick box and a field to log progress.
+// The numbers are for the unit with the largest goal, as in the project's picture (picProg).
+function projGoals(p){const L=[],walk=x=>x.children.map(i=>S.nodes[i]).forEach(c=>{if(!c||c.status==='cancelled')return;if(c.children.length)walk(c);else if(c.prog.mode==='units'&&c.kind==='todo')L.push(c)});walk(p);return L}
+// the amount of a goal on a day: today from the count, earlier days from progHist
+const wordsOn=(n,d)=>d===addDays(0)?(n.progDay&&n.progDay.d===d?Math.max(0,n.prog.done-n.progDay.start):0):Math.max(0,(n.progHist||{})[d]||0);
+function openProject(id){if(S.nodes[id]){S.prefs.projPage=id;persist()}setView('project')}
+function renderProject(){const el=$('#vProject'),all=allNodes().filter(n=>n.kind==='project'),num=x=>Math.round(x).toLocaleString('en');
+  let p=S.nodes[S.prefs.projPage];if(!p||p.kind!=='project'||inTrash(p))p=all.find(n=>!isClosed(n)&&projGoals(n).length)||all.find(n=>!isClosed(n))||all[0];
+  if(!p){el.innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px">Project</h2><div class="empty">No project yet. Click <b>+ Add</b> and type <b>p: My book</b> to make one.</div></div>`;return}
+  const G=projGoals(p),sums={};G.forEach(c=>sums[c.prog.unit]=(sums[c.prog.unit]||0)+c.prog.total);
+  const unit=Object.keys(sums).sort((a,b)=>sums[b]-sums[a])[0]||'',U=G.filter(c=>c.prog.unit===unit),u=unit?' '+esc(unit):'';
+  const done=U.reduce((a,c)=>a+(c.status==='done'?c.prog.total:c.prog.done),0),total=U.reduce((a,c)=>a+c.prog.total,0),left=Math.max(0,total-done),t0=startOfToday();
+  // the deadline: the project's own, else the last one of its open goals
+  const dl=(p.deadline||U.filter(c=>!isClosed(c)&&c.deadline).map(c=>c.deadline).sort().pop()||'').slice(0,10),dd=dl?pd(dl):null;if(dd)dd.setHours(0,0,0,0);
+  const days=dd?Math.round((dd-t0)/864e5)+1:0,need=days>0&&left>0?Math.ceil(left/days):0;
+  // the last 14 days, and the speed over the days since the first amount was kept (14 at most)
+  const D=Array.from({length:14},(_,i)=>addDays(i-13)),W=D.map(d=>U.reduce((a,c)=>a+wordsOn(c,d),0)),first=W.findIndex(x=>x>0),span=first<0?0:14-first;
+  const per=span?W.slice(first).reduce((a,b)=>a+b,0)/span:0,fin=per>0&&left>0?new Date(t0.getTime()):null;if(fin)fin.setDate(fin.getDate()+Math.ceil(left/per)-1);
+  const late=fin&&dd?Math.round((fin-dd)/864e5):0,max=Math.max(1,...W),bw=26,ch=70;
+  const chart=`<svg class="pchart" width="${14*bw}" height="${ch+16}" role="img" aria-label="Amount per day, last 14 days">${D.map((d,i)=>{const h=Math.round(W[i]/max*ch),x=pd(d);
+    return`<rect class="bar${i===13?' now':''}" x="${i*bw+3}" y="${ch-Math.max(h,W[i]?2:0)}" width="${bw-6}" height="${Math.max(h,W[i]?2:0)}" rx="3" data-tip="${DOW[x.getDay()]} ${x.getDate()} ${MON[x.getMonth()]}: ${num(W[i])}${u}"/><text x="${i*bw+bw/2}" y="${ch+12}" text-anchor="middle">${x.getDate()}</text>`}).join('')}<path d="M0 ${ch+.5}H${14*bw}" style="stroke:var(--line);fill:none"/></svg>`;
+  const tile=(big,label,small='')=>`<div class="tile"><b>${big}</b><span>${label}</span>${small?`<small>${small}</small>`:''}</div>`;
+  const tiles=!U.length?'':`<div class="tiles">${tile(num(done),`of ${num(total)}${u}`,`${Math.round(done/(total||1)*100)}% · ${U.filter(c=>c.status==='done').length} of ${U.length} goals done`)}
+${tile(num(W[13]),`${u.trim()||'done'} today`,need?(W[13]>=need?'the amount for today is reached ✓':`${num(need-W[13])} to go for today`):'')}
+${tile(num(left),'left',dl?(days>0?`until ${esc(fmtWhen(dl))} · ${days} day${days>1?'s':''}`:'<span class="late">the deadline has passed</span>'):'no deadline')}
+${tile(need?num(need):'–','needed per day',need?'to finish in time':'')}
+${tile(per?num(per):'–',`per day, last ${span||14} day${span===1?'':'s'}`,fin?`<span class="${late>0?'late':''}">done ~${esc(finTxt(fin))}${late>0?`, ${late} day${late>1?'s':''} late`:''}</span>`:per?'':'fills as you log progress')}</div>`;
+  // the goals, under the entry they sit in; then the other open todos of the project
+  let last=null;const rows=G.map(c=>{const g=subPath(c),f=c.status==='done'?1:Math.min(1,c.prog.done/(c.prog.total||1)),cu=c.prog.unit?' '+esc(c.prog.unit):'',open=!isClosed(c),head=g!==last?`<h2>${esc(g)||'Goals'}</h2>`:'';last=g;
+    return`${head}<div class="trow prow${c.status==='done'?' fin':''}" data-goto="${c.id}" style="${c.color?`--c:${c.color}`:''}"><button class="chk st-${c.status} k-${c.kind}" data-chk="${c.id}" data-tip="Toggle done"></button><span class="pname">${tagIc(c)}${esc(c.name)}</span><span class="sp"></span>${c.deadline&&open?`<span class="bd ${dueState(c)==='over'?'over':dueState(c)==='today'?'today':''}">${esc(fmtWhen(c.deadline))}</span>`:''}<span class="pbar"><i style="width:${(f*100).toFixed(1)}%"></i></span><span class="pnum">${num(c.status==='done'?c.prog.total:c.prog.done)} / ${num(c.prog.total)}${cu}</span>${open?`<input class="goal-in" data-wlin="${c.id}" inputmode="numeric" autocomplete="off" placeholder="+500" aria-label="Log progress for ${esc(c.name)}" data-tip="Log progress: type +500 to add, or a number for the new total, then press Enter">`:''}</div>`}).join('');
+  const other=[];(function walk(x){x.children.map(i=>S.nodes[i]).forEach(c=>{if(!c)return;if(c.children.length)walk(c);else if(c.kind==='todo'&&!isClosed(c)&&c.prog.mode!=='units')other.push(c)})})(p);
+  el.innerHTML=`<div class="page"><h2 style="margin-top:4px;font-size:20px"><select id="projSel" style="float:right;max-width:50%;font-size:13px" data-tip="Which project this page shows">${all.map(x=>`<option value="${x.id}" ${x===p?'selected':''}>${esc((path(x)?path(x)+' › ':'')+x.name)}${isClosed(x)?' ('+STAT[x.status].toLowerCase()+')':''}</option>`).join('')}</select><span data-goto="${p.id}" style="cursor:pointer" data-tip="Open the project in the detail panel">${P[p.icon]?ic(p.icon,18)+' ':''}${esc(p.name)}</span> <small>${STAT[p.status]}</small></h2>
+<div class="phead">${p.pic?picSVG(p,'l'):''}${tiles}</div>
+${U.length?`<h2>${u.trim()?u.trim()[0].toUpperCase()+u.trim().slice(1):'Amount'} per day <small>last 14 days</small></h2><div class="card" style="overflow:auto">${chart}${first<0?'<div class="note">The chart fills as you log progress: the app keeps the amount of each day from now on.</div>':''}</div>`:'<div class="empty">This project has no goal that counts something yet. Give a todo below it a progress in <b>Units</b> (detail panel → Progress), for example 4,000 words.</div>'}
+${rows}${other.length?`<h2>Other open todos<small>${other.length}</small></h2>${other.slice(0,40).map(n=>trow(n,null,true)).join('')}${other.length>40?`<div class="note">… and ${other.length-40} more in the tree</div>`:''}`:''}</div>`}
 
 /* ============================ stats ============================ */
 const MET={closed:['Closed','items completed'],created:['Created','items created'],activity:['Activity','changes'],time:['Time','minutes tracked']};
@@ -1645,7 +1704,7 @@ function toggleNotesMax(){ui.panel=true;ui.notesMax=!ui.notesMax;if(ui.notesMax)
   const ta=ui.notesMax&&$('.notesbox textarea');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}}
 function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f()},sel=S.nodes[ui.sel],sn=sel&&!sel.trashed?' “'+sel.name+'”':'';
   const cmds=[['Quick add…',openQuick,'N'],['New idea in Inbox',tree(()=>newAndRename(inboxId(),null,{kind:'idea',status:'raw'}))],
-   ['Go to Tree',()=>setView('tree'),'1'],['Go to Today',()=>setView('today'),'2'],['Go to Stats',()=>setView('stats'),'3'],['Go to Inbox',()=>reveal(inboxId())],
+   ['Go to Tree',()=>setView('tree'),'1'],['Go to Today',()=>setView('today'),'2'],['Go to Stats',()=>setView('stats'),'3'],['Go to Project',()=>setView('project'),'4'],['Go to Inbox',()=>reveal(inboxId())],
    ...(S.prefs.views||[]).map(v=>['View: '+v.name,tree(()=>setQuery(v.q))]),
    ...(sn?[['Edit notes of'+sn,toggleNotesMax,'Alt+Enter'],['Print list of'+sn,()=>printList(sel.id)],['Copy ID of'+sn,()=>copyText(sel.id)]]:[]),
    ['Start timer…',()=>openTimer(),'T'],['Collapse all',tree(()=>setAllCollapsed(true))],['Expand all',tree(()=>setAllCollapsed(false))],
@@ -1663,7 +1722,7 @@ function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f(
   inp.onkeydown=e=>{if(e.key==='ArrowDown'){cur=Math.min(items.length-1,cur+1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){cur=Math.max(0,cur-1);draw();e.preventDefault()}else if(e.key==='Enter')run(cur)};
   ul.onclick=e=>{const li=e.target.closest('li');if(li)run(+li.dataset.i)};draw();inp.focus()}
 // keys of the help window, grouped; README.md "Keyboard shortcuts" has the same list
-const KEYS=[['Anywhere',[['Ctrl+K','Command palette: every action, and jump to an entry'],['N','Quick add'],['/','Search'],['1 / 2 / 3','Tree / Today / Stats'],['T','Timer'],
+const KEYS=[['Anywhere',[['Ctrl+K','Command palette: every action, and jump to an entry'],['N','Quick add'],['/','Search'],['1 / 2 / 3 / 4','Tree / Today / Stats / Project'],['T','Timer'],
     ['Ctrl+Z / Ctrl+Shift+Z','Undo / redo (Ctrl+Y redoes too)'],['Esc','Close a window or the panel, clear the search and selection'],['?','This help']]],
   ['Moving in the tree',[['↑ / ↓','Previous / next entry'],['→','Expand, then go to the first sub-entry'],['←','Collapse, then go to the parent']]],
   ['Changing entries',[['Enter','New entry below'],['Insert','New sub-entry'],['F2 / Double-click','Rename'],['Space','Done / not done'],['Tab / Shift+Tab','Indent / outdent'],
@@ -1928,9 +1987,9 @@ function seedActivity(){const ids=Object.keys(S.nodes).filter(i=>i!=='root'),out
 
 /* ============================ chrome, views, theme ============================ */
 function setView(v){ui.view=v;document.body.dataset.view=v;$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
-  $('#vTree').hidden=v!=='tree';$('#vToday').hidden=v!=='today';$('#vStats').hidden=v!=='stats';
-  if(v==='today')renderToday();if(v==='stats')renderStats();if(v==='tree')renderTree();ui.panel=ui.panel&&v!=='stats';renderDetail()}
-function chrome(){$('#btnUndo').disabled=!U.undo.length;$('#btnRedo').disabled=!U.redo.length;if(ui.view==='today')renderToday();if(ui.view==='stats')renderStats()}
+  $('#vTree').hidden=v!=='tree';$('#vToday').hidden=v!=='today';$('#vStats').hidden=v!=='stats';$('#vProject').hidden=v!=='project';
+  if(v==='today')renderToday();if(v==='stats')renderStats();if(v==='tree')renderTree();if(v==='project')renderProject();ui.panel=ui.panel&&v!=='stats';renderDetail()}
+function chrome(){$('#btnUndo').disabled=!U.undo.length;$('#btnRedo').disabled=!U.redo.length;if(ui.view==='today')renderToday();if(ui.view==='stats')renderStats();if(ui.view==='project')renderProject()}
 function renderAll(){renderTree();renderDetail();renderTimerBtn();chrome()}
 // Settings → Font: [CSS value, label, font name to look for]. Named fonts are only listed when installed.
 const FONTS=[['system-ui,sans-serif','System sans-serif'],['serif','System serif'],['monospace','System monospace'],
@@ -1984,6 +2043,14 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   ${C.links.some(l=>l.svg)?`<div id="calQrBox" hidden><div class="note" style="margin-top:6px">QR codes for a phone or tablet: pick the address of your Wi-Fi or network cable (usually 192.168.… or 10.…), not 172.…</div><div>${C.links.filter(l=>l.svg).map(l=>`<div class="qrbox">${l.svg}<small>${esc(l.url.split('/cal/')[0])}</small></div>`).join('')}</div></div>`:''}
   <div class="row-between" style="margin-top:6px"><span class="note" style="margin:0">Anyone with this link can read your calendar entries (not change them).</span><button class="btn" id="calNew" data-tip="The old links stop working; subscribe again with the new one">New link</button></div>`:''}
   <div class="note">In Apple Calendar: File → New Calendar Subscription, and choose <b>On My Mac</b> as the location, not iCloud: iCloud fetches it from the internet and cannot reach this computer. ${L.active?'':'For a phone or tablet, switch on LAN access first.'}</div>
+  <div class="sh">Backups</div>
+  <div class="row-between"><label class="field row2" style="align-items:center;gap:8px"><span>Snapshot every</span><input type="number" id="bkInt" min="1" max="1440" value="${cfg.backupIntervalMin}" style="width:70px"><span>min (when something changed)</span></label><button class="btn" id="bkNow">Back up now</button></div>
+  <button class="btn" id="bkShow" style="margin-top:6px">${ui.showBk?'Hide':'Show'} backups</button><div id="bkBox" ${ui.showBk?'':'hidden'}>
+  <div class="list" style="margin-top:8px">${bk.slice(0,6).map(b=>`<div class="li"><span class="t">${esc(b.kind)} · ${fmtFull(new Date(b.time).getTime())}</span><small style="color:var(--muted)">${Math.max(1,Math.round(b.size/1024))} KB</small><button class="btn" data-restore="${esc(b.name)}" data-tip="Replace all data with this backup (the current data is backed up first)">Restore</button></div>`).join('')||'<div class="note">No backups yet.</div>'}</div></div>
+  <div class="note">Kept: all from the last 2 hours, then hourly, daily and weekly. ${bk.length} on disk.</div>
+  <div class="sh">Data</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dDemo" data-tip="Replace everything with example data">Load demo data</button><button class="btn dng" id="dReset" data-tip="Remove all entries and statistics — a backup is kept">Start with empty data…</button><button class="btn" id="dUnused" disabled data-tip="Looking for attachments that no entry uses…">Remove unused attachments…</button></div>
+  <div class="note">Export and import are in the ⋯ menu at the top right. “Start with empty data” clears all entries and statistics at once, without restarting the server. Your settings stay, and the previous data is kept as a backup you can restore above.</div>
   ${aiSettings(cfg.ai)}
   <div class="sh">MCP server <span class="bd" data-tip="Lets AI assistants (Claude etc.) read and change your entries through the Model Context Protocol.">?</span></div>
   <label class="chk-row"><input type="checkbox" id="mcpOn" ${m.enabled?'checked':''}> Enable the MCP server <small style="color:var(--muted)">(off by default)</small></label>
@@ -1991,14 +2058,6 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   <div class="note">Only reachable from this computer (127.0.0.1) and only with the access token. Nothing outside can connect.</div>
   ${m.enabled?`<div class="codebox"><b>Endpoint</b> ${esc(m.url)}<br><b>Token</b> <span id="tokv">••••••••</span> <button class="chip" id="tokShow">show</button> <button class="chip" id="tokCopy">copy</button></div>
   <div class="note" style="margin-top:8px">Client config (HTTP): <button class="chip" id="cfgCopy">copy</button> &nbsp; or for stdio clients use the command <code>todo mcp</code></div>`:''}
-  <div class="sh">Backups</div>
-  <div class="row-between"><label class="field row2" style="align-items:center;gap:8px"><span>Snapshot every</span><input type="number" id="bkInt" min="1" max="1440" value="${cfg.backupIntervalMin}" style="width:70px"><span>min (when something changed)</span></label><button class="btn" id="bkNow">Back up now</button></div>
-  <button class="btn" id="bkShow" style="margin-top:6px">${ui.showBk?'Hide':'Show'} backups</button><div id="bkBox" ${ui.showBk?'':'hidden'}>
-  <div class="list" style="margin-top:8px">${bk.slice(0,6).map(b=>`<div class="li"><span class="t">${esc(b.kind)} · ${fmtFull(new Date(b.time).getTime())}</span><small style="color:var(--muted)">${Math.max(1,Math.round(b.size/1024))} KB</small><button class="btn" data-restore="${esc(b.name)}" data-tip="Replace all data with this backup (the current data is backed up first)">Restore</button></div>`).join('')||'<div class="note">No backups yet.</div>'}</div></div>
-  <div class="note">Kept: all from the last 2 hours, then hourly, daily and weekly. ${bk.length} on disk.</div>
-  <div class="sh">Data</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="dExport" data-tip="Download everything as one JSON file (the complete backup)">Export JSON</button><button class="btn" id="dCsv" data-tip="All entries as a table for Excel, LibreOffice or Google Sheets">Export CSV</button><button class="btn" id="dIcs" data-tip="Open entries with a date as a calendar file for Outlook, Google Calendar, Apple Calendar, Thunderbird…">Export calendar (.ics)</button><button class="btn" id="dImport" data-tip="Replace everything with a JSON export">Import JSON…</button><button class="btn" id="dImport2" data-tip="Add the entries of a CSV file or a calendar file (.ics) below a new project — nothing is replaced">Import CSV / calendar…</button><button class="btn" id="dDemo" data-tip="Replace everything with example data">Load demo data</button><button class="btn dng" id="dReset" data-tip="Remove all entries and statistics — a backup is kept">Start with empty data…</button><button class="btn" id="dUnused" disabled data-tip="Looking for attachments that no entry uses…">Remove unused attachments…</button></div>
-  <div class="note">“Start with empty data” clears all entries and statistics at once, without restarting the server. Your settings stay, and the previous data is kept as a backup you can restore above.</div>
   <div class="sh">About</div>
   <div class="note"><a href="https://github.com/Tillerz/todomgr" target="_blank" rel="noopener" data-tip="Project page on GitHub">${esc(APP.name)} ${esc(APP.version)}</a> · <a href="https://github.com/Tillerz/todomgr/blob/main/LICENSE" target="_blank" rel="noopener">PolyForm Shield licence</a> · data schema ${cfg.schema} · time zone ${esc(cfg.timezone)}<br>Data folder: <code>${esc(cfg.dataDir)}</code></div>
   <div class="note">Built with these open-source parts (click for the licence):<br>${LIBS.map(([n,l,f,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a> · <a href="/licenses/${f}" target="_blank" rel="noopener">${l}</a>`).join('<br>')}</div>`;
@@ -2034,7 +2093,7 @@ async function showSettings(){const v=S.prefs.rowH||DEF.rowH,font=S.prefs.font??
   $('#aiUnload').onclick=async()=>{try{await Store.api('POST','/api/ai/unload',{});toast('AI unloaded');showSettings()}catch(e){toast('Could not unload: '+e.message)}};
   $('#mcpOn').onchange=e=>put({mcp:{enabled:e.target.checked}});$('#mcpRo').onchange=e=>put({mcp:{readOnly:e.target.checked}});
   $('#bkInt').onchange=e=>put({backupIntervalMin:+e.target.value});
-  $('#dExport').onclick=exportJSON;$('#dCsv').onclick=()=>exportFile('/api/export.csv');$('#dIcs').onclick=()=>exportFile('/api/export.ics');$('#dImport').onclick=()=>{closeModal();$('#file').click()};$('#dImport2').onclick=()=>{closeModal();$('#file2').click()};$('#dDemo').onclick=()=>{closeModal();loadDemo()};
+  $('#dDemo').onclick=()=>{closeModal();loadDemo()};
   $('#dReset').onclick=async()=>{if(!confirm('Remove ALL entries and statistics and start with empty data?\n\nThe current data is saved as a backup first, so you can restore it from Settings.'))return;
     try{await Store.sync();await Store.api('POST','/api/reset',{});closeModal();await Store.refresh();inboxId();persist();renderTree();toast('Started with empty data — the previous data is in data/backups')}catch(err){toast('Reset failed: '+err.message,{ms:9000})}};
   // unused attachments: the button shows how many there are, and its tip lists them
@@ -2229,16 +2288,22 @@ $('#bulk').addEventListener('click',e=>{const a=e.target.closest('[data-bulk]')?
 $('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view)});
 $('#vToday').addEventListener('keydown',e=>{const i=e.target.closest('.goal-in');if(i&&e.key==='Enter'){e.preventDefault();wordLogApply(i.dataset.wlin,i.value)}});
 $('#vToday').addEventListener('click',e=>{if(e.target.closest('.goal-in'))return;// typing in a goal's field must not open the entry
+  const pj=e.target.closest('[data-proj]');if(pj){openProject(pj.dataset.proj);return}
   const wl=e.target.closest('[data-wlog]');if(wl){const i=wl.closest('.goal')?.querySelector('.goal-in');if(i)i.focus();else wordLog(wl.dataset.wlog);return}const wt=e.target.closest('[data-wtimer]');if(wt){openTimer(wt.dataset.wtimer);return}const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail();renderToday();return}
   const tv=e.target.closest('[data-tv]');if(tv){ui.todayWeek=!!tv.dataset.tv;renderToday();return}
   if(e.target.closest('.plan')){S.prefs.planOpen=!S.prefs.planOpen;persist();renderToday()}});
+$('#vProject').addEventListener('keydown',e=>{const i=e.target.closest('.goal-in');if(i&&e.key==='Enter'){e.preventDefault();wordLogApply(i.dataset.wlin,i.value)}});
+$('#vProject').addEventListener('change',e=>{if(e.target.id==='projSel'){S.prefs.projPage=e.target.value;persist();renderProject()}});
+$('#vProject').addEventListener('click',e=>{if(e.target.closest('.goal-in,#projSel'))return;
+  const c=e.target.closest('[data-chk]');if(c){mutate(()=>toggleDone(S.nodes[c.dataset.chk]),{panel:true});return}
+  const g=e.target.closest('[data-goto]');if(g){ui.sel=g.dataset.goto;ui.panel=true;renderDetail()}});
 $('#vStats').addEventListener('click',e=>{const m=e.target.closest('[data-metric]');if(m){ui.metric=m.dataset.metric;renderStats()}});
 $('#btnTimer').onclick=()=>S.timer&&S.timer.alarmed?showAlarm():openTimer();
 $('#btnPal').innerHTML=ic('cmd');$('#btnPal').onclick=openPalette;
 $('#btnAdd').innerHTML=ic('plus',16)+'<span>Add</span>';$('#btnAdd').onclick=()=>openQuick();
 $('#btnUndo').innerHTML=ic('undo');$('#btnUndo').onclick=undo;$('#btnRedo').innerHTML=ic('redo');$('#btnRedo').onclick=redo;
 $('#btnTheme').onclick=toggleTheme;$('#btnMenu').innerHTML=ic('menu');$('#ico-search').innerHTML=ic('search',14);
-const MENU=[['Settings…',showSettings],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp]];
+const MENU=[['Settings…',showSettings],['Command palette…',()=>openPalette()],['Light / dark mode',()=>toggleTheme()],['Export JSON backup',exportJSON],['Export Markdown outline',exportMD],['Export CSV (spreadsheet)',()=>exportFile('/api/export.csv')],['Export calendar (.ics)',()=>exportFile('/api/export.ics?closed=0')],['Import JSON…',()=>$('#file').click()],['Import CSV / calendar…',()=>$('#file2').click()],['Trash',showTrash],['Keyboard shortcuts',showHelp]];
 $('#btnMenu').onclick=()=>openModal(`<div class="list">${MENU.map(([l],i)=>`<button class="btn" data-m="${i}" style="text-align:left">${l}</button>`).join('')}</div><div style="margin-top:10px;color:var(--muted);font-size:12px;text-align:center">${APP.name} ${APP.version}</div>`,{cls:'pop-right',kind:'menu'});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&modalKind==='menu'){const f=MENU[+b.dataset.m][1];closeModal();f()}});
 $('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b||modalKind!=='remind')return;const it=remQ[0],a=b.dataset.rm;
@@ -2337,7 +2402,7 @@ document.addEventListener('keydown',e=>{
   if(ctrl&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
   if(ctrl&&e.key.toLowerCase()==='y'){e.preventDefault();redo();return}
   if(ctrl||modalKind)return;
-  if(e.key==='1'||e.key==='2'||e.key==='3'){setView(['tree','today','stats'][+e.key-1]);return}
+  if(e.key>='1'&&e.key<='4'){setView(['tree','today','stats','project'][+e.key-1]);return}
   if(e.key==='/'){e.preventDefault();setView('tree');$('#q').focus();return}
   if(e.key==='?'){showHelp();return}
   if(e.key.toLowerCase()==='t'){openTimer();return}

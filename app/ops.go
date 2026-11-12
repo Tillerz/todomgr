@@ -300,11 +300,23 @@ func (t *Tx) setField(n Node, k string, v any, creating bool) error {
 		if num(out["done"]) > num(out["total"]) {
 			out["done"] = out["total"]
 		}
-		// progDay: the count at the start of today, for "words today" (the page keeps it the same way)
+		// progDay: the count at the start of today, for "words today" (the page keeps it the same way).
+		// progHist: the amount of each day, for the chart of the Project page; 400 days are kept.
 		if old := num(cur["done"]); !creating && out["mode"] == "units" && num(out["done"]) != old {
 			today := time.Now().In(t.loc).Format("2006-01-02")
-			if d, _ := n["progDay"].(map[string]any); d == nil || str(d["d"]) != today {
-				n["progDay"] = map[string]any{"d": today, "start": old}
+			d, _ := n["progDay"].(map[string]any)
+			if d == nil || str(d["d"]) != today {
+				d = map[string]any{"d": today, "start": old}
+				n["progDay"] = d
+			}
+			h, _ := n["progHist"].(map[string]any)
+			if h == nil {
+				h = map[string]any{}
+				n["progHist"] = h
+			}
+			h[today] = num(out["done"]) - num(d["start"])
+			for ks := sortedKeys(h); len(ks) > 400; ks = ks[1:] {
+				delete(h, ks[0])
 			}
 		}
 		n["prog"] = out
