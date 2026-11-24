@@ -133,7 +133,7 @@ func csv(v string) []string {
 var mcpTools = []mcpTool{
 	{Name: "list_entries", Desc: "List entries in tree order. Filters combine with AND. Returns compact entries (id, name, kind, status, deadline, tags, path, progress…).",
 		Schema: obj(map[string]any{
-			"query":  withDesc(tStr, "words that must all appear in name, notes, location, tags or people"),
+			"query":  withDesc(tStr, "words that must all appear in name, notes, location, tags or people; a word that is an entry id finds that entry"),
 			"status": withDesc(tStr, "comma separated statuses, e.g. open,progress"), "kind": withDesc(tStr, "comma separated: todo, idea, project, reminder"),
 			"tag": tStr, "person": tStr, "project": withDesc(tStr, "project name or id the entry lives in"), "parent": withDesc(tStr, "only entries below this id"),
 			"open_only": withDesc(tBool, "hide closed, postponed (later) entries and reminders"), "overdue_only": tBool, "include_trashed": tBool, "limit": tInt}),
@@ -145,9 +145,9 @@ var mcpTools = []mcpTool{
 	{Name: "get_entry", Desc: "Get all details of one entry (notes, links, dependencies, history, time log…).",
 		Schema: obj(map[string]any{"id": tStr}, "id"),
 		Run:    func(s *Store, a map[string]any) (any, error) { return s.Get(argStr(a, "id")) }},
-	{Name: "get_tree", Desc: "Outline of the tree below an entry (default: everything, depth 3).",
-		Schema: obj(map[string]any{"id": withDesc(tStr, "start entry, default top level"), "depth": tInt}),
-		Run:    func(s *Store, a map[string]any) (any, error) { return s.Tree(argStr(a, "id"), argInt(a, "depth", 3)) }},
+	{Name: "get_tree", Desc: "Outline of the tree below an entry: all levels, unless depth limits it.",
+		Schema: obj(map[string]any{"id": withDesc(tStr, "start entry, default top level"), "depth": withDesc(tInt, "levels to show; leave out (or 0, -1) for all")}),
+		Run:    func(s *Store, a map[string]any) (any, error) { return s.Tree(argStr(a, "id"), argInt(a, "depth", 0)) }},
 	{Name: "today", Desc: "What needs attention now: overdue, due today, in progress, upcoming reminders, high-priority next-up.",
 		Schema: obj(map[string]any{}),
 		Run:    func(s *Store, a map[string]any) (any, error) { return s.Today(), nil }},

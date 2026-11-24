@@ -320,7 +320,7 @@ func (s *Store) List(f Filter) []map[string]any {
 			hay := strings.ToLower(n.S("name") + " " + n.S("notes") + " " + n.S("location") + " " + strings.Join(strs(n["tags"]), " ") + " " + strings.Join(strs(n["people"]), " "))
 			ok := true
 			for _, w := range words {
-				if !strings.Contains(hay, w) {
+				if !strings.Contains(hay, w) && w != strings.ToLower(n.S("id")) { // a word that is the entry's id finds it too
 					ok = false
 					break
 				}
@@ -346,8 +346,8 @@ func (s *Store) Tree(root string, depth int) (map[string]any, error) {
 	if _, ok := s.db.Nodes[root]; !ok {
 		return nil, fmt.Errorf("entry %q not found", root)
 	}
-	if depth == 0 {
-		depth = 3
+	if depth <= 0 { // not given, 0 or -1: all levels (a negative depth never reaches 0 while walking down)
+		depth = -1
 	}
 	return s.db.tree(root, depth, s.Now()), nil
 }

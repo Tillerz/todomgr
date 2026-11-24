@@ -261,6 +261,14 @@ check('growing pictures: a project counts the words of its goals; book and journ
     p.pic='';renderToday();if(el('#vToday').innerHTML.includes('class="piccard" data-goto="'+p.id+'"'))bad.push('no picture: no card')}
   finally{ui.sel=null;made.reverse().forEach(x=>{detach(x);delete S.nodes[x.id]})}
   return bad.join('; ')});
+check('search finds an entry by its id (a part of an id does not); reminder warning of 45 minutes',()=>{const bad=[];
+  const n=allNodes().find(x=>x.kind==='todo'),other=allNodes().find(x=>x.id!==n.id&&x.kind==='todo');
+  if(!matches(n,parseQ(n.id.toUpperCase())))bad.push('the id finds the entry');
+  if(matches(other,parseQ(n.id)))bad.push('the id of another entry must not match');
+  if(!n.name.toLowerCase().includes(n.id.slice(0,3))&&!n.notes.toLowerCase().includes(n.id.slice(0,3))&&matches(n,parseQ(n.id.slice(0,3))))bad.push('a part of an id must not match');
+  if(!LEADS.some(([m,t])=>m===45&&t==='45 minutes before'))bad.push('LEADS lacks 45 minutes');
+  if(LEADS.map(x=>x[0]).join()!==[...LEADS.map(x=>x[0])].sort((a,b)=>a-b).join())bad.push('LEADS must stay in order');
+  return bad.join('; ')});
 // note drafts (Drafts) with an in-memory browser store; Store.clientId stands for the window
 check('note drafts: kept in the browser, put back on the next page load, asks when the note changed elsewhere',()=>{
   const mem={},realLS=localStorage,me=Store.clientId,bad=[];

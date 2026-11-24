@@ -336,7 +336,7 @@ the list.
 
 Reminders are scheduled by the **program itself**, not by the browser page, so they are noticed even when no window is open.
 
-- A **reminder entry** has a date and time, and pops up *at the time*, plus (if you want) an early warning 1 day / 2 h / 1 h / 30 / 15 / 10 / 5 minutes before. A recurring reminder then moves on to its next occurrence by itself; a one-off one stays in the tree as "passed".
+- A **reminder entry** has a date and time, and pops up *at the time*, plus (if you want) an early warning 1 day / 2 h / 1 h / 45 / 30 / 15 / 10 / 5 minutes before. A recurring reminder then moves on to its next occurrence by itself; a one-off one stays in the tree as "passed".
 - **Events with an end:** give a reminder an optional *Ends* time, for a stream from 19:00 to 21:00 or a convention over three days. The tree shows "Sat 19:00–21:00" or "5–7 Dec", Today lists the event on every day it runs, and the pop-up stays at the start. Moving the start moves the end along. The **+1h** button next to *Ends* sets the end to one hour after the start.
 - A normal todo, idea or project can also have a **reminder time** and pops up once.
 - A pop-up offers *Open link*, *Snooze 10 min* and *Dismiss* (and *Show* for tasks). If the program was off or no window was open, the pop-up waits and appears as **Missed reminder** the next time you open the page.
@@ -663,7 +663,7 @@ The UI, the CLI and MCP all use the same HTTP API on `127.0.0.1:7437`. Every cal
 | `POST /api/nodes/{id}/restore` | take out of the trash |
 | `POST /api/nodes/{id}/time` | `{minutes}` or `{seconds}` – log time |
 | `POST /api/quick` | `{text, parent}` – quick-add syntax |
-| `GET /api/tree`, `/api/today`, `/api/stats` | the tree (`root`, `depth`), the Today lists, statistics (`days`) |
+| `GET /api/tree`, `/api/today`, `/api/stats` | the tree (`root`; `depth` limits the levels, all by default), the Today lists, statistics (`days`) |
 | `POST /api/alerts/ack` | `{id, action: "ok" \| "snooze"}` – dismiss or snooze a reminder pop-up |
 | `POST /api/discord` | `{id, title, url}` – post to the Discord channel of the entry's project |
 | `GET`/`PUT /api/settings` | MCP and LAN switches, backup interval |

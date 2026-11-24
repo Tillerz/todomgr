@@ -1019,7 +1019,7 @@ function parseQ(q){const Q={terms:[],tags:[],people:[],is:[],prio:0};q.toLowerCa
   else if(t.startsWith('is:'))Q.is.push(t.slice(3));else Q.terms.push(t)});return Q}
 function matches(n,Q){
   const hay=(n.name+' '+n.notes+' '+n.location+' '+n.tags.join(' ')+' '+n.people.join(' ')).toLowerCase();
-  if(!Q.terms.every(t=>hay.includes(t)))return false;
+  if(!Q.terms.every(t=>hay.includes(t)||t===n.id))return false;// a word that is the entry's id finds it too
   if(!Q.tags.every(t=>n.tags.some(x=>x.toLowerCase().startsWith(t))))return false;
   if(!Q.people.every(t=>n.people.some(x=>x.toLowerCase().startsWith(t))))return false;
   if(Q.prio&&n.prio<Q.prio)return false;
@@ -1688,7 +1688,7 @@ function whenRange(n){const s=n.reminder,e=n.end,a=pd(s),b=pd(e);if(!a||!b)retur
 function shiftEnd(n,oldS,newS){const u=x=>{const d=pd(x);return d&&Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes())};
   const a=u(oldS),b=u(newS),e=u(n.end);if(!n.end||!a||!b||!e||a===b)return;const x=new Date(e+(b-a));
   n.end=`${x.getUTCFullYear()}-${pad(x.getUTCMonth()+1)}-${pad(x.getUTCDate())}`+(n.end.includes('T')?`T${pad(x.getUTCHours())}:${pad(x.getUTCMinutes())}`:'')}
-const LEADS=[[0,'At the time only'],[5,'5 minutes before'],[10,'10 minutes before'],[15,'15 minutes before'],[30,'30 minutes before'],[60,'1 hour before'],[120,'2 hours before'],[1440,'1 day before']];
+const LEADS=[[0,'At the time only'],[5,'5 minutes before'],[10,'10 minutes before'],[15,'15 minutes before'],[30,'30 minutes before'],[45,'45 minutes before'],[60,'1 hour before'],[120,'2 hours before'],[1440,'1 day before']];
 const defaultRemTime=()=>{const d=new Date();d.setHours(d.getHours()+1,0,0,0);return dayKey(d)+'T'+pad(d.getHours())+':00'};
 // next date of a repeating entry after s; an unknown rule keeps s (same as nextOcc in recur.go)
 // Repeat field of the detail panel: presets, or "Custom…" with every N … / monthly on the 1st, 3rd… weekday
@@ -1787,7 +1787,7 @@ function openPalette(){const tree=f=>()=>{if(ui.view!=='tree')setView('tree');f(
   const inp=$('#pq'),ul=$('#pl');let items=[],cur=0;
   const draw=()=>{const q=inp.value.toLowerCase().trim();items=[];
     cmds.filter(c=>c[0].toLowerCase().includes(q)).slice(0,q?8:14).forEach(c=>items.push({l:c[0],s:c[2]||'command',f:c[1]}));
-    if(q)allNodes().filter(n=>(n.name+' '+n.tags.join(' ')).toLowerCase().includes(q)).slice(0,12).forEach(n=>items.push({l:n.name,s:path(n)||'item',f:()=>reveal(n.id)}));
+    if(q)allNodes().filter(n=>n.id===q||(n.name+' '+n.tags.join(' ')).toLowerCase().includes(q)).slice(0,12).forEach(n=>items.push({l:n.name,s:path(n)||'item',f:()=>reveal(n.id)}));
     cur=Math.min(cur,Math.max(0,items.length-1));ul.innerHTML=items.map((it,i)=>`<li class="${i===cur?'on':''}" data-i="${i}"><span>${esc(it.l)}</span><small>${esc(it.s)}</small></li>`).join('')};
   const run=i=>{const it=items[i];if(it){closeModal();it.f()}};
   inp.oninput=()=>{cur=0;draw()};
